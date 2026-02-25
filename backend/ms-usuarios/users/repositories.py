@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.db.models import Q, QuerySet
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any,List
+from datetime import date
 from .models import User,Dependencia,BDEmpleados
 
 class BDEmpleadosRepository:
@@ -45,61 +46,52 @@ class DependenciaRepository:
         dependencia.save(update_fields=['is_active'])
         return dependencia
     
-
 class UserRepository:
     @staticmethod
     def base_queryset() -> QuerySet:
-        return User.objects.select_related(
-            'role',
-            'dependencia',
-            'created_by'
-        ).prefetch_related('sedes')
+        return User.objects.select_related('role','dependencia', 'created_by').prefetch_related('sedes')
     @staticmethod
-    def apply_filters(qs: QuerySet, filters: Dict[str, Any]) -> QuerySet:
-        if not filters:
-            return qs
-        for field, value in filters.items():
-            if value in [None, ""]:
-                continue
-            if field in ["es_usuario_sistema", "is_active"]:
-                qs = qs.filter(**{field: value})
-            elif field in ["role", "dependencia"]:
-                qs = qs.filter(**{f"{field}__id": value})
-            elif field == "sedes":
-                if isinstance(value, list):
-                    qs = qs.filter(sedes__id__in=value)
-                else:
-                    qs = qs.filter(sedes__id=value)
-            elif field in ["cargo", "first_name", "last_name"]:
-                qs = qs.filter(**{f"{field}__icontains": value})
-            elif field == "search":
-                qs = qs.filter(
-                    Q(first_name__icontains=value) |
-                    Q(last_name__icontains=value) |
-                    Q(dni__icontains=value) |
-                    Q(username__icontains=value) |
-                    Q(institucional_email__icontains=value)
-                )
-            elif field == "created_between":
-                start, end = value
-                qs = qs.filter(date_joined__date__range=[start, end])
-            elif field == "created_date":
-                qs = qs.filter(date_joined__date=value)
-            elif field == "created_year":
-                qs = qs.filter(date_joined__year=value)
-            elif field == "fecha_baja_between":
-                start, end = value
-                qs = qs.filter(fecha_baja__range=[start, end])
-        return qs.distinct()
-    @staticmethod
-    def get_all() -> QuerySet:
-        return User.objects.order_by('first_name', 'last_name')
+    def get_all():
+        return UserRepository.base_queryset().all()
     @staticmethod
     def get_by_id(user_id: int) -> Optional[User]:
-        return User.objects.filter(pk=user_id).first()
+        return (UserRepository.base_queryset().filter(pk=user_id).first())
     @staticmethod
-    def get_by_dni(dni: str) -> Optional[User]:
-        return User.objects.filter(dni=dni).first()
+    def filter_users(
+        dni: Optional[str] = None,
+        cargo: Optional[str] = None,
+        role_id: Optional[int] = None,
+        sede_ids: Optional[List[int]] = None,
+        dependencia_id: Optional[int] = None,
+        es_usuario_sistema: Optional[bool] = None,
+        fecha_desde: Optional[date] = None,
+        fecha_hasta: Optional[date] = None,
+        search: Optional[str] = None,
+    ) -> QuerySet:
+        filters = Q()
+        if dni:
+            filters &= Q(dni__icontains=dni)
+        if cargo:
+            filters &= Q(cargo__icontains=cargo)
+        if role_id:
+            filters &= Q(role_id=role_id)
+        if sede_ids:
+            filters &= Q(sedes__id__in=sede_ids)
+        if dependencia_id:
+            filters &= Q(dependencia_id=dependencia_id)
+        if es_usuario_sistema is not None:
+            filters &= Q(es_usuario_sistema=es_usuario_sistema)
+        if fecha_desde:
+            filters &= Q(date_joined__date__gte=fecha_desde)
+        if fecha_hasta:
+            filters &= Q(date_joined__date__lte=fecha_hasta)
+        if search:
+            filters &= (
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(dni__icontains=search)
+            )           
+        return UserRepository.base_queryset().filter(filters).distinct()       
     @staticmethod
     @transaction.atomic
     def create(data: Dict[str, Any], sede_ids=None) -> User:

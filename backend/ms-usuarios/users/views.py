@@ -5,8 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated,AllowAny
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from .services import UserService,DependencyService,BDEmpleadosService
-from .serializers import (BDEmpleadosSerializer,UserSerializer, UserListSerializer,
-                          UserDetailSerializer,UserUpdateSerializer,
+from .serializers import (BDEmpleadosSerializer, UserListSerializer,UserDetailSerializer,UserCreateSerializer,UserUpdateSerializer,
                           DependencySerializer, DependencyCreateUpdateSerializer)
 
 from rest_framework.decorators import action
@@ -73,7 +72,7 @@ class DependencyViewSet(ViewSet):
         serializer.is_valid(raise_exception=True)        
         try:
             result = DependencyService.create_dependency(serializer.validated_data)
-            if not result.get("success"):
+            if not result['success']:
                 return Response(result, status=status.HTTP_400_BAD_REQUEST)
             return Response(result, status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -89,7 +88,7 @@ class DependencyViewSet(ViewSet):
         serializer = DependencyCreateUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         response = DependencyService.update_dependency(pk,serializer.validated_data)
-        if not response.get("success"):
+        if not response['success']:
             return Response(response, status=status.HTTP_400_BAD_REQUEST)
         return Response(response, status=status.HTTP_200_OK)
     @extend_schema(
@@ -101,7 +100,7 @@ class DependencyViewSet(ViewSet):
     @action(detail=True, methods=["patch"])
     def activate(self, request, pk=None):
         result = DependencyService.activate_dependency(pk)
-        if not result.get("success"):
+        if not result['success']:
             return Response(result, status=status.HTTP_404_NOT_FOUND)        
         return Response(result, status=status.HTTP_200_OK)
     @extend_schema(
@@ -113,7 +112,7 @@ class DependencyViewSet(ViewSet):
     @action(detail=True, methods=["patch"])
     def deactivate(self, request, pk=None):        
         result = DependencyService.deactivate_dependency(pk)
-        if not result.get("success"):
+        if not result['success']:
             return Response(result, status=status.HTTP_404_NOT_FOUND)        
         return Response(result, status=status.HTTP_200_OK)
 
@@ -145,17 +144,13 @@ class UserViewSet(ViewSet):
         ],
         responses={200: UserListSerializer(many=True)}
     )
-    @action(detail=True, methods=["get"])
-    def get(self, request):
+    @action(detail=False, methods=["get"])
+    def filters(self, request):    
         filters = request.query_params.dict()
-        if "sedes" in request.query_params:
-            filters["sedes"] = request.query_params.getlist("sedes")
-        if "created_between" in filters:
-            filters["created_between"] = filters["created_between"].split(",")
-        if "fecha_baja_between" in filters:
-            filters["fecha_baja_between"] = filters["fecha_baja_between"].split(",")
-        users = UserService.apply_filters(filters)
-        serializer = UserListSerializer(users, many=True)
+        result = UserService.filter_users(filters)
+        if not result["success"]:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        serializer = UserListSerializer(result["data"], many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Users'],
@@ -187,40 +182,17 @@ class UserViewSet(ViewSet):
         user = UserService.get_user_by_id(pk)
         if not user['success']:
             return Response(user, status=status.HTTP_400_BAD_REQUEST)
-        serializer = UserListSerializer(user["data"])
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    @extend_schema(
-        tags=['Users'],
-        summary="Buscar usuario por DNI",
-        description="Retorna un usuario según su DNI.",
-        parameters=[
-            OpenApiParameter(
-                name="dni",
-                type=OpenApiTypes.STR,
-                required=True,
-                description="DNI del usuario"
-            )
-        ],
-        responses={200: UserDetailSerializer}
-    )
-    @action(detail=False, methods=["get"], url_path="by-dni")
-    def get_by_dni(self, request):
-        dni= request.query_params.get("dni")
-        user = UserService.get_user_by_dni(dni)
-        if not user['success']:
-            return Response(user, status=status.HTTP_400_BAD_REQUEST)
         serializer = UserDetailSerializer(user["data"])
         return Response(serializer.data, status=status.HTTP_200_OK)
-        
     @extend_schema(
         tags=['Users'],
         summary="Crear usuario",
         description="Crea un nuevo usuario. Si es usuario del sistema, se generará automáticamente username y password igual al DNI.",
-        request=UserSerializer,
+        request=UserCreateSerializer,
         responses={201: UserDetailSerializer}
     )
     def create(self, request):
-        serializer = UserSerializer(data=request.data)
+        serializer = UserCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         sede_ids = serializer.validated_data.pop("sedes", [])
         user = UserService.create_user(serializer.validated_data, sede_ids=sede_ids)

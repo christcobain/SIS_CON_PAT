@@ -1,175 +1,61 @@
-from .models import Sede, Modulo, Area, Departamento, Provincia, Distrito,Empresa,Choices
+from .models import Sede, Modulo,  Departamento, Provincia, Distrito,TipoUbicacion,Ubicacion
 from django.db.models import QuerySet
 from django.db import transaction
 from typing import Optional, Dict, Any
 
 class DepartamentoRepository:
     @staticmethod
-    def get_all()-> QuerySet:
-        qs = Departamento.objects.order_by('id')
-        return qs
+    def base_queryset() -> QuerySet:
+        return (Departamento.objects.select_related('created_by').prefetch_related(
+                'provincias',
+                'provincias__distritos',
+                'provincias__distritos__sedes')
+        )
     @staticmethod
-    def get_by_id(departamento_id:int)->  Optional[Departamento]:
-        return Departamento.objects.filter(pk=departamento_id).first()
+    def get_all():
+        return DepartamentoRepository.base_queryset().all()
     @staticmethod
-    def get_by_name(nombre: str) -> Optional[Departamento]:
-        return Departamento.objects.filter(nombre__iexact=nombre).first()
-    @staticmethod
-    @transaction.atomic
-    def create(data: Dict[str, Any]) -> Optional[Departamento]:
-        departamento = Departamento(**data)
-        departamento.save()
-        return departamento
-    @staticmethod
-    @transaction.atomic
-    def update(departamento: Departamento, data: Dict[str, Any]) -> Departamento:
-        for key, value in data.items():
-            setattr(departamento, key, value)
-        departamento.save()
-        return departamento
-    @staticmethod
-    def activate(departamento: Departamento) -> Departamento:
-        departamento.is_active = True
-        departamento.save(update_fields=['is_active'])
-        return departamento
-    @staticmethod
-    def deactivate(departamento: Departamento) -> Departamento:
-        departamento.is_active = False
-        departamento.save(update_fields=['is_active'])
-        return departamento
+    def get_by_id(pk: int):
+        return (DepartamentoRepository.base_queryset().filter(pk=pk).first())
     
 class ProvinciaRepository:
     @staticmethod
-    def get_all(is_active=None, search=None):
-        qs = Provincia.objects.select_related('departamento').prefetch_related('distritos')
-        if is_active is not None:
-            qs = qs.filter(is_active=is_active)
-        if search:
-            qs = qs.filter(nombre__icontains=search)
-        return qs
+    def base_queryset() -> QuerySet:
+        return (Provincia.objects.select_related('departamento', 'created_by')
+            .prefetch_related('distritos','distritos__sedes'))
     @staticmethod
-    def get_by_id(provincia_id:int)->  Optional[Provincia]:
-        return Provincia.objects.filter(pk=provincia_id).first()
+    def get_all():
+        return ProvinciaRepository.base_queryset().all()
     @staticmethod
-    def get_by_name(nombre: str) -> Optional[Provincia]:
-        return Provincia.objects.filter(nombre__iexact=nombre).first()
-    @staticmethod
-    @transaction.atomic
-    def create(data: Dict[str, Any]) -> Optional[Provincia]:
-        provincia = Provincia(**data)
-        provincia.save()
-        return provincia
-    @staticmethod
-    @transaction.atomic
-    def update(provincia: Provincia, data: Dict[str, Any]) -> Provincia:
-        for key, value in data.items():
-            setattr(provincia, key, value)
-        provincia.save()
-        return provincia
-    @staticmethod
-    def activate(provincia: Provincia) -> Provincia:
-        provincia.is_active = True
-        provincia.save(update_fields=['is_active'])
-        return provincia
-    @staticmethod
-    def deactivate(provincia: Provincia) -> Provincia:
-        provincia.is_active = False
-        provincia.save(update_fields=['is_active'])
-        return provincia
+    def get_by_id(pk: int):
+        return (ProvinciaRepository.base_queryset().filter(pk=pk).first())    
 
 class DistritoRepository:
     @staticmethod
-    def get_all(is_active=None, search=None):
-        qs = Distrito.objects.select_related('provincia__departamento').prefetch_related('sedes')
-        if is_active is not None:
-            qs = qs.filter(is_active=is_active)
-        if search:
-            qs = qs.filter(nombre__icontains=search)
-        return qs
+    def base_queryset() -> QuerySet:
+        return ( Distrito.objects.select_related('provincia','provincia__departamento','created_by')
+            .prefetch_related('sedes'))
     @staticmethod
-    def get_by_id(distrito_id:int)->  Optional[Distrito]:
-        return Distrito.objects.filter(pk=distrito_id).first()
+    def get_all():
+        return DistritoRepository.base_queryset().all()
     @staticmethod
-    def get_by_name(nombre: str) -> Optional[Distrito]:
-        return Distrito.objects.filter(nombre__iexact=nombre).first()
-    @staticmethod
-    @transaction.atomic
-    def create(data: Dict[str, Any]) -> Optional[Distrito]:
-        distrito = Distrito(**data)
-        distrito.save()
-        return distrito
-    @staticmethod
-    @transaction.atomic
-    def update(distrito: Distrito, data: Dict[str, Any]) -> Distrito:
-        for key, value in data.items():
-            setattr(distrito, key, value)
-        distrito.save()
-        return distrito
-    @staticmethod
-    def activate(distrito: Distrito) -> Distrito:
-        distrito.is_active = True
-        distrito.save(update_fields=['is_active'])
-        return distrito
-    @staticmethod
-    def deactivate(distrito: Distrito) -> Distrito:
-        distrito.is_active = False
-        distrito.save(update_fields=['is_active'])
-        return distrito
-
-class EmpresaRepository:
-    @staticmethod
-    def get_all(is_active=None, search=None):
-        qs = Empresa.objects.prefetch_related( 'sedes')
-        if is_active is not None:
-            qs = qs.filter(is_active=is_active)
-        if search:
-            qs = qs.filter(nombre__icontains=search)
-        return qs
-    @staticmethod
-    def get_by_id(distrito_id:int)->  Optional[Empresa]:
-        return Empresa.objects.filter(pk=distrito_id).first()
-    @staticmethod
-    def get_by_name(nombre: str) -> Optional[Empresa]:
-        return Empresa.objects.filter(nombre__iexact=nombre).first()
-    @staticmethod
-    @transaction.atomic
-    def create(data: Dict[str, Any]) -> Optional[Empresa]:
-        empresa = Empresa(**data)
-        empresa.save()
-        return empresa
-    @staticmethod
-    @transaction.atomic
-    def update(empresa: Empresa, data: Dict[str, Any]) -> Empresa:
-        for key, value in data.items():
-            setattr(empresa, key, value)
-        empresa.save()
-        return empresa
-    @staticmethod
-    def activate(empresa: Empresa) -> Empresa:
-        empresa.is_active = True
-        empresa.save(update_fields=['is_active'])
-        return empresa
-    @staticmethod
-    def deactivate(empresa: Empresa) -> Empresa:
-        empresa.is_active = False
-        empresa.save(update_fields=['is_active'])
-        return empresa
+    def get_by_id(id: int):
+        return (DistritoRepository.base_queryset().filter(pk=id).first())
 
 class SedeRepository:
     @staticmethod
-    def get_all(estado=None, search=None):
-        qs = Sede.objects.select_related('distrito__provincia__departamento').prefetch_related('modulos')
-        if estado is not None:
-            qs = qs.filter(estado=estado)
-        if search:
-            qs = qs.filter(nombre__icontains=search)
-        return qs
+    def base_queryset() -> QuerySet:
+        return (Sede.objects.select_related('distrito','distrito__provincia','distrito__provincia__departamento','created_by')
+            .prefetch_related('modulos'))
     @staticmethod
-    def get_by_id(sede_id):
-        return Sede.objects.select_related('distrito__provincia__departamento').get(pk=sede_id)
+    def get_all():
+        return SedeRepository.base_queryset().all()
     @staticmethod
-    def get_by_name(nombre: str) -> Optional[Sede]:
-        return Sede.objects.filter(nombre__iexact=nombre).first()
+    def get_by_id(id: int):
+        return (SedeRepository.base_queryset().filter(pk=id).first())    
+    @staticmethod
+    def get_by_name(nombre: str) :
+        return SedeRepository.base_queryset().filter(nombre__iexact=nombre).first()
     @staticmethod
     @transaction.atomic
     def create(data: Dict[str, Any]) -> Optional[Sede]:
@@ -194,60 +80,20 @@ class SedeRepository:
         sede.save(update_fields=['is_active'])
         return sede
 
-class ChoicesRepository:
-    @staticmethod
-    def get_all()-> QuerySet:
-        qs = Choices.objects.order_by('id')
-        return qs
-    @staticmethod
-    def get_by_id(distrito_id:int)->  Optional[Choices]:
-        return Choices.objects.filter(pk=distrito_id).first()
-    @staticmethod
-    def get_by_name(nombre: str) -> Optional[Choices]:
-        return Choices.objects.filter(nombre__iexact=nombre).first()
-    @staticmethod
-    @transaction.atomic
-    def create(data: Dict[str, Any]) -> Optional[Choices]:
-        result = Choices(**data)
-        result.save()
-        return result
-    @staticmethod
-    @transaction.atomic
-    def update(result: Choices, data: Dict[str, Any]) -> Choices:
-        for key, value in data.items():
-            setattr(result, key, value)
-        result.save()
-        return result
-    @staticmethod
-    def activate(result: Choices) -> Choices:
-        result.is_active = True
-        result.save(update_fields=['is_active'])
-        return result
-    @staticmethod
-    def deactivate(result: Choices) -> Choices:
-        result.is_active = False
-        result.save(update_fields=['is_active'])
-        return result
-    
 class ModuloRepository:
     @staticmethod
-    def get_all(is_active=None, search=None):
-        qs = Modulo.objects.select_related(
-            'sede__distrito__provincia__departamento', 'codigo' 
-        ).prefetch_related(
-            'areas'  
-        )
-        if is_active is not None:
-            qs = qs.filter(is_active=is_active)
-        if search:
-            qs = qs.filter(nombre__icontains=search)
-        return qs
+    def base_queryset() -> QuerySet:
+        return (Modulo.objects.select_related('sede','sede__distrito','sede__distrito__provincia',
+                'sede__distrito__provincia__departamento','created_by').prefetch_related('ubicaciones'))
     @staticmethod
-    def get_by_id(sede_id):
-        return Modulo.objects.select_related('sede__distrito__provincia__departamento').get(pk=sede_id)
+    def get_all():
+        return ModuloRepository.base_queryset().all()
     @staticmethod
-    def get_by_name(nombre: str) -> Optional[Modulo]:
-        return Modulo.objects.filter(nombre__iexact=nombre).first()
+    def get_by_id(pk: int):
+        return (ModuloRepository.base_queryset().filter(pk=pk).first())    
+    @staticmethod
+    def get_by_name(nombre: str):
+        return ModuloRepository.base_queryset().filter(nombre__iexact=nombre).first()
     @staticmethod
     @transaction.atomic
     def create(data: Dict[str, Any]) -> Optional[Modulo]:
@@ -272,44 +118,88 @@ class ModuloRepository:
         result.save(update_fields=['is_active'])
         return result
 
-class AreaRepository:
+class TipoUbicacionRepository:
     @staticmethod
-    def get_all(is_active=None, search=None):
-        qs = Area.objects.select_related(
-            'modulo__sede__distrito__provincia__departamento', 
-            'modulo__codigo'
-        )
-        if is_active is not None:
-            qs = qs.filter(is_active=is_active)
-        if search:
-            qs = qs.filter(nombre__icontains=search)
-        return qs
+    def base_queryset() -> QuerySet:
+        return (TipoUbicacion.objects.select_related('created_by').prefetch_related('ubicaciones'))
     @staticmethod
-    def get_by_id(sede_id):
-        return Area.objects.select_related('dulo__sede__distrito__provincia__departamento').get(pk=sede_id)
+    def get_all():
+        return TipoUbicacionRepository.base_queryset().all()
     @staticmethod
-    def get_by_name(nombre: str) -> Optional[Area]:
-        return Area.objects.filter(nombre__iexact=nombre).first()
+    def get_by_id(pk: int):
+        return (TipoUbicacionRepository.base_queryset().filter(pk=pk).first())
+    @staticmethod
+    def get_by_name(nombre: str):
+        return TipoUbicacionRepository.base_queryset().filter(nombre__iexact=nombre).first()
     @staticmethod
     @transaction.atomic
-    def create(data: Dict[str, Any]) -> Optional[Area]:
-        result = Area(**data)
+    def create(data: Dict[str, Any]) -> Optional[TipoUbicacion]:
+        result = TipoUbicacion(**data)
         result.save()
         return result
     @staticmethod
     @transaction.atomic
-    def update(result: Area, data: Dict[str, Any]) -> Area:
+    def update(result: TipoUbicacion, data: Dict[str, Any]) -> TipoUbicacion:
         for key, value in data.items():
             setattr(result, key, value)
         result.save()
         return result
     @staticmethod
-    def activate(result: Area) -> Area:
+    def activate(result: TipoUbicacion) -> TipoUbicacion:
         result.is_active = True
         result.save(update_fields=['is_active'])
         return result
     @staticmethod
-    def deactivate(result: Area) -> Area:
+    def deactivate(result: TipoUbicacion) -> TipoUbicacion:
         result.is_active = False
         result.save(update_fields=['is_active'])
         return result
+ 
+class UbicacionRepository:
+    @staticmethod
+    def base_queryset() -> QuerySet:
+        return (
+            Ubicacion.objects
+            .select_related(
+                'modulo',
+                'modulo__sede',
+                'modulo__sede__distrito',
+                'modulo__sede__distrito__provincia',
+                'modulo__sede__distrito__provincia__departamento',
+                'tipoubicacion',
+                'created_by'
+            )
+        )
+    @staticmethod
+    def get_all():
+        return UbicacionRepository.base_queryset().all()
+    @staticmethod
+    def get_by_id(pk: int):
+        return (UbicacionRepository.base_queryset().filter(pk=pk).first())
+    @staticmethod
+    def get_by_name(nombre: str):
+        return UbicacionRepository.base_queryset().filter(nombre__iexact=nombre).first()
+    @staticmethod
+    @transaction.atomic
+    def create(data: Dict[str, Any]) -> Optional[Ubicacion]:
+        result = Ubicacion(**data)
+        result.save()
+        return result
+    @staticmethod
+    @transaction.atomic
+    def update(result: Ubicacion, data: Dict[str, Any]) -> Ubicacion:
+        for key, value in data.items():
+            setattr(result, key, value)
+        result.save()
+        return result
+    @staticmethod
+    def activate(result: Ubicacion) -> Ubicacion:
+        result.is_active = True
+        result.save(update_fields=['is_active'])
+        return result
+    @staticmethod
+    def deactivate(result: Ubicacion) -> Ubicacion:
+        result.is_active = False
+        result.save(update_fields=['is_active'])
+        return result
+    

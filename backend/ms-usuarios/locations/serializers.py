@@ -1,71 +1,84 @@
 from rest_framework import serializers
-from .models import Sede, Modulo, Area, Departamento, Provincia, Distrito, Empresa
-
+from .models import Departamento, Provincia, Distrito,Sede,Modulo
 
 class DistritoSerializer(serializers.ModelSerializer):
-    created_by_detail = serializers.SerializerMethodField()    
     class Meta:
         model = Distrito
-        fields = ['id', 'nombre', 'codigo', 'is_active', 'created_by', 'created_by_detail', 'created_at', 'updated_at']    
-
+        fields = [
+            "id",
+            "nombre",
+            "codigo",
+        ]
 class ProvinciaSerializer(serializers.ModelSerializer):
-    """Serializer para Provincia con auditoría."""
     distritos = DistritoSerializer(many=True, read_only=True)
-    created_by_detail = serializers.SerializerMethodField()
     class Meta:
         model = Provincia
-        fields = ['id', 'nombre', 'codigo', 'distritos', 'is_active', 'created_by', 'created_by_detail', 'created_at', 'updated_at']    
-        
+        fields = [
+            "id",
+            "nombre",
+            "codigo",
+            "departamento",
+            "distritos",
+        ]
 class DepartamentoSerializer(serializers.ModelSerializer):
-    """Serializer para Departamento con auditoría."""
     provincias = ProvinciaSerializer(many=True, read_only=True)
-    created_by_detail = serializers.SerializerMethodField()
     class Meta:
         model = Departamento
-        fields = ['id', 'nombre', 'codigo', 'provincias', 'is_active', 'created_by', 'created_by_detail', 'created_at', 'updated_at']    
-
-class EmpresaSerializer(serializers.ModelSerializer):
-    created_by_detail = serializers.SerializerMethodField()    
-    class Meta:
-        model = Empresa
-        fields = ['id', 'nombre', 'codigo', 'descripcion', 'is_active', 'created_by', 'created_by_detail', 'created_at', 'updated_at']    
-   
-class AreaSerializer(serializers.ModelSerializer):
-    created_by_detail = serializers.SerializerMethodField()    
-    class Meta:
-        model = Area
-        fields = ['id', 'nombre', 'tipo_area', 'is_active', 'created_by', 'created_by_detail', 'created_at', 'updated_at']    
-
+        fields = [
+            "id",
+            "nombre",
+            "codigo",
+            "provincias",
+        ]
+        
+        
 class ModuloSerializer(serializers.ModelSerializer):
-    areas = AreaSerializer(many=True, read_only=True)
-    created_by_detail = serializers.SerializerMethodField()
+    sede_nombre = serializers.CharField(source="sede.nombre", read_only=True)
     class Meta:
         model = Modulo
-        fields = ['id', 'sede', 'codigo', 'nombre', 'is_active', 'areas', 'created_by', 'created_by_detail', 'created_at', 'updated_at']    
-
-class SedeSerializer(serializers.ModelSerializer):
-    modulos = ModuloSerializer(many=True, read_only=True)
-    distrito_detail = DistritoSerializer(source='distrito', read_only=True)
-    empresa_detail = EmpresaSerializer(source='empresa', read_only=True)
-    created_by_detail = serializers.SerializerMethodField()
-    ubicacion = serializers.SerializerMethodField()
-    class Meta:
-        model = Sede
         fields = [
-            'id', 'nombre', 'codigo', 'direccion', 'distrito', 'distrito_detail',
-            'empresa', 'empresa_detail', 'ubicacion', 'is_active', 'modulos',
-            'created_by', 'created_by_detail', 'created_at', 'updated_at'
+            "id",
+            "sede",
+            "sede_nombre",
+            "nombre",
+            "is_active",
+            "created_at",
+            "updated_at",
         ]
-    
-
-class SedeListSerializer(serializers.ModelSerializer):
-    ubicacion = serializers.SerializerMethodField()
-    modulos_count = serializers.SerializerMethodField()
-    empresa_detail = EmpresaSerializer(source='empresa', read_only=True)
-    created_by_detail = serializers.SerializerMethodField()
+class SedeSerializer(serializers.ModelSerializer):
+    distrito_nombre = serializers.CharField(source="distrito.nombre", read_only=True)
+    provincia_nombre = serializers.CharField(source="distrito.provincia.nombre", read_only=True)
+    departamento_nombre = serializers.CharField(source="distrito.provincia.departamento.nombre", read_only=True)
+    modulos = ModuloSerializer(many=True, read_only=True)
     class Meta:
         model = Sede
         fields = [
-            'id', 'nombre', 'codigo', 'direccion', 'ubicacion', 'empresa', 'empresa_detail',
-            'is_active', 'modulos_count', 'created_by', 'created_by_detail', 'created_at'
+            "id",
+            "nombre",
+            "codigo",
+            "direccion",
+            "distrito",
+            "distrito_nombre",
+            "provincia_nombre",
+            "departamento_nombre",
+            "is_active",
+            "modulos",
+            "created_at",
+            "updated_at",
+        ]
+class SedeCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sede
+        fields = [
+            "nombre",
+            "codigo",
+            "direccion",
+            "distrito",
+        ]
+class ModuloCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Modulo
+        fields = [
+            "sede",
+            "nombre",
         ]

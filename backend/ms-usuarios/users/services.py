@@ -1,6 +1,7 @@
 from django.db import transaction
 from typing import Optional, Dict, Any
 from .repositories import UserRepository,DependenciaRepository,BDEmpleadosRepository
+from datetime import datetime
 import requests
 
 class BDEmpleadosService:
@@ -150,15 +151,11 @@ class DependencyService:
             "message": "Dependencia desactivada exitosamente."
         }
 
-class UserService:
-    @staticmethod
-    def apply_filters(filters: Optional[Dict[str, Any]] = None):
-        qs = UserRepository.base_queryset()
-        return UserRepository.apply_filters(qs, filters)       
+class UserService:     
     @staticmethod
     def list_users() -> Dict[str, Any]:
         usuarios=UserRepository.get_all()
-        if not usuarios.exists():       
+        if not usuarios:       
             return {
                     "success": False,
                     "error": "No hay usuarios registrados."                
@@ -180,18 +177,60 @@ class UserService:
             "data": result
         }
     @staticmethod
-    @staticmethod
-    def get_user_by_dni(dni: str) -> Dict[str, Any]:
-        result=UserRepository.get_by_dni(dni)
-        if not result:
+    def filter_users(filters: Dict[str, Any]):
+        dni = filters.get("dni")
+        cargo = filters.get("cargo")
+        role_id = filters.get("role_id")
+        sede_ids = filters.get("sede_ids")
+        dependencia_id = filters.get("dependencia_id")
+        es_usuario_sistema = filters.get("es_usuario_sistema")
+        fecha_desde = filters.get("fecha_desde")
+        fecha_hasta = filters.get("fecha_hasta")
+        search = filters.get("search")
+        if dni and len(dni) < 3:
             return {
                 "success": False,
-                "error": "Usuario no encontrado por DNI."                
-            }
+                "error": "El DNI debe tener al menos 3 caracteres."                
+            }         
+        if fecha_desde:
+            fecha_desde = datetime.strptime(fecha_desde, "%Y-%m-%d").date()
+        if fecha_hasta:
+            fecha_hasta = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
+        if fecha_desde and fecha_hasta and fecha_desde > fecha_hasta:
+            return {
+                "success": False,
+                "error": "La fecha inicial no puede ser mayor que la final.."                
+            }           
+        if sede_ids and isinstance(sede_ids, str):
+            sede_ids = [int(x) for x in sede_ids.split(",") if x.isdigit()]
+        if role_id:
+            role_id = int(role_id)
+        if dependencia_id:
+            dependencia_id = int(dependencia_id)
+        if es_usuario_sistema is not None:
+            if isinstance(es_usuario_sistema, str):
+                es_usuario_sistema = es_usuario_sistema.lower() == "true"
+        usuarios=UserRepository.filter_users(
+            dni=dni,
+            cargo=cargo,
+            role_id=role_id,
+            sede_ids=sede_ids,
+            dependencia_id=dependencia_id,
+            es_usuario_sistema=es_usuario_sistema,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            search=search,
+        )
+        if not usuarios:       
+            return {
+                    "success": False,
+                    "error": "No hay usuarios registrados."                
+                }
         return {
             "success": True,
-            "data": result
+            "data": usuarios
         }
+    
     @staticmethod
     @transaction.atomic
     def create_user(data: Dict[str, Any], sede_ids=None) -> Any:
@@ -217,6 +256,7 @@ class UserService:
         data["first_name"] = empleado.get("first_name")
         data["last_name"] = empleado.get("last_name")
         data["cargo"] = empleado.get("cargo")
+        data["empresa"] = empleado.get("empresa")
         UserRepository.create(data=data, sede_ids=sede_ids)
         es_usuario_sistema = data.get("es_usuario_sistema")             
         if es_usuario_sistema:

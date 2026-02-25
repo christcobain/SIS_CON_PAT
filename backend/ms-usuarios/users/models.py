@@ -13,6 +13,7 @@ class BDEmpleados(models.Model):
     last_name = models.CharField(max_length=150)
     cargo = models.CharField(max_length=150, blank=True)
     modulo= models.CharField(max_length=50, blank=True)
+    empresa = models.CharField(max_length=150, blank=True)
     is_active= models.BooleanField(default=True)
     class Meta:
         db_table = 'bdempleados'
@@ -25,7 +26,7 @@ class BDEmpleados(models.Model):
     def __str__(self):
         return f'{self.first_name} {self.last_name} ({self.dni})'
 
-#--dependencias: Administrativa, Operativa, informatica.
+#--dependencias: Administrativa, Operativa,Jurisdiccional, informatica.
 class Dependencia(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
     codigo = models.CharField(max_length=10, unique=True)
@@ -46,10 +47,11 @@ class Dependencia(models.Model):
 class User(AbstractUser):
     dni = models.CharField(max_length=8, unique=True, db_index=True)    
     cargo = models.CharField(max_length=150, blank=True)
-    role = models.ForeignKey(Role,on_delete=models.PROTECT,related_name='usuarios')
-    sedes = models.ManyToManyField(Sede,blank=True,related_name='usuarios')
     dependencia = models.ForeignKey(Dependencia,null=True,blank=True,on_delete=models.SET_NULL,related_name='usuarios')
+    sedes= models.ManyToManyField(Sede,related_name='usuarios')
     es_usuario_sistema = models.BooleanField(default=False)
+    role = models.ForeignKey(Role,on_delete=models.PROTECT,related_name='usuarios')
+    empresa = models.CharField(max_length=150, blank=True)
     fecha_baja = models.DateField(null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL,null=True,blank=True,on_delete=models.SET_NULL,related_name='usuarios_creados')
     REQUIRED_FIELDS = ['dni', 'first_name', 'last_name', 'role']
@@ -57,7 +59,6 @@ class User(AbstractUser):
         db_table = 'users_user'
         ordering = ['last_name', 'first_name']
         indexes = [
-            models.Index(fields=['dni']),
             models.Index(fields=['is_active']),
             models.Index(fields=['es_usuario_sistema']),
         ]

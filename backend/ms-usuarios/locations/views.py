@@ -2,72 +2,246 @@ from rest_framework import status
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from .services import SedeService, ModuloService, AreaService
-from .serializers import (SedeSerializer, SedeListSerializer,
-                          ModuloSerializer, AreaSerializer)
+from rest_framework.permissions import IsAuthenticated,AllowAny
+from .services import SedeService, ModuloService,DepartamentoService,ProvinciaService,DistritoService
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
+from .serializers import (
+    DepartamentoSerializer,ProvinciaSerializer,DistritoSerializer,SedeSerializer,SedeCreateUpdateSerializer,
+    ModuloSerializer,ModuloCreateUpdateSerializer
+)
+class DepartamentoViewSet(ViewSet):
+    permission_classes = [AllowAny]
+    @extend_schema(
+        tags=['Locations'],
+        summary="Listar departamentos",
+        description="Obtiene la lista de todos los departamentos con sus provincias y distritos.",
+        responses={200: DepartamentoSerializer(many=True)}
+    )
+    def list(self, request):
+        result = DepartamentoService.get_all()
+        if not result["success"]:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        serializer = DepartamentoSerializer(result["data"], many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Obtener departamento por ID",
+        description="Retorna el detalle de un departamento específico.",
+        responses={200: DepartamentoSerializer}
+    )
+    def retrieve(self, request, pk=None):
+        result = DepartamentoService.get__by_id(pk)
+        if not result['success']:
+            return Response({"success": False, "error": "Departamento no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = DepartamentoSerializer(result["data"])
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
+class ProvinciaViewSet(ViewSet):
+    permission_classes = [AllowAny]
+    @extend_schema(
+        tags=['Locations'],
+        summary="Listar provincias",
+        responses={200: ProvinciaSerializer(many=True)})   
+    def list(self, request):
+        result = ProvinciaService.get_all()
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)        
+        serializer=ProvinciaSerializer(result["data"], many=True)          
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Obtener provincia por ID",
+        responses={200: ProvinciaSerializer}
+    )
+    def retrieve(self, request, pk=None):
+        result = ProvinciaService.get__by_id(pk)
+        if not result["success"]:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)  
+        serializer = ProvinciaSerializer(result["data"],many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class DistritoViewSet(ViewSet):
+    permission_classes = [AllowAny]
+    @extend_schema(
+        tags=['Locations'],
+        summary="Listar distritos",
+        responses={200: DistritoSerializer(many=True)})
+    def list(self, request):
+        result = DistritoService.get_all()
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)        
+        serializer=DistritoSerializer(result["data"], many=True)          
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Obtener distrito por ID",
+        responses={200: DistritoSerializer}
+    )
+    def retrieve(self, request, pk=None):
+        result = DistritoService.get__by_id(pk)
+        if not result["success"]:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)  
+        serializer = DistritoSerializer(result["data"],many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class SedeViewSet(ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    @extend_schema(
+        tags=['Locations'],
+        summary="Listar sedes",
+        description="Obtiene la lista de sedes",
+        responses={200: SedeSerializer(many=True)}
+    )
     def list(self, request):
-        sedes = SedeService.list_sedes(request.query_params)
-        serializer = SedeListSerializer(sedes, many=True)
-        return Response({'success': True, 'data': serializer.data})
-
+        result = SedeService.get_all()
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)        
+        serializer=SedeSerializer(result["data"], many=True)          
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Obtener sede por ID",
+        description="Retorna el detalle de una sede específica.",
+        responses={200: SedeSerializer})
     def retrieve(self, request, pk=None):
-        sede = SedeService.get_sede(pk)
-        serializer = SedeSerializer(sede)
-        return Response({'success': True, 'data': serializer.data})
-
+        result = SedeService.get__by_id(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)        
+        serializer=SedeSerializer(result["data"], many=True)          
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Crear sede",
+        description="Crea una nueva sede.",
+        request=SedeCreateUpdateSerializer,
+        responses={201: SedeSerializer, 
+                   400: OpenApiTypes.OBJECT            
+        }
+    )
     def create(self, request):
-        serializer = SedeSerializer(data=request.data)
+        serializer = SedeCreateUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        sede = SedeService.create_sede(serializer.validated_data)
-        return Response({'success': True, 'data': SedeSerializer(sede).data}, status=status.HTTP_201_CREATED)
+        result = SedeService.create(serializer.validated_data)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_201_CREATED)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Actualizar sede",
+        description="Actualiza una sede.",
+        request=SedeCreateUpdateSerializer,
+        responses={201: SedeSerializer}
+    )
     def update(self, request, pk=None):
-        sede = SedeService.get_sede(pk)
-        serializer = SedeSerializer(sede, data=request.data, partial=True)
+        serializer = SedeCreateUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        sede = SedeService.update_sede(pk, serializer.validated_data)
-        return Response({'success': True, 'data': SedeSerializer(sede).data})
-    @action(detail=True, methods=['patch'], url_path='toggle-estado')
-    def toggle_estado(self, request, pk=None):
-        sede = SedeService.toggle_estado(pk)
-        return Response({'success': True, 'estado': sede.estado})
-
-    @action(detail=True, methods=['get'], url_path='modulos')
-    def get_modulos(self, request, pk=None):
-        modulos = ModuloService.list_by_sede(pk)
-        serializer = ModuloSerializer(modulos, many=True)
-        return Response({'success': True, 'data': serializer.data})
-
-
+        result = SedeService.update(pk, serializer.validated_data)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Activar sede",
+        description="Activar una sede",
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    @action(detail=True, methods=["patch"])
+    def activate(self, request, pk=None):
+        result = SedeService.activate(pk)   
+        if not result['success']:
+            return Response(result, status=status.HTTP_404_NOT_FOUND)        
+        return Response(result, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Desactivar sede",
+        description="Desactivar una sede",
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    @action(detail=True, methods=["patch"])
+    def deactivate(self, request, pk=None):
+        result = SedeService.deactivate_dependency(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_404_NOT_FOUND)        
+        return Response(result, status=status.HTTP_200_OK)
+        
 class ModuloViewSet(ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    @extend_schema(
+        tags=['Locations'],
+        summary="Listar modulos",
+        description="Obtiene la lista de modulos",
+        responses={200: ModuloSerializer(many=True)}
+    )
+    def list(self, request):
+        result = ModuloService.get_all()
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)        
+        serializer=ModuloSerializer(result["data"], many=True)          
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Obtener modulo por ID",
+        description="Retorna el detalle de un modulo específico.",
+        responses={200: ModuloSerializer})
+    def retrieve(self, request, pk=None):
+        result = ModuloService.get__by_id(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)        
+        serializer=ModuloSerializer(result["data"], many=True)          
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Crear Modulo",
+        description="Crea un nuevo Modulo.",
+        request=ModuloCreateUpdateSerializer,
+        responses={201: ModuloSerializer, 
+                   400: OpenApiTypes.OBJECT            
+        }
+    )
     def create(self, request):
-        serializer = ModuloSerializer(data=request.data)
+        serializer = ModuloCreateUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        modulo = ModuloService.create_modulo(serializer.validated_data)
-        return Response({'success': True, 'data': ModuloSerializer(modulo).data}, status=status.HTTP_201_CREATED)
-    @action(detail=True, methods=['patch'], url_path='toggle-estado')
-    def toggle_estado(self, request, pk=None):
-        modulo = ModuloService.toggle_estado(pk)
-        return Response({'success': True, 'estado': modulo.estado})
-    @action(detail=True, methods=['get'], url_path='areas')
-    def get_areas(self, request, pk=None):
-        areas = AreaService.list_by_modulo(pk)
-        serializer = AreaSerializer(areas, many=True)
-        return Response({'success': True, 'data': serializer.data})
-
-class AreaViewSet(ViewSet):
-    permission_classes = [IsAuthenticated]
-    def create(self, request):
-        serializer = AreaSerializer(data=request.data)
+        result = ModuloService.create(serializer.validated_data)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_201_CREATED)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Actualizar Modulo",
+        description="Actualiza un Modulo.",
+        request=ModuloCreateUpdateSerializer,
+        responses={201: ModuloSerializer}
+    )
+    def update(self, request, pk=None):
+        serializer = ModuloCreateUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        area = AreaService.create_area(serializer.validated_data)
-        return Response({'success': True, 'data': AreaSerializer(area).data}, status=status.HTTP_201_CREATED)
-    @action(detail=True, methods=['patch'], url_path='toggle-estado')
-    def toggle_estado(self, request, pk=None):
-        area = AreaService.toggle_estado(pk)
-        return Response({'success': True, 'estado': area.estado})
+        result = ModuloService.update(pk, serializer.validated_data)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Activar modulo",
+        description="Activar un modulo",
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    @action(detail=True, methods=["patch"])
+    def activate(self, request, pk=None):
+        result = ModuloService.activate(pk)   
+        if not result['success']:
+            return Response(result, status=status.HTTP_404_NOT_FOUND)        
+        return Response(result, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Desactivar modulo",
+        description="Desactivar un modulo",
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    @action(detail=True, methods=["patch"])
+    def deactivate(self, request, pk=None):
+        result = ModuloService.deactivate_dependency(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_404_NOT_FOUND)        
+        return Response(result, status=status.HTTP_200_OK)
+        
+    

@@ -1,5 +1,11 @@
 from rest_framework import serializers
 from .models import User,Dependencia,BDEmpleados
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+from .models import Dependencia
+from locations.models import Sede
+from roles.models import Role  
+User = get_user_model()
 
 class BDEmpleadosSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,26 +25,79 @@ class DependencyCreateUpdateSerializer(serializers.ModelSerializer):
             'nombre': {'validators': []},
             'codigo': {'validators': []},
         }
-
-class UserSerializer(serializers.ModelSerializer):
-    sedes = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=User.sedes.rel.model.objects.all(),
-        required=False
-    )
+class SedeSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sede
+        fields = [
+            "id",
+            "nombre",
+            "codigo"
+        ]
+class RoleSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = [
+            "id",
+            "name"
+        ]
+class CreatedBySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "first_name", "last_name"]
+class UserListSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(source="role.nombre", read_only=True)
+    dependencia = serializers.CharField(source="dependencia.nombre", read_only=True)
     class Meta:
         model = User
         fields = [
             "id",
-            "dni",    
-            "email",
-            "role",
-            "sedes",
+            "dni",
+            "first_name",
+            "last_name",  
+            "cargo",          
             "dependencia",
+            "empresa",
             "es_usuario_sistema",
-            'is_superuser',
-            "is_active",
+            "role",
+            "is_active"
         ]
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    role = RoleSimpleSerializer(read_only=True)
+    dependencia = DependencySerializer(read_only=True)
+    sedes = SedeSimpleSerializer(many=True, read_only=True)
+    created_by = CreatedBySerializer(read_only=True)
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "dni",
+            "first_name",
+            "last_name",
+            "cargo",            
+            "dependencia",
+            "sedes",
+            "empresa",
+            "created_by",
+            "es_usuario_sistema",
+            "role",
+            "is_active",
+            "date_joined",
+            "fecha_baja"
+        ]        
+class UserCreateSerializer(serializers.ModelSerializer):
+    sedes = serializers.PrimaryKeyRelatedField(many=True,queryset=Sede.objects.all(),
+        required=False)
+    class Meta:
+        model = User
+        fields = [
+            "dni",            
+            "dependencia",
+            "sedes",
+            "es_usuario_sistema",
+            "role",
+            "is_active"
+        ]    
 class UserUpdateSerializer(serializers.ModelSerializer):
     sedes = serializers.PrimaryKeyRelatedField(
         many=True,
@@ -54,25 +113,3 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "dependencia",
             "es_usuario_sistema",
         ]
-
-class UserListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = [
-            "id",
-            'dni',
-            "first_name",
-            "last_name",
-            'dependencia',
-            "role",
-            "es_usuario_sistema",
-            "is_active"
-        ]
-
-class UserDetailSerializer(serializers.ModelSerializer):
-    role = serializers.StringRelatedField()
-    dependencia = serializers.StringRelatedField()
-    sedes = serializers.StringRelatedField(many=True)
-    class Meta:
-        model = User
-        exclude = ["password"]
