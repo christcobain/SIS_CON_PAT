@@ -31,7 +31,6 @@ class SedeSimpleSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "nombre",
-            "codigo"
         ]
 class RoleSimpleSerializer(serializers.ModelSerializer):
     class Meta:

@@ -1,5 +1,6 @@
 from .repositories import (SedeRepository, ModuloRepository,
-                           DepartamentoRepository,ProvinciaRepository,DistritoRepository)
+                           DepartamentoRepository,ProvinciaRepository,DistritoRepository,
+                           UbicacionRepository)
 from typing import Optional, Dict, Any
 from django.db import transaction
 
@@ -89,8 +90,8 @@ class SedeService:
     @staticmethod
     @transaction.atomic
     def create(data: Dict[str, Any]) -> Dict[str, Any]:
-        sede=SedeService.get_by_name(data.get("nombre"))
-        if sede:
+        sede=SedeRepository.get_by_name(data.get("nombre"))      
+        if sede.get("success"):
             if sede.is_active:
                 return {
                     "success": False,
@@ -138,15 +139,17 @@ class SedeService:
     @staticmethod
     def activate(_id:int) -> Dict[str, Any]:
         sede=SedeRepository.get_by_id(_id)
-        if not sede.get("success"):
-            return sede
-        result=sede['data']
-        if result.is_active:
+        if not sede:
+            return {
+            "success": False,
+            "error": "Sede no encontrada."
+        }
+        if sede.is_active:
             return {
                 "success": False,
                 "error": "La sede ya se encuentra activa."                
             }
-        SedeRepository.activate(result)
+        SedeRepository.activate(sede)
         return {
             "success": True,
             "message": "Sede activada exitosamente."
@@ -154,20 +157,21 @@ class SedeService:
     @staticmethod
     def deactivate_dependency(_id:int) -> Dict[str, Any]:
         sede=SedeRepository.get_by_id(_id)
-        if not sede.get("success"):
-            return sede
-        result=sede['data']
-        if not result.is_active:
+        if not sede:
+            return {
+            "success": False,
+            "error": "Sede no encontrada."
+        }
+        if not sede.is_active:
             return {
                 "success": False,
                 "error": "La sede ya se encuentra inactiva."                
             }
-        SedeRepository.deactivate(result)
+        SedeRepository.deactivate(sede)
         return {
             "success": True,
             "message": "Sede desactivada exitosamente."
         }
-
 
 class ModuloService:
     @staticmethod
@@ -188,7 +192,7 @@ class ModuloService:
         if not byId:
             return {
                 "success": False,
-                "error": "Modulo no encontradp."                
+                "error": "Modulo no encontrado."                
             }
         return {
             "success": True,
@@ -258,33 +262,166 @@ class ModuloService:
     @staticmethod
     def activate(_id:int) -> Dict[str, Any]:
         modulo=ModuloRepository.get_by_id(_id)
-        if not modulo.get("success"):
-            return modulo
-        result=modulo['data']
-        if result.is_active:
+        if not modulo:
+            return {
+            "success": False,
+            "error": "Modulo no encontrado."
+        }
+        if modulo.is_active:
             return {
                 "success": False,
-                "error": "El modulo ya se encuentra activp."                
+                "error": "El modulo ya se encuentra activo."                
             }
-        ModuloRepository.activate(result)
+        ModuloRepository.activate(modulo)
         return {
             "success": True,
             "message": "Modulo activado exitosamente."
         }
     @staticmethod
     def deactivate_dependency(_id:int) -> Dict[str, Any]:
-        modulo=ModuloRepository.get_by_id(_id)
-        if not modulo.get("success"):
-            return modulo
-        result=modulo['data']
-        if not result.is_active:
+        modulo=ModuloRepository.get__by_id(_id)
+        if not modulo:
+            return {
+            "success": False,
+            "error": "Modulo no encontrado."
+        }
+        if not modulo.is_active:
             return {
                 "success": False,
                 "error": "El modulo  ya se encuentra inactivo."                
             }
-        ModuloRepository.deactivate(result)
+        ModuloRepository.deactivate(modulo)
         return {
             "success": True,
             "message": "Modulo desactivado exitosamente."
         }
 
+class UbicacionService:
+    @staticmethod
+    def get_all()-> Dict[str, Any]:
+        result=UbicacionRepository.get_all()     
+        if not result:
+            return {
+                "success": False,
+                "error": "No hay ubicaciones registradas."                
+            }      
+        return {
+            "success": True,
+            "data": result
+        }
+    @staticmethod
+    def get__by_id(id: int)-> Dict[str, Any]:
+        byId=UbicacionRepository.get_by_id(id)
+        if not byId:
+            return {
+                "success": False,
+                "error": "ubicacion no encontrado."                
+            }
+        return {
+            "success": True,
+            "data": byId
+        }    
+    @staticmethod
+    def get_by_name(nombre: str)-> Dict[str, Any]:
+        byId=UbicacionRepository.get_by_name(nombre)
+        if not byId:
+            return {
+                "success": False,
+                "error": "Ubicacion no encontrado."                
+            }
+        return {
+            "success": True,
+            "data": byId
+        }
+    @staticmethod
+    @transaction.atomic
+    def create(data: Dict[str, Any]) -> Dict[str, Any]:
+        ubicaciones=UbicacionRepository.get_by_name(data.get("nombre"))   
+        if ubicaciones:
+            if ubicaciones.is_active:
+                return {
+                    "success": False,
+                    "error": "Ya existe una Ubicacion activo con el mismo nombre."                
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Ya existe una Ubicacion inactivo con el mismo nombre. Por favor active la Ubicacion o use otro nombre."                
+                }
+        UbicacionRepository.create(data)
+        return {
+            "success": True,
+            "message": "Ubicacion creada exitosamente."
+        }
+    @staticmethod
+    @transaction.atomic
+    def update(_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        sede = UbicacionRepository.get_by_id(_id)
+        if not sede:
+            return {
+                "success": False,
+                "error": "Ubicacion no encontrado."
+            }        
+        new_name = data.get("nombre")
+        if new_name:
+            existing = UbicacionRepository.get_by_name(new_name)
+            if existing and existing.id != sede.id:
+                if existing.is_active:
+                    return {
+                        "success": False,
+                        "error": "Ya existe una Ubicacion Activa con el mismo nombre."
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": "Ya existe una Ubicacion Inactiva con el mismo nombre. Por favor active la Ubicacion o use otro nombre."
+                    }
+      
+        UbicacionRepository.update(sede, data)
+        return {
+            "success": True,
+            "message": "Ubicacion actualizada exitosamente."
+        } 
+    @staticmethod
+    def activate(_id:int) -> Dict[str, Any]:
+        tipoubicaciones=UbicacionRepository.get_by_id(_id)
+        if not tipoubicaciones:
+            return {
+            "success": False,
+            "error": "Ubicacion no encontrado."
+        }
+        if tipoubicaciones.is_active:
+            return {
+                "success": False,
+                "error": "Ubicacion ya se encuentra activa."                
+            }
+        UbicacionRepository.activate(tipoubicaciones)
+        return {
+            "success": True,
+            "message": "Ubicacion activada exitosamente."
+        }
+    @staticmethod
+    def deactivate_dependency(_id:int) -> Dict[str, Any]:
+        ubicacion=UbicacionRepository.get_by_id(_id)
+        if not ubicacion:
+            return {
+            "success": False,
+            "error": "Ubicacion no encontrado."
+        }
+        if not ubicacion.is_active:
+            return {
+                "success": False,
+                "error": "El Ubicacion  ya se encuentra inactivo."                
+            }
+        UbicacionRepository.deactivate(ubicacion)
+        return {
+            "success": True,
+            "message": "Ubicacion desactivado exitosamente."
+        }
+
+
+   
+    
+        
+        
+        

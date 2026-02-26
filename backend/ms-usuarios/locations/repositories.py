@@ -1,4 +1,4 @@
-from .models import Sede, Modulo,  Departamento, Provincia, Distrito,TipoUbicacion,Ubicacion
+from .models import Sede, Modulo,  Departamento, Provincia, Distrito,Ubicacion
 from django.db.models import QuerySet
 from django.db import transaction
 from typing import Optional, Dict, Any
@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any
 class DepartamentoRepository:
     @staticmethod
     def base_queryset() -> QuerySet:
-        return (Departamento.objects.select_related('created_by').prefetch_related(
+        return (Departamento.objects.prefetch_related(
                 'provincias',
                 'provincias__distritos',
                 'provincias__distritos__sedes')
@@ -21,7 +21,7 @@ class DepartamentoRepository:
 class ProvinciaRepository:
     @staticmethod
     def base_queryset() -> QuerySet:
-        return (Provincia.objects.select_related('departamento', 'created_by')
+        return (Provincia.objects.select_related('departamento')
             .prefetch_related('distritos','distritos__sedes'))
     @staticmethod
     def get_all():
@@ -33,7 +33,7 @@ class ProvinciaRepository:
 class DistritoRepository:
     @staticmethod
     def base_queryset() -> QuerySet:
-        return ( Distrito.objects.select_related('provincia','provincia__departamento','created_by')
+        return ( Distrito.objects.select_related('provincia','provincia__departamento')
             .prefetch_related('sedes'))
     @staticmethod
     def get_all():
@@ -49,10 +49,10 @@ class SedeRepository:
             .prefetch_related('modulos'))
     @staticmethod
     def get_all():
-        return SedeRepository.base_queryset().all()
+        return SedeRepository.base_queryset().all().order_by('id')
     @staticmethod
     def get_by_id(id: int):
-        return (SedeRepository.base_queryset().filter(pk=id).first())    
+        return (SedeRepository.base_queryset().filter(pk=id).first())
     @staticmethod
     def get_by_name(nombre: str) :
         return SedeRepository.base_queryset().filter(nombre__iexact=nombre).first()
@@ -87,10 +87,10 @@ class ModuloRepository:
                 'sede__distrito__provincia__departamento','created_by').prefetch_related('ubicaciones'))
     @staticmethod
     def get_all():
-        return ModuloRepository.base_queryset().all()
+        return ModuloRepository.base_queryset().all().order_by('id')
     @staticmethod
     def get_by_id(pk: int):
-        return (ModuloRepository.base_queryset().filter(pk=pk).first())    
+        return (ModuloRepository.base_queryset().filter(pk=pk).first()).order_by('id')
     @staticmethod
     def get_by_name(nombre: str):
         return ModuloRepository.base_queryset().filter(nombre__iexact=nombre).first()
@@ -118,43 +118,6 @@ class ModuloRepository:
         result.save(update_fields=['is_active'])
         return result
 
-class TipoUbicacionRepository:
-    @staticmethod
-    def base_queryset() -> QuerySet:
-        return (TipoUbicacion.objects.select_related('created_by').prefetch_related('ubicaciones'))
-    @staticmethod
-    def get_all():
-        return TipoUbicacionRepository.base_queryset().all()
-    @staticmethod
-    def get_by_id(pk: int):
-        return (TipoUbicacionRepository.base_queryset().filter(pk=pk).first())
-    @staticmethod
-    def get_by_name(nombre: str):
-        return TipoUbicacionRepository.base_queryset().filter(nombre__iexact=nombre).first()
-    @staticmethod
-    @transaction.atomic
-    def create(data: Dict[str, Any]) -> Optional[TipoUbicacion]:
-        result = TipoUbicacion(**data)
-        result.save()
-        return result
-    @staticmethod
-    @transaction.atomic
-    def update(result: TipoUbicacion, data: Dict[str, Any]) -> TipoUbicacion:
-        for key, value in data.items():
-            setattr(result, key, value)
-        result.save()
-        return result
-    @staticmethod
-    def activate(result: TipoUbicacion) -> TipoUbicacion:
-        result.is_active = True
-        result.save(update_fields=['is_active'])
-        return result
-    @staticmethod
-    def deactivate(result: TipoUbicacion) -> TipoUbicacion:
-        result.is_active = False
-        result.save(update_fields=['is_active'])
-        return result
- 
 class UbicacionRepository:
     @staticmethod
     def base_queryset() -> QuerySet:
@@ -166,7 +129,6 @@ class UbicacionRepository:
                 'modulo__sede__distrito',
                 'modulo__sede__distrito__provincia',
                 'modulo__sede__distrito__provincia__departamento',
-                'tipoubicacion',
                 'created_by'
             )
         )

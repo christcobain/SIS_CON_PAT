@@ -3,11 +3,12 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated,AllowAny
-from .services import SedeService, ModuloService,DepartamentoService,ProvinciaService,DistritoService
+from .services import (SedeService, ModuloService,DepartamentoService,
+                       ProvinciaService,DistritoService,UbicacionService)
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from .serializers import (
     DepartamentoSerializer,ProvinciaSerializer,DistritoSerializer,SedeSerializer,SedeCreateUpdateSerializer,
-    ModuloSerializer,ModuloCreateUpdateSerializer
+    ModuloSerializer,ModuloCreateUpdateSerializer,UbicacionSerializer,UbicacionCreateUpdateSerializer
 )
 class DepartamentoViewSet(ViewSet):
     permission_classes = [AllowAny]
@@ -32,7 +33,7 @@ class DepartamentoViewSet(ViewSet):
     def retrieve(self, request, pk=None):
         result = DepartamentoService.get__by_id(pk)
         if not result['success']:
-            return Response({"success": False, "error": "Departamento no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
         serializer = DepartamentoSerializer(result["data"])
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -57,7 +58,7 @@ class ProvinciaViewSet(ViewSet):
         result = ProvinciaService.get__by_id(pk)
         if not result["success"]:
             return Response(result, status=status.HTTP_400_BAD_REQUEST)  
-        serializer = ProvinciaSerializer(result["data"],many=True)
+        serializer = ProvinciaSerializer(result["data"])
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class DistritoViewSet(ViewSet):
@@ -81,7 +82,7 @@ class DistritoViewSet(ViewSet):
         result = DistritoService.get__by_id(pk)
         if not result["success"]:
             return Response(result, status=status.HTTP_400_BAD_REQUEST)  
-        serializer = DistritoSerializer(result["data"],many=True)
+        serializer = DistritoSerializer(result["data"])
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class SedeViewSet(ViewSet):
@@ -107,7 +108,7 @@ class SedeViewSet(ViewSet):
         result = SedeService.get__by_id(pk)
         if not result['success']:
             return Response(result, status=status.HTTP_400_BAD_REQUEST)        
-        serializer=SedeSerializer(result["data"], many=True)          
+        serializer=SedeSerializer(result["data"])          
         return Response(serializer.data, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Locations'],
@@ -187,7 +188,7 @@ class ModuloViewSet(ViewSet):
         result = ModuloService.get__by_id(pk)
         if not result['success']:
             return Response(result, status=status.HTTP_400_BAD_REQUEST)        
-        serializer=ModuloSerializer(result["data"], many=True)          
+        serializer=ModuloSerializer(result["data"])          
         return Response(serializer.data, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Locations'],
@@ -244,4 +245,83 @@ class ModuloViewSet(ViewSet):
             return Response(result, status=status.HTTP_404_NOT_FOUND)        
         return Response(result, status=status.HTTP_200_OK)
         
-    
+class UbicacionViewSet(ViewSet):
+    permission_classes = [AllowAny]
+    @extend_schema(
+        tags=['Locations'],
+        summary="Listar ubicaciones",
+        description="Obtiene la lista de ubicaciones",
+        responses={200: UbicacionSerializer(many=True)}
+    )
+    def list(self, request):
+        result = UbicacionService.get_all()
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)        
+        serializer=UbicacionSerializer(result["data"], many=True)          
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Obtener ubicacion por ID",
+        description="Retorna el detalle de una ubicacion específico.",
+        responses={200: UbicacionSerializer})
+    def retrieve(self, request, pk=None):
+        result = UbicacionService.get__by_id(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)        
+        serializer=UbicacionSerializer(result["data"])          
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Crear ubicaciones",
+        description="Crea una nueva ubicacion.",
+        request=UbicacionCreateUpdateSerializer,
+        responses={201: UbicacionSerializer, 
+                   400: OpenApiTypes.OBJECT            
+        }
+    )
+    def create(self, request):
+        serializer = UbicacionCreateUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = UbicacionService.create(serializer.validated_data)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_201_CREATED)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Actualizar ubicaciones",
+        description="Actualiza una ubicacion.",
+        request=UbicacionCreateUpdateSerializer,
+        responses={201: UbicacionSerializer}
+    )
+    def update(self, request, pk=None):
+        serializer = UbicacionCreateUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        result = UbicacionService.update(pk, serializer.validated_data)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Activar ubicaciones",
+        description="Activar una ubicacion",
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    @action(detail=True, methods=["patch"])
+    def activate(self, request, pk=None):
+        result = UbicacionService.activate(pk)   
+        if not result['success']:
+            return Response(result, status=status.HTTP_404_NOT_FOUND)        
+        return Response(result, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary="Desactivar ubicaciones",
+        description="Desactivar una ubicacion",
+        responses={200: OpenApiTypes.OBJECT}
+    )
+    @action(detail=True, methods=["patch"])
+    def deactivate(self, request, pk=None):
+        result = UbicacionService.deactivate_dependency(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_404_NOT_FOUND)        
+        return Response(result, status=status.HTTP_200_OK)
+        

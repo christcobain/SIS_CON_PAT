@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Departamento, Provincia, Distrito,Sede,Modulo
+from .models import Departamento, Provincia, Distrito,Sede,Modulo,Ubicacion
 
 class DistritoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -33,17 +33,15 @@ class DepartamentoSerializer(serializers.ModelSerializer):
         
         
 class ModuloSerializer(serializers.ModelSerializer):
-    sede_nombre = serializers.CharField(source="sede.nombre", read_only=True)
+  
     class Meta:
         model = Modulo
         fields = [
             "id",
-            "sede",
-            "sede_nombre",
             "nombre",
+            
             "is_active",
-            "created_at",
-            "updated_at",
+
         ]
 class SedeSerializer(serializers.ModelSerializer):
     distrito_nombre = serializers.CharField(source="distrito.nombre", read_only=True)
@@ -55,26 +53,26 @@ class SedeSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "nombre",
-            "codigo",
             "direccion",
             "distrito",
             "distrito_nombre",
             "provincia_nombre",
             "departamento_nombre",
             "is_active",
+            'created_by',
+            'created_at',
+            'updated_at',
             "modulos",
-            "created_at",
-            "updated_at",
         ]
 class SedeCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sede
         fields = [
             "nombre",
-            "codigo",
             "direccion",
             "distrito",
         ]
+        validators = [] 
 class ModuloCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Modulo
@@ -82,3 +80,23 @@ class ModuloCreateUpdateSerializer(serializers.ModelSerializer):
             "sede",
             "nombre",
         ]
+        validators = [] 
+        
+class UbicacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ubicacion
+        fields = [
+            "id",
+            "modulo",
+            "nombre",
+            "is_active",
+        ]
+        validators = []
+class UbicacionCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ubicacion
+        fields = [
+            "modulo",
+            "nombre",
+        ]
+        validators = []
