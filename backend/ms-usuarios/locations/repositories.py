@@ -1,4 +1,4 @@
-from .models import Sede, Modulo,  Departamento, Provincia, Distrito,Ubicacion
+from locations.models import Sede, Modulo,  Departamento, Provincia, Distrito,Ubicacion
 from django.db.models import QuerySet
 from django.db import transaction
 from typing import Optional, Dict, Any
@@ -45,8 +45,8 @@ class DistritoRepository:
 class SedeRepository:
     @staticmethod
     def base_queryset() -> QuerySet:
-        return (Sede.objects.select_related('distrito','distrito__provincia','distrito__provincia__departamento','created_by')
-            .prefetch_related('modulos'))
+        return (Sede.objects.select_related('distrito','distrito__provincia',
+                                            'distrito__provincia__departamento','created_by'))
     @staticmethod
     def get_all():
         return SedeRepository.base_queryset().all().order_by('id')
@@ -83,14 +83,13 @@ class SedeRepository:
 class ModuloRepository:
     @staticmethod
     def base_queryset() -> QuerySet:
-        return (Modulo.objects.select_related('sede','sede__distrito','sede__distrito__provincia',
-                'sede__distrito__provincia__departamento','created_by').prefetch_related('ubicaciones'))
+        return (Modulo.objects.select_related('created_by',))
     @staticmethod
     def get_all():
         return ModuloRepository.base_queryset().all().order_by('id')
     @staticmethod
     def get_by_id(pk: int):
-        return (ModuloRepository.base_queryset().filter(pk=pk).first()).order_by('id')
+        return (ModuloRepository.base_queryset().filter(pk=pk).first())
     @staticmethod
     def get_by_name(nombre: str):
         return ModuloRepository.base_queryset().filter(nombre__iexact=nombre).first()
@@ -121,15 +120,8 @@ class ModuloRepository:
 class UbicacionRepository:
     @staticmethod
     def base_queryset() -> QuerySet:
-        return (
-            Ubicacion.objects
-            .select_related(
-                'modulo',
-                'modulo__sede',
-                'modulo__sede__distrito',
-                'modulo__sede__distrito__provincia',
-                'modulo__sede__distrito__provincia__departamento',
-                'created_by'
+        return ( Ubicacion.objects.select_related(
+                'created_by',             
             )
         )
     @staticmethod

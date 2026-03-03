@@ -47,14 +47,15 @@ class Dependencia(models.Model):
 class User(AbstractUser):
     dni = models.CharField(max_length=8, unique=True, db_index=True)    
     cargo = models.CharField(max_length=150, blank=True)
+    modulo_rrhh=models.CharField(max_length=150, blank=True)
     dependencia = models.ForeignKey(Dependencia,null=True,blank=True,on_delete=models.SET_NULL,related_name='usuarios')
     sedes= models.ManyToManyField(Sede,related_name='usuarios')
     es_usuario_sistema = models.BooleanField(default=False)
     role = models.ForeignKey(Role,on_delete=models.PROTECT,related_name='usuarios')
-    empresa = models.CharField(max_length=150, blank=True)
+    empresa = models.CharField(max_length=150)
     fecha_baja = models.DateField(null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL,null=True,blank=True,on_delete=models.SET_NULL,related_name='usuarios_creados')
-    REQUIRED_FIELDS = ['dni', 'first_name', 'last_name', 'role']
+    is_active = models.BooleanField(default=True)
     class Meta:
         db_table = 'users_user'
         ordering = ['last_name', 'first_name']

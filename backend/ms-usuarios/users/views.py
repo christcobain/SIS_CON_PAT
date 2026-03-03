@@ -7,11 +7,15 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from .services import UserService,DependencyService,BDEmpleadosService
 from .serializers import (BDEmpleadosSerializer, UserListSerializer,UserDetailSerializer,UserCreateSerializer,UserUpdateSerializer,
                           DependencySerializer, DependencyCreateUpdateSerializer)
-
+from roles.permissions import IsSysAdmin
 from rest_framework.decorators import action
+from roles.permissions import HasJWTPermission
+
 
 class BDEmpleadosViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        perms = {'retrieve':[IsSysAdmin]}
+        return perms.get(self.action, [IsAuthenticated()])
     lookup_field = "dni"
     lookup_url_kwarg = "dni"
     @extend_schema(
@@ -34,7 +38,17 @@ class BDEmpleadosViewSet(ViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class DependencyViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        perms = {
+            'filters':[HasJWTPermission('ms-usuarios:users:view_dependencia')],
+            'list':[HasJWTPermission('ms-usuarios:users:view_dependencia')],
+            'retrieve':[HasJWTPermission('ms-usuarios:users:view_dependencia')],
+            'create':[IsSysAdmin()],
+            'update': [IsSysAdmin()],
+            'activate': [IsSysAdmin()],   
+            'deactivate': [IsSysAdmin()],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Users'],
         summary="Listar dependencias",
@@ -117,14 +131,24 @@ class DependencyViewSet(ViewSet):
         return Response(result, status=status.HTTP_200_OK)
 
 class UserViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        perms = {
+            'filters':           [HasJWTPermission('ms-usuarios:users:view_user')],
+            'list':           [HasJWTPermission('ms-usuarios:users:view_user')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_user')],
+            'create':         [IsSysAdmin()],
+            'update':           [IsSysAdmin()],
+            'activate':        [IsSysAdmin()],   
+            'deactivate':           [IsSysAdmin()],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Users'],
         summary="Listar usuarios filtrados",
         description="Obtiene la lista de usuarios con filtros dinámicos opcionales. "
                     "Se pueden combinar múltiples parámetros en la misma consulta.",
         parameters=[
-            OpenApiParameter("search", OpenApiTypes.STR, description="Buscar por nombres, apellidos, DNI, username o email"),
+            OpenApiParameter("search", OpenApiTypes.STR, description="Buscar por nombres, apellidos, DNI o email"),
             OpenApiParameter("es_usuario_sistema", OpenApiTypes.BOOL, description="Filtrar por tipo de usuario"),
 
             OpenApiParameter("is_active", OpenApiTypes.BOOL, description="Filtrar por activo/inactivo"),
@@ -157,7 +181,7 @@ class UserViewSet(ViewSet):
         summary="Listar usuarios",
         description="Obtiene la lista de usuarios con filtros opcionales.",
         parameters=[
-            OpenApiParameter("search", OpenApiTypes.STR, description="Buscar por nombres, apellidos, DNI o username"),
+            OpenApiParameter("search", OpenApiTypes.STR, description="Buscar por nombres, apellidos, DNI "),
             OpenApiParameter("es_usuario_sistema", OpenApiTypes.BOOL, description="Filtrar por tipo de usuario"),
             OpenApiParameter("is_active", OpenApiTypes.BOOL, description="Filtrar por estado"),
             OpenApiParameter("role", OpenApiTypes.INT, description="Filtrar por ID de rol"),
@@ -187,7 +211,7 @@ class UserViewSet(ViewSet):
     @extend_schema(
         tags=['Users'],
         summary="Crear usuario",
-        description="Crea un nuevo usuario. Si es usuario del sistema, se generará automáticamente username y password igual al DNI.",
+        description="Crea un nuevo usuario. Si es usuario del sistema, se generará automáticamente dni y password igual al DNI.",
         request=UserCreateSerializer,
         responses={201: UserDetailSerializer}
     )
@@ -223,7 +247,7 @@ class UserViewSet(ViewSet):
     @action(detail=True, methods=["patch"])
     def activate(self, request,pk=None):
         user = UserService.activate_user(pk)
-        if not user.get("success"):
+        if not user['success']:
             return Response(user, status=status.HTTP_404_NOT_FOUND)
         return Response(user, status=status.HTTP_200_OK)
     @extend_schema(
@@ -235,7 +259,7 @@ class UserViewSet(ViewSet):
     @action(detail=True, methods=["patch"])
     def deactivate(self, request, pk=None):
         user = UserService.deactivate_user(pk)
-        if not user.get("success"):
+        if not user['success']:
             return Response(user, status=status.HTTP_404_NOT_FOUND)
         return Response(user, status=status.HTTP_200_OK)
   

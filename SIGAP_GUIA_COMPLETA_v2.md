@@ -1894,23 +1894,23 @@ source ms-bienes/venv/bin/activate
 
 pip install django==6.0
 pip install djangorestframework==3.16.0
-pip install djangorestframework-simplejwt==5.4.0
-pip install django-cors-headers==4.4.0
-pip install psycopg2-binary==2.9.9
-pip install python-decouple==3.8
-pip install django-filter==24.3
-pip install Pillow==10.4.0
-pip install reportlab==4.2.0
-pip install requests==2.32.3
+pip install djangorestframework-simplejwt
+pip install django-cors-headers
+pip install psycopg2-binary
+pip install python-decouple
+pip install django-filter
+pip install Pillow
+pip install reportlab
+pip install requests
 
 pip freeze > ms-bienes/requirements.txt
 django-admin startproject config ms-bienes/
 cd ms-bienes/
-python manage.py startapp apps/catalogs
+python manage.py startapp catalogs
 python manage.py startapp apps/assets
 python manage.py startapp apps/maintenance
 python manage.py startapp apps/transfers
-python manage.py startapp apps/decommission
+python manage.py startapp apps/derecognition
 ```
 
 ## Paso 2: .env del ms-bienes
@@ -2133,31 +2133,25 @@ class Bien(models.Model):
     # Usuario de sistema que registra (ID del ms-usuarios)
     usuario_registra_id     = models.IntegerField()
     usuario_registra_nombre = models.CharField(max_length=200)
-
     observacion   = models.TextField(blank=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
     fecha_baja     = models.DateField(null=True, blank=True)
     motivo_baja    = models.TextField(blank=True)
-
     class Meta:
         db_table = 'assets_bien'
         ordering = ['-fecha_registro']
         verbose_name = 'Bien'
-
     def __str__(self):
         return f'{self.tipo_bien} - {self.codigo_patrimonial}'
 
-
 class BienCPU(models.Model):
-    """Datos técnicos específicos para CPU/Computadoras."""
     bien = models.OneToOneField(Bien, on_delete=models.CASCADE, related_name='cpu_detail')
-    hostname         = models.CharField(max_length=100, blank=True)
-    dominio_equipo   = models.CharField(max_length=100, blank=True)
-    direccion_ip     = models.GenericIPAddressField(null=True, blank=True)
-    direccion_mac    = models.CharField(max_length=17, blank=True)
-    tipo_computadora = models.ForeignKey(TipoCpu, on_delete=models.SET_NULL, null=True, blank=True)
-    funcion_cpu      = models.CharField(max_length=100, blank=True)
-
+    hostname = models.CharField(max_length=100, blank=True)
+    dominio_equipo= models.CharField(max_length=100, blank=True)
+    direccion_ip= models.GenericIPAddressField(null=True, blank=True)
+    direccion_mac= models.CharField(max_length=17, blank=True)
+    tipo_computadora= models.ForeignKey(TipoCpu, on_delete=models.SET_NULL, null=True,blank=True)
+    funcion_cpu  = models.CharField(max_length=100, blank=True)
     procesador_tipo      = models.CharField(max_length=100, blank=True)
     procesador_cantidad  = models.IntegerField(null=True, blank=True)
     procesador_nucleos   = models.IntegerField(null=True, blank=True)
@@ -2167,15 +2161,14 @@ class BienCPU(models.Model):
     arquitectura_bits  = models.ForeignKey(ArquitecturaBits, on_delete=models.SET_NULL, null=True, blank=True)
     licencia_so        = models.CharField(max_length=100, blank=True)
     version_office     = models.CharField(max_length=50, blank=True)
-    licencia_office    = models.CharField(max_length=100, blank=True)
+    licencia_offic= models.CharField(max_length=100, blank=True)
 
-    capacidad_ram_gb      = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
-    cantidad_modulos_ram  = models.IntegerField(null=True, blank=True)
-    tipo_disco            = models.ForeignKey(TipoDiscoDuro, on_delete=models.SET_NULL, null=True, blank=True)
-    capacidad_disco_gb    = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    cantidad_discos       = models.IntegerField(null=True, blank=True)
-    tipo_tarjeta_video    = models.CharField(max_length=100, blank=True)
-
+    capacidad_ram_gb = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    cantidad_modulos_ram = models.IntegerField(null=True, blank=True)
+    tipo_disco= models.ForeignKey(TipoDiscoDuro, on_delete=models.SET_NULL, null=True, blank=True)
+    capacidad_disco_gb = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cantidad_discos = models.IntegerField(null=True, blank=True)
+    tipo_tarjeta_video= models.CharField(max_length=100, blank=True)
     class Meta:
         db_table = 'assets_bien_cpu'
 

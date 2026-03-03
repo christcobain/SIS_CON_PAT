@@ -1,12 +1,10 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken
-from django.conf import settings
-
+from django.conf import settings as django_settings
 
 class CookieJWTAuthentication(JWTAuthentication):
-    """Lee el JWT Access Token desde la HttpOnly Cookie en vez del header."""
     def authenticate(self, request):
-        cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
+        cookie_name = getattr(django_settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
         raw_token = request.COOKIES.get(cookie_name)
         if raw_token is None:
             return None

@@ -26,3 +26,32 @@ git log --oneline
 git add .
 git commit -m "mensaje"
 git push
+
+## Paso 1: Crear proyecto y los microservicios
+
+```bash - powershell
+cd SIST_CON_PAT 
+# Aqui haces los mismos pasos para los microservicios cambiando el nombre obviamente
+python -m venv ms-bienes/venv 
+source ms-bienes/venv/bin/activate
+
+pip install django==6.0
+pip install djangorestframework==3.16.0
+pip install djangorestframework-simplejwt
+pip install django-cors-headers
+pip install psycopg2-binary
+pip install python-decouple
+pip install django-filter
+pip install Pillow
+pip install reportlab
+pip install requests
+
+pip freeze > requirements.txt
+django-admin startproject config .
+cd ms-bienes/
+python manage.py startapp catalogs
+python manage.py startapp assets
+python manage.py startapp maintenance
+python manage.py startapp transfers
+python manage.py startapp derecognition
+```

@@ -2,39 +2,43 @@ from django.db import transaction
 from typing import Optional, Dict, Any
 from .repositories import UserRepository,DependenciaRepository,BDEmpleadosRepository
 from datetime import datetime
+from rest_framework.exceptions import ValidationError, NotFound
 import requests
-
+from authentication.services import CredentialService
 class BDEmpleadosService:
     @staticmethod
     def get_by_dni(dni: str) -> Optional[Any]:
-        result=BDEmpleadosRepository.get_by_dni(dni)        
-        return result       
+        response=BDEmpleadosRepository.get_by_dni(dni)    
+        if not response:
+                raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')    
+        return response       
 class BDEmpleadosClient:
     BASE_URL = "http://127.0.0.1:8000/api/v1/users/empleados"
     @classmethod
     def get_by_dni(cls, dni: str) -> dict:
         try:
             response = requests.get(f"{cls.BASE_URL}/{dni}/", timeout=5)
-            if not response:
+            if response.status_code == 404:
+                raise NotFound(f'El DNI {dni} no existe en la base de datos.')
+            if response.status_code != 200:
+                raise ValidationError(f'Error consultando el sistema RRHH.')
+            data = response.json()
+            if not data.get("is_active", False):
                 return {
                     "success": False,
-                    "error": "El DNI no existe en la base de datos de RRHH."
+                    "error": "Empleado inactivo."
                 }
-            else:
-                if not response.is_active:
-                    return {
-                        "success": False,
-                        "error": "Empleado inactivo."
-                    }
+
             return {
                 "success": True,
-                "data": response
-                }
+                "data": data
+            }
         except requests.RequestException:
             return {
                 "success": False,
                 "error": "Error de conexión con el sistema RRHH."
             }
+            
 class DependencyService:
     @staticmethod
     def get_all_dependencies()-> Dict[str, Any]:#REPOSITORUES CON QURYSET
@@ -70,15 +74,9 @@ class DependencyService:
             dependencia=DependencyService.get_dependency_by_name(data.get("nombre"))  
             if dependencia:
                 if dependencia.is_active:
-                    return {
-                        "success": False,
-                        "error": "Ya existe una dependencia Activa con el mismo nombre."                
-                    }
+                    raise ValidationError(f'Ya existe una dependencia Activa con el mismo nombre.')  
                 else:
-                    return {
-                        "success": False,
-                        "error": "Ya existe una dependencia Inactiva con el mismo nombre. Por favor active la dependencia o use otro nombre."                
-                    }                    
+                    raise ValidationError(f'Ya existe una dependencia Inactiva con el mismo nombre. Por favor active la dependencia o use otro nombre.')                   
             DependenciaRepository.create(data)
             return {
                 "success": True,
@@ -94,24 +92,15 @@ class DependencyService:
     def update_dependency(dependency_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
         dependencia = DependenciaRepository.get_by_id(dependency_id)
         if not dependencia:
-            return {
-                "success": False,
-                "error": "Dependencia no encontrada."
-            }        
+            raise ValidationError(f'Dependencia no encontrada.')  
         new_name = data.get("nombre")
         if new_name:
             existing = DependencyService.get_dependency_by_name(new_name)
             if existing and existing.id != dependencia.id:
                 if existing.is_active:
-                    return {
-                        "success": False,
-                        "error": "Ya existe una dependencia Activa con el mismo nombre."
-                    }
+                    raise ValidationError(f'Ya existe una dependencia Activa con el mismo nombre.')  
                 else:
-                    return {
-                        "success": False,
-                        "error": "Ya existe una dependencia Inactiva con el mismo nombre. Por favor active la dependencia o use otro nombre."
-                    }
+                    raise ValidationError(f'Ya existe una dependencia Inactiva con el mismo nombre. Por favor active la dependencia o use otro nombre.')  
       
         DependenciaRepository.update(dependencia, data)
         return {
@@ -125,10 +114,7 @@ class DependencyService:
             return dependencia
         result=dependencia['data']
         if result.is_active:
-            return {
-                "success": False,
-                "error": "La dependencia ya se encuentra activa."                
-            }
+            raise ValidationError(f'La dependencia ya se encuentra activa.') 
         DependenciaRepository.activate(result)
         return {
             "success": True,
@@ -141,10 +127,7 @@ class DependencyService:
             return dependencia
         result=dependencia['data']
         if not result.is_active:
-            return {
-                "success": False,
-                "error": "La dependencia ya se encuentra inactiva."                
-            }
+            raise ValidationError(f'La dependencia ya se encuentra inactiva.') 
         DependenciaRepository.deactivate(result)
         return {
             "success": True,
@@ -156,10 +139,7 @@ class UserService:
     def list_users() -> Dict[str, Any]:
         usuarios=UserRepository.get_all()
         if not usuarios:       
-            return {
-                    "success": False,
-                    "error": "No hay usuarios registrados."                
-                }
+             raise NotFound(f'No hay usuarios registrados.')
         return {
             "success": True,
             "data": usuarios
@@ -168,10 +148,7 @@ class UserService:
     def get_user_by_id(user_id: int) -> Dict[str, Any]:
         result=UserRepository.get_by_id(user_id)
         if not result:
-            return {
-                "success": False,
-                "error": "Usuario no encontrado."                
-            }
+            raise NotFound(f'Usuario no encontrado.')
         return {
             "success": True,
             "data": result
@@ -188,19 +165,13 @@ class UserService:
         fecha_hasta = filters.get("fecha_hasta")
         search = filters.get("search")
         if dni and len(dni) < 3:
-            return {
-                "success": False,
-                "error": "El DNI debe tener al menos 3 caracteres."                
-            }         
+            raise NotFound(f'El DNI debe tener al menos 3 caracteres.')        
         if fecha_desde:
             fecha_desde = datetime.strptime(fecha_desde, "%Y-%m-%d").date()
         if fecha_hasta:
             fecha_hasta = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
-        if fecha_desde and fecha_hasta and fecha_desde > fecha_hasta:
-            return {
-                "success": False,
-                "error": "La fecha inicial no puede ser mayor que la final.."                
-            }           
+        if fecha_desde and fecha_hasta and fecha_desde > fecha_hasta:  
+            raise NotFound(f'La fecha inicial no puede ser mayor que la final.')      
         if sede_ids and isinstance(sede_ids, str):
             sede_ids = [int(x) for x in sede_ids.split(",") if x.isdigit()]
         if role_id:
@@ -222,15 +193,11 @@ class UserService:
             search=search,
         )
         if not usuarios:       
-            return {
-                    "success": False,
-                    "error": "No hay usuarios registrados."                
-                }
+            raise NotFound(f'No hay usuarios registrados.')  
         return {
             "success": True,
             "data": usuarios
         }
-    
     @staticmethod
     @transaction.atomic
     def create_user(data: Dict[str, Any], sede_ids=None) -> Any:
@@ -243,24 +210,23 @@ class UserService:
         usuario=UserRepository.get_by_dni(dni)
         if usuario:
             if usuario.is_active:
-                return {
-                    "success": False,
-                    "error": "Ya existe un usuario Activo con el mismo DNI."                
-                }
+                raise ValidationError(f'Ya existe un usuario Activo con el mismo DNI.')  
             else:
-                return {
-                    "success": False,
-                    "error": "Ya existe un usuario Inactivo con el mismo DNI. Por favor active el usuario o use otro DNI."
-                }
-        data['dni'] = empleado.get('dni')
-        data["first_name"] = empleado.get("first_name")
-        data["last_name"] = empleado.get("last_name")
-        data["cargo"] = empleado.get("cargo")
-        data["empresa"] = empleado.get("empresa")
-        UserRepository.create(data=data, sede_ids=sede_ids)
+                raise ValidationError(f'Ya existe un usuario Inactivo con el mismo DNI. Por favor active el usuario o use otro DNI.') 
+        data.update({
+            "username": dni, 
+            "password": dni,
+            "dni": empleado.get("dni") or "",
+            "first_name": empleado.get("first_name") or "",
+            "last_name": empleado.get("last_name") or "",
+            "cargo": empleado.get("cargo") or "",
+            "modulo_rrhh":empleado.get("modulo") or "",
+            "empresa": empleado.get("empresa") or "",  
+        })
+        user = UserRepository.create(data=data, sede_ids=sede_ids)
         es_usuario_sistema = data.get("es_usuario_sistema")             
         if es_usuario_sistema:
-            CredentialService.create(dni)             
+            CredentialService.create(user)             
         return {
             "success": True,
             "message": "Usuario creado exitosamente.",
@@ -270,43 +236,34 @@ class UserService:
     def update_user(user_id:int, data: Dict[str, Any], sede_ids=None) -> Dict[str, Any]:
         user = UserRepository.get_by_id(user_id)
         if not user:
-            return {
-                "success": False,
-                "error": "Usuario no encontrado."
-            }
+            raise ValidationError(f'Usuario no encontrado.')  
         UserRepository.update(user, data, sede_ids)                        
         return {
             "success": True,
             "message": "Usuario actualizado exitosamente.",
         }
     @staticmethod
-    def activate_user(user_id) -> Dict[str, Any]:
-        result=UserService.get_user_by_id(user_id)
-        if not result["success"]:
-            return result
-        result=result['data']
+    def activate_user(user_id:int) -> Dict[str, Any]:
+        result=UserRepository.get_by_id(user_id)
+        if not result:
+            raise ValidationError(f'Usuario no encontrado.') 
         if result.is_active:
-            return {
-                "success": False,
-                "error": "El usuario ya se encuentra activo."                
-            }
+            raise ValidationError(f'El usuario ya se encuentra activo.')  
         UserRepository.activate(result)
         return {
             "success": True,
             "message": "Usuario activado exitosamente."
         }
     @staticmethod
-    def deactivate_user(user_id) -> Dict[str, Any]:
-        result=UserService.get_user_by_id(user_id)
-        if not result["success"]:
-            return result
-        result=result['data']
+    def deactivate_user(user_id:int) -> Dict[str, Any]:
+        result=UserRepository.get_by_id(user_id)
+        if not result:
+            raise ValidationError(f'Usuario no encontrado.') 
         if not result.is_active:
-            return {
-                "success": False,
-                "error": "El usuario ya se encuentra desactivado."                
-            }
-        UserRepository.deactivate(user_id)
+            raise ValidationError(f'El usuario ya se encuentra desactivado.')
+        UserRepository.deactivate(result)
+        if result.get("es_usuario_sistema"):
+            CredentialService.deactivate_user
         return {
             "success": True,
             "message": "Usuario desactivado exitosamente."

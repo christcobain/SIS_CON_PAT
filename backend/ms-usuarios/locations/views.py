@@ -2,16 +2,30 @@ from rest_framework import status
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated,AllowAny
+from rest_framework.permissions import IsAuthenticated
+from roles.permissions import IsSysAdmin
 from .services import (SedeService, ModuloService,DepartamentoService,
                        ProvinciaService,DistritoService,UbicacionService)
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
+from drf_spectacular.utils import extend_schema,  OpenApiTypes
 from .serializers import (
     DepartamentoSerializer,ProvinciaSerializer,DistritoSerializer,SedeSerializer,SedeCreateUpdateSerializer,
     ModuloSerializer,ModuloCreateUpdateSerializer,UbicacionSerializer,UbicacionCreateUpdateSerializer
 )
+from roles.permissions import HasJWTPermission
+
+
 class DepartamentoViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        perms = {
+            'filters':           [HasJWTPermission('ms-usuarios:users:view_departamento')],
+            'list':           [HasJWTPermission('ms-usuarios:users:view_departamento')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_departamento')],
+            'create':         [IsSysAdmin()],
+            'update':           [IsSysAdmin()],
+            'activate':        [IsSysAdmin()],   
+            'deactivate':           [IsSysAdmin()],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Locations'],
         summary="Listar departamentos",
@@ -38,7 +52,17 @@ class DepartamentoViewSet(ViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class ProvinciaViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        perms = {
+            'filters':           [HasJWTPermission('ms-usuarios:users:view_provincia')],
+            'list':           [HasJWTPermission('ms-usuarios:users:view_provincia')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_provincia')],
+            'create':         [IsSysAdmin()],
+            'update':           [IsSysAdmin()],
+            'activate':        [IsSysAdmin()],   
+            'deactivate':           [IsSysAdmin()],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Locations'],
         summary="Listar provincias",
@@ -62,7 +86,17 @@ class ProvinciaViewSet(ViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class DistritoViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        perms = {
+            'filters':           [HasJWTPermission('ms-usuarios:users:view_distrito')],
+            'list':           [HasJWTPermission('ms-usuarios:users:view_distrito')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_distrito')],
+            'create':         [IsSysAdmin()],
+            'update':           [IsSysAdmin()],
+            'activate':        [IsSysAdmin()],   
+            'deactivate':           [IsSysAdmin()],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Locations'],
         summary="Listar distritos",
@@ -86,7 +120,17 @@ class DistritoViewSet(ViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class SedeViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        perms = {
+            'filters':           [HasJWTPermission('ms-usuarios:users:view_sede')],
+            'list':           [HasJWTPermission('ms-usuarios:users:view_sede')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_sede')],
+            'create':         [IsSysAdmin()],
+            'update':           [IsSysAdmin()],
+            'activate':        [IsSysAdmin()],   
+            'deactivate':           [IsSysAdmin()],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Locations'],
         summary="Listar sedes",
@@ -166,7 +210,17 @@ class SedeViewSet(ViewSet):
         return Response(result, status=status.HTTP_200_OK)
         
 class ModuloViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        perms = {
+            'filters':           [HasJWTPermission('ms-usuarios:users:view_modulo')],
+            'list':           [HasJWTPermission('ms-usuarios:users:view_modulo')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_modulo')],
+            'create':         [IsSysAdmin()],
+            'update':           [IsSysAdmin()],
+            'activate':        [IsSysAdmin()],   
+            'deactivate':           [IsSysAdmin()],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Locations'],
         summary="Listar modulos",
@@ -246,7 +300,17 @@ class ModuloViewSet(ViewSet):
         return Response(result, status=status.HTTP_200_OK)
         
 class UbicacionViewSet(ViewSet):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        perms = {
+            'filters':           [HasJWTPermission('ms-usuarios:users:view_ubicacion')],
+            'list':           [HasJWTPermission('ms-usuarios:users:view_ubicacion')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_ubicacion')],
+            'create':         [IsSysAdmin()],
+            'update':           [IsSysAdmin()],
+            'activate':        [IsSysAdmin()],   
+            'deactivate':           [IsSysAdmin()],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Locations'],
         summary="Listar ubicaciones",
@@ -279,13 +343,14 @@ class UbicacionViewSet(ViewSet):
                    400: OpenApiTypes.OBJECT            
         }
     )
-    def create(self, request):
-        serializer = UbicacionCreateUpdateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        result = UbicacionService.create(serializer.validated_data)
-        if not result['success']:
-            return Response(result, status=status.HTTP_400_BAD_REQUEST)
-        return Response(result, status=status.HTTP_201_CREATED)
+    def create(self, request):       
+            serializer = UbicacionCreateUpdateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)       
+            result = UbicacionService.create(serializer.validated_data)
+            print(result) 
+            if not result['success']:
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+            return Response(result, status=status.HTTP_201_CREATED)
     @extend_schema(
         tags=['Locations'],
         summary="Actualizar ubicaciones",

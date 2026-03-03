@@ -1,8 +1,9 @@
 from .repositories import (SedeRepository, ModuloRepository,
                            DepartamentoRepository,ProvinciaRepository,DistritoRepository,
                            UbicacionRepository)
-from typing import Optional, Dict, Any
+from typing import  Dict, Any
 from django.db import transaction
+from rest_framework.exceptions import ValidationError,NotFound
 
 class DepartamentoService:
     @staticmethod
@@ -55,10 +56,7 @@ class SedeService:
     def get_all()-> Dict[str, Any]:
         result=SedeRepository.get_all()     
         if not result:
-            return {
-                "success": False,
-                "error": "No hay sedes registradas."                
-            }      
+            raise ValidationError(f'No hay sedes registradas.')   
         return {
             "success": True,
             "data": result
@@ -67,10 +65,7 @@ class SedeService:
     def get__by_id(id: int)-> Dict[str, Any]:
         byId=SedeRepository.get_by_id(id)
         if not byId:
-            return {
-                "success": False,
-                "error": "Sede no encontrada."                
-            }
+            raise ValidationError(f'Sede no encontrada.')
         return {
             "success": True,
             "data": byId
@@ -79,10 +74,7 @@ class SedeService:
     def get_by_name(nombre: str)-> Dict[str, Any]:
         byId=SedeRepository.get_by_name(nombre)
         if not byId:
-            return {
-                "success": False,
-                "error": "Sede no encontrada."                
-            }
+            raise ValidationError(f'Sede no encontrada.')
         return {
             "success": True,
             "data": byId
@@ -91,17 +83,11 @@ class SedeService:
     @transaction.atomic
     def create(data: Dict[str, Any]) -> Dict[str, Any]:
         sede=SedeRepository.get_by_name(data.get("nombre"))      
-        if sede.get("success"):
+        if sede:
             if sede.is_active:
-                return {
-                    "success": False,
-                    "error": "Ya existe una sede activa con el mismo nombre."                
-                }
+                raise ValidationError(f'Ya existe una sede activa con el mismo nombre.')
             else:
-                return {
-                    "success": False,
-                    "error": "Ya existe una sede inactiva con el mismo nombre. Por favor active la sede o use otro nombre."                
-                }
+                raise ValidationError(f'a existe una sede inactiva con el mismo nombre. Por favor active la sede o use otro nombre.')
         SedeRepository.create(data)
         return {
             "success": True,
@@ -112,25 +98,15 @@ class SedeService:
     def update(_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
         sede = SedeRepository.get_by_id(_id)
         if not sede:
-            return {
-                "success": False,
-                "error": "Sede no encontrada."
-            }        
+            raise ValidationError(f'Sede no encontrada.')    
         new_name = data.get("nombre")
         if new_name:
             existing = SedeRepository.get_by_name(new_name)
             if existing and existing.id != sede.id:
                 if existing.is_active:
-                    return {
-                        "success": False,
-                        "error": "Ya existe una sede Activa con el mismo nombre."
-                    }
+                    raise ValidationError(f'Ya existe una sede Activa con el mismo nombre.')
                 else:
-                    return {
-                        "success": False,
-                        "error": "Ya existe una sede Inactiva con el mismo nombre. Por favor active la sede o use otro nombre."
-                    }
-      
+                    raise ValidationError(f'Ya existe una sede Inactiva con el mismo nombre. Por favor active la sede o use otro nombre.')
         SedeRepository.update(sede, data)
         return {
             "success": True,
@@ -140,15 +116,9 @@ class SedeService:
     def activate(_id:int) -> Dict[str, Any]:
         sede=SedeRepository.get_by_id(_id)
         if not sede:
-            return {
-            "success": False,
-            "error": "Sede no encontrada."
-        }
+            raise ValidationError(f'Sede no encontrada.') 
         if sede.is_active:
-            return {
-                "success": False,
-                "error": "La sede ya se encuentra activa."                
-            }
+            raise ValidationError(f'La sede ya se encuentra activa.') 
         SedeRepository.activate(sede)
         return {
             "success": True,
@@ -158,15 +128,9 @@ class SedeService:
     def deactivate_dependency(_id:int) -> Dict[str, Any]:
         sede=SedeRepository.get_by_id(_id)
         if not sede:
-            return {
-            "success": False,
-            "error": "Sede no encontrada."
-        }
+            raise ValidationError(f'Sede no encontrada.') 
         if not sede.is_active:
-            return {
-                "success": False,
-                "error": "La sede ya se encuentra inactiva."                
-            }
+            raise ValidationError(f'La sede ya se encuentra inactiva.')
         SedeRepository.deactivate(sede)
         return {
             "success": True,
@@ -279,7 +243,7 @@ class ModuloService:
         }
     @staticmethod
     def deactivate_dependency(_id:int) -> Dict[str, Any]:
-        modulo=ModuloRepository.get__by_id(_id)
+        modulo=ModuloRepository.get_by_id(_id)
         if not modulo:
             return {
             "success": False,
@@ -301,10 +265,7 @@ class UbicacionService:
     def get_all()-> Dict[str, Any]:
         result=UbicacionRepository.get_all()     
         if not result:
-            return {
-                "success": False,
-                "error": "No hay ubicaciones registradas."                
-            }      
+            raise ValidationError(f'No hay ubicaciones registradas.')  
         return {
             "success": True,
             "data": result
@@ -313,10 +274,7 @@ class UbicacionService:
     def get__by_id(id: int)-> Dict[str, Any]:
         byId=UbicacionRepository.get_by_id(id)
         if not byId:
-            return {
-                "success": False,
-                "error": "ubicacion no encontrado."                
-            }
+            raise ValidationError(f'ubicacion no encontrado.') 
         return {
             "success": True,
             "data": byId
@@ -325,10 +283,7 @@ class UbicacionService:
     def get_by_name(nombre: str)-> Dict[str, Any]:
         byId=UbicacionRepository.get_by_name(nombre)
         if not byId:
-            return {
-                "success": False,
-                "error": "Ubicacion no encontrado."                
-            }
+            raise ValidationError(f'Ubicacion no encontrado.') 
         return {
             "success": True,
             "data": byId
@@ -339,15 +294,9 @@ class UbicacionService:
         ubicaciones=UbicacionRepository.get_by_name(data.get("nombre"))   
         if ubicaciones:
             if ubicaciones.is_active:
-                return {
-                    "success": False,
-                    "error": "Ya existe una Ubicacion activo con el mismo nombre."                
-                }
+                raise ValidationError(f'Ya existe una Ubicacion activo con el mismo nombre.')
             else:
-                return {
-                    "success": False,
-                    "error": "Ya existe una Ubicacion inactivo con el mismo nombre. Por favor active la Ubicacion o use otro nombre."                
-                }
+                raise ValidationError(f'Ya existe una Ubicacion inactivo con el mismo nombre. Por favor active la Ubicacion o use otro nombre.')
         UbicacionRepository.create(data)
         return {
             "success": True,
@@ -357,25 +306,16 @@ class UbicacionService:
     @transaction.atomic
     def update(_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
         sede = UbicacionRepository.get_by_id(_id)
-        if not sede:
-            return {
-                "success": False,
-                "error": "Ubicacion no encontrado."
-            }        
+        if not sede:    
+            raise ValidationError(f'Ubicacion no encontrado.')  
         new_name = data.get("nombre")
         if new_name:
             existing = UbicacionRepository.get_by_name(new_name)
             if existing and existing.id != sede.id:
                 if existing.is_active:
-                    return {
-                        "success": False,
-                        "error": "Ya existe una Ubicacion Activa con el mismo nombre."
-                    }
+                    raise ValidationError(f'Ya existe una Ubicacion Activa con el mismo nombre.') 
                 else:
-                    return {
-                        "success": False,
-                        "error": "Ya existe una Ubicacion Inactiva con el mismo nombre. Por favor active la Ubicacion o use otro nombre."
-                    }
+                    raise ValidationError(f'Ya existe una Ubicacion Inactiva con el mismo nombre. Por favor active la Ubicacion o use otro nombre.') 
       
         UbicacionRepository.update(sede, data)
         return {
@@ -386,15 +326,9 @@ class UbicacionService:
     def activate(_id:int) -> Dict[str, Any]:
         tipoubicaciones=UbicacionRepository.get_by_id(_id)
         if not tipoubicaciones:
-            return {
-            "success": False,
-            "error": "Ubicacion no encontrado."
-        }
+            raise ValidationError(f'Ubicacion no encontrado.')
         if tipoubicaciones.is_active:
-            return {
-                "success": False,
-                "error": "Ubicacion ya se encuentra activa."                
-            }
+            raise ValidationError(f'Ubicacion ya se encuentra activa.')
         UbicacionRepository.activate(tipoubicaciones)
         return {
             "success": True,
@@ -404,15 +338,9 @@ class UbicacionService:
     def deactivate_dependency(_id:int) -> Dict[str, Any]:
         ubicacion=UbicacionRepository.get_by_id(_id)
         if not ubicacion:
-            return {
-            "success": False,
-            "error": "Ubicacion no encontrado."
-        }
+            raise ValidationError(f'Ubicacion no encontrado.')
         if not ubicacion.is_active:
-            return {
-                "success": False,
-                "error": "El Ubicacion  ya se encuentra inactivo."                
-            }
+            raise ValidationError(f'Ubicacion  ya se encuentra inactivo.')
         UbicacionRepository.deactivate(ubicacion)
         return {
             "success": True,

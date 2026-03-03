@@ -1,18 +1,20 @@
-from typing import Optional, Dict, Any,List
+from typing import Optional, List, Dict, Any
 from django.db.models import QuerySet
 from django.utils import timezone
-from .models import LoginSession, LoginAttempt, PasswordPolicy, PasswordHistory, Credential
-from django.contrib.auth.hashers import check_password
-from users.models import User
-from users.repositories import UserRepository
+from django.contrib.auth.hashers import check_password, make_password
+from .models import PasswordPolicy, PasswordHistory, Credential, LoginSession, LoginAttempt
+
 
 class PasswordPolicyRepository:
     @staticmethod
     def get_active() -> Optional[PasswordPolicy]:
-        return PasswordPolicy.get_active_policy()
+        return PasswordPolicy.objects.filter(is_active=True).order_by('-id').first()
     @staticmethod
     def get_all() -> QuerySet:
         return PasswordPolicy.objects.all()
+    @staticmethod
+    def get_by_id(id: int)-> Dict[str, Any]:
+        return (PasswordPolicy.objects.filter(pk=id).first())
     @staticmethod
     def create(data: Dict[str, Any]) -> PasswordPolicy:
         return PasswordPolicy.objects.create(**data)
@@ -24,124 +26,136 @@ class PasswordPolicyRepository:
         return instance
     @staticmethod
     def activate(policy: PasswordPolicy):
-        PasswordPolicyRepository.deactivate_all()
-        policy.active = True
-        policy.save(update_fields=["active"])
+        PasswordPolicy.objects.update(is_active=False)
+        policy.is_active = True
+        policy.save(update_fields=['is_active'])
     @staticmethod
-    def deactivate_all():
-        PasswordPolicy.objects.update(active=False)
+    def deactivate(policy: PasswordPolicy):
+        PasswordPolicy.objects.update(is_active=False)
+        policy.is_active = False
+        policy.save(update_fields=['is_active'])
     @staticmethod
-    def get_active_policy(cls) -> Optional[Any]:
-        return PasswordPolicy.get_active_policy(cls)
-    @staticmethod
-    def validate_password(password: str) -> bool:
-        return PasswordPolicyRepository.get_active_policy(password)
-       
+    def validate_password(password: str) -> List[str]:
+        policy = PasswordPolicyRepository.get_active()
+        if not policy:
+            return []
+        return policy.validate_password(password)
+
 class PasswordHistoryRepository:
     @staticmethod
-    def create(user, hashed_password: str) -> PasswordHistory:
+    def create(user, plain_password: str) -> PasswordHistory:
         return PasswordHistory.objects.create(
             user=user,
-            hashed_password=hashed_password
+            hashed_password=make_password(plain_password),
         )
     @staticmethod
-    def get_recent(user, limit: int) -> List[PasswordHistory]:
+    def get_recent(user, limit: int) -> QuerySet:
         return PasswordHistory.objects.filter(user=user).order_by('-created_at')[:limit]
     @staticmethod
-    def is_password_in_history(user, plain_password: str, limit: int = 3) -> bool:
-        recent = PasswordHistoryRepository.get_recent(user, limit)
-        for history_entry in recent:
-            if user.check_password(plain_password):                
-                if check_password(plain_password, history_entry.hashed_password):
-                    return True
-        return False
+    def is_password_in_history(user, plain_password: str, limit: int = 5) -> bool:
+        policy = PasswordPolicyRepository.get_active()
+        count = policy.history_count if policy else limit
+        recent = PasswordHistoryRepository.get_recent(user, count)
+        return any(
+            check_password(plain_password, entry.hashed_password)
+            for entry in recent
+        )
 
 class CredentialRepository:
-    MAX_FAILED_ATTEMPTS = 4
+    MAX_FAILED_ATTEMPTS = 3
     @staticmethod
-    def get_user_credential(user) -> Optional[Credential]:
-        return Credential.objects.filter(user=user).first()
+    def get_by_user(user) -> Optional[Credential]:
+        return Credential.objects.filter(user=user).select_related('user').first()
+    @staticmethod
+    def get_by_username(username) -> Optional[Credential]:
+        return (
+            Credential.objects
+            .select_related("user")
+            .filter(user__username=username)
+            .first()
+        )
+    @staticmethod
+    def get_by_id(user_id: int) -> Optional[Credential]:
+        return (Credential.objects.filter(user_id=user_id).first())
     @staticmethod
     def create(user, **kwargs) -> Credential:
         return Credential.objects.create(user=user, **kwargs)
     @staticmethod
-    def increment_failed_attempts(user):
-        credential = CredentialRepository.get_user_credential(user)
+    def after_password_change(credential):
+        # credential = user.credential
+        credential.force_password_change = False
+        credential.last_password_change = timezone.now()
+        credential.failed_attempts = 0
+        credential.is_locked=False
+        credential.save(update_fields=[
+            "force_password_change",
+            "last_password_change",
+            "failed_attempts",
+            "is_locked",
+        ])
+    @staticmethod
+    def increment_failed_attempts(credential):
         credential.failed_attempts += 1
         if credential.failed_attempts >= CredentialRepository.MAX_FAILED_ATTEMPTS:
             credential.is_locked = True
-            credential.lock_until = timezone.now()
-        credential.save(update_fields=["failed_attempts", "is_locked", "lock_until"])
-    @staticmethod
-    def reset_attempts(user):        
-        LoginSessionRepository.logout_all_user_sessions(user)   
-    @staticmethod
-    def reset_password(user,new_password):
-        user = UserRepository.get_by_dni(user.dniid)
-        Credential.objects.filter(user=user).update(
-            force_password_change=True,
-            last_password_change=timezone.now(),
-            failed_attempts=0,
-            is_locked=False,
-            lock_until=None
-        )        
-        user.set_password(new_password)
-        user.save(update_fields=["password"])
-            
-    @staticmethod
-    def force_password_change(user, value: bool = True):
-        Credential.objects.filter(user=user).update(
-            force_password_change=value
-        )
-    @staticmethod
-    def update_password_change_date(user):
-        Credential.objects.filter(user=user).update(
-            last_password_change=timezone.now()
-        )    
+        credential.updated_at = timezone.now()
+        credential.save(update_fields=[
+            "failed_attempts",
+            "is_locked",
+            "updated_at",
+        ])
+        return credential
     @staticmethod
     def activate(user):
-        Credential.objects.filter(user=user).update(
-            active=True
-        )    
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+        return user
     @staticmethod
     def deactivate(user):
-        Credential.objects.filter(user=user).update(
-            active=False
-        )
+        user.is_active = False
+        user.save(update_fields=['is_active'])
+        return user
+    @staticmethod
+    def set_multiple_sessions(credential, allow: bool):
+        credential.allow_multiple_sessions = allow
+        credential.save(update_fields=["allow_multiple_sessions"])  
     @staticmethod
     def is_password_expired(user) -> bool:
-        credential = CredentialRepository.get_user_credential(user)
-        return credential.is_password_expired()
+        credential = CredentialRepository.get_by_user(user)
+        return credential.is_password_expired() if credential else False
     @staticmethod
-    def days_until_expiry(user):
-        credential = CredentialRepository.get_user_credential(user)
-        return credential.days_until_expiry()
+    def days_until_expiry(user) -> Optional[int]:
+        credential = CredentialRepository.get_by_user(user)
+        return credential.days_until_expiry() if credential else None
     @staticmethod
     def needs_password_warning(user) -> bool:
-        credential = CredentialRepository.get_user_credential(user)
-        return credential.needs_password_warning()
+        credential = CredentialRepository.get_by_user(user)
+        return credential.needs_password_warning() if credential else False
 
 class LoginSessionRepository:
     @staticmethod
-    def create(user, ip_address: str, device_info: str, jwt_token_hash: str):
+    def create(user, ip_address: str, device_info: str, jwt_token_hash: str) -> LoginSession:
         return LoginSession.objects.create(
             user=user,
             ip_address=ip_address,
             device_info=device_info,
             jwt_token_hash=jwt_token_hash,
-            status="active"
+            status='active',
         )
     @staticmethod
-    def get_active_sessions(user) -> QuerySet:
-        return LoginSession.objects.filter(user=user, status="active")
+    def get_active_sessions(dni: str | None = None):
+        qs = LoginSession.objects.filter(status="active").select_related("user")
+        if dni:
+            qs = qs.filter(user__dni=dni)
+        return qs
     @staticmethod
     def close(session: LoginSession):
-        session.status = "logout"
+        session.status = 'logout'
         session.logout_at = timezone.now()
-        session.save(update_fields=["status", "logout_at"])
+        session.save(update_fields=['status', 'logout_at'])
     @staticmethod
     def logout_all_user_sessions(user, except_session_id=None):
-        qs = LoginSession.objects.filter(user=user, status__in=['active', 'success'])
+        qs = LoginSession.objects.filter(user=user, status='active')
         if except_session_id:
             qs = qs.exclude(id=except_session_id)
         qs.update(status='logout', logout_at=timezone.now())
@@ -149,33 +163,26 @@ class LoginSessionRepository:
 class LoginAttemptRepository:
     @staticmethod
     def create(
-        username: str,
-        ip_address: str,
-        device_info: str,
-        attempt_type: str,
-        success: bool,
-        error_message: str = ""
-    ) -> LoginAttempt:
+        username: str,ip_address: str,device_info: str,attempt_type: str,
+        success: bool,error_message: str = '') -> LoginAttempt:
         return LoginAttempt.objects.create(
             username=username,
             ip_address=ip_address,
             device_info=device_info,
             attempt_type=attempt_type,
             success=success,
-            error_message=error_message
+            error_message=error_message,
         )
     @staticmethod
     def get_recent_attempts(username: str, minutes: int) -> QuerySet:
         threshold = timezone.now() - timezone.timedelta(minutes=minutes)
-        return LoginAttempt.objects.filter(
-            username=username,
-            attempted_at__gte=threshold
-        )
+        return LoginAttempt.objects.filter(username=username, attempted_at__gte=threshold)
+
     @staticmethod
     def count_failed_attempts(username: str, minutes: int) -> int:
         threshold = timezone.now() - timezone.timedelta(minutes=minutes)
         return LoginAttempt.objects.filter(
             username=username,
             success=False,
-            attempted_at__gte=threshold
+            attempted_at__gte=threshold,
         ).count()

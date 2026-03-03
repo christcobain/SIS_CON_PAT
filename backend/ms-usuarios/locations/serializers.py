@@ -30,24 +30,46 @@ class DepartamentoSerializer(serializers.ModelSerializer):
             "codigo",
             "provincias",
         ]
-        
-        
 class ModuloSerializer(serializers.ModelSerializer):
-  
     class Meta:
         model = Modulo
         fields = [
             "id",
             "nombre",
-            
             "is_active",
-
+            "created_at",
+            "updated_at",
         ]
+class ModuloCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Modulo
+        fields = [
+            "nombre",
+        ]
+class UbicacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ubicacion
+        fields = [
+            "id",
+            "nombre",
+            "descripcion",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+class UbicacionCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ubicacion
+        fields = [
+            "nombre",
+            "descripcion",
+        ]
+        validators = []
 class SedeSerializer(serializers.ModelSerializer):
     distrito_nombre = serializers.CharField(source="distrito.nombre", read_only=True)
     provincia_nombre = serializers.CharField(source="distrito.provincia.nombre", read_only=True)
     departamento_nombre = serializers.CharField(source="distrito.provincia.departamento.nombre", read_only=True)
-    modulos = ModuloSerializer(many=True, read_only=True)
+    ubicaciones = UbicacionSerializer(many=True, read_only=True)
     class Meta:
         model = Sede
         fields = [
@@ -59,11 +81,11 @@ class SedeSerializer(serializers.ModelSerializer):
             "provincia_nombre",
             "departamento_nombre",
             "is_active",
-            'created_by',
-            'created_at',
-            'updated_at',
-            "modulos",
-        ]
+            "created_by",
+            "created_at",
+            "updated_at",
+            "ubicaciones",
+        ]        
 class SedeCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sede
@@ -71,32 +93,10 @@ class SedeCreateUpdateSerializer(serializers.ModelSerializer):
             "nombre",
             "direccion",
             "distrito",
-        ]
-        validators = [] 
-class ModuloCreateUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Modulo
-        fields = [
-            "sede",
-            "nombre",
-        ]
-        validators = [] 
+        ]       
         
-class UbicacionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Ubicacion
-        fields = [
-            "id",
-            "modulo",
-            "nombre",
-            "is_active",
-        ]
-        validators = []
-class UbicacionCreateUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Ubicacion
-        fields = [
-            "modulo",
-            "nombre",
-        ]
-        validators = []
+        
+        
+        
+        
+        

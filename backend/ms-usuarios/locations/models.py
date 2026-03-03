@@ -65,7 +65,6 @@ class Sede(models.Model):
         return self.nombre  
 ##-NCPP,CIVIL,LFAGRANCIA,--
 class Modulo(models.Model):
-    sede = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='modulos')
     nombre = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='modulos_creados')
@@ -79,27 +78,19 @@ class Modulo(models.Model):
         ]
     def __str__(self):
         return f'{self.sede.nombre} - {self.nombre}'
-
-#("JUZGADO", "Juzgado"),
-        # ("OFICINA", "Oficina"),
-        # ("SALA", "Sala de Audiencia"),
-        # ("POOL", "Pool"),
-        # ("COORDINACION", "Coordinación"),
-        # ("ALMACEN", "Almacén"),
-
 #---pool especialistas audiencia,pool espcausa, pool asistentes,area_informatica, administracion, subadministracion,coordinacion
 ## 1er juzgado civil,juzgadi jip, etc
 class Ubicacion(models.Model):
-    modulo = models.ForeignKey(Modulo,on_delete=models.CASCADE,related_name="ubicaciones")
-    nombre = models.CharField(max_length=200)
+    nombre = models.CharField(max_length=250)
+    descripcion=models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='choices_creados')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)  
     class Meta:
-        db_table = "locations_ubicacion"
-        indexes = [
-            models.Index(fields=["modulo"]),
-            models.Index(fields=["is_active"]),        ]
+        db_table = 'locations_ubicacion'
+        unique_together = ['nombre']
+        ordering = ['nombre']
     def __str__(self):
-        return f"{self.modulo.nombre} - {self.nombre}"
+        return f"{self.nombre} - {self.descripcion} "
+    

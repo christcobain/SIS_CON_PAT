@@ -11,7 +11,7 @@ class BDEmpleadosSerializer(serializers.ModelSerializer):
     class Meta:
         model = BDEmpleados
         fields = ['id', 'dni', 'escalafon', 
-                  'first_name', 'last_name', 'cargo', 'modulo', 'is_active']
+                  'first_name', 'last_name', 'cargo', 'modulo','empresa', 'is_active']
 
 class DependencySerializer(serializers.ModelSerializer):
     class Meta:
@@ -53,7 +53,8 @@ class UserListSerializer(serializers.ModelSerializer):
             "dni",
             "first_name",
             "last_name",  
-            "cargo",          
+            "cargo",  
+            "modulo_rrhh",        
             "dependencia",
             "empresa",
             "es_usuario_sistema",
@@ -73,7 +74,8 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "dni",
             "first_name",
             "last_name",
-            "cargo",            
+            "cargo",    
+            "modulo_rrhh" ,        
             "dependencia",
             "sedes",
             "empresa",
@@ -106,7 +108,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [            
-            "cargo",
             "role",
             "sedes",
             "dependencia",

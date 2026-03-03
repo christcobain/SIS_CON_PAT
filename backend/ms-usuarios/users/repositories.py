@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any,List
 from datetime import date
 from .models import User,Dependencia,BDEmpleados
 
+
 class BDEmpleadosRepository:
     @staticmethod
     def get_by_dni(dni: str) -> Optional[BDEmpleados]:
@@ -57,6 +58,9 @@ class UserRepository:
     def get_by_id(user_id: int) -> Optional[User]:
         return (UserRepository.base_queryset().filter(pk=user_id).first())
     @staticmethod
+    def get_by_dni(dni: int) -> Optional[User]:
+        return (UserRepository.base_queryset().filter(dni=dni).first())
+    @staticmethod
     def filter_users(
         dni: Optional[str] = None,
         cargo: Optional[str] = None,
@@ -99,6 +103,8 @@ class UserRepository:
         user = User(**data)
         if password:
             user.set_password(password)
+        else:
+            user.set_unusable_password()
         user.save()
         if sede_ids:
             user.sedes.set(sede_ids)

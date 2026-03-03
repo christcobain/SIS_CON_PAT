@@ -7,17 +7,17 @@ from users.models import User
 class PasswordPolicy(models.Model):
     name = models.CharField(max_length=100, default='Default')
     min_length = models.PositiveSmallIntegerField(default=10)
-    require_upper = models.BooleanField(default=True)
+    require_upper = models.BooleanField(default=True,null=False)
     require_lower = models.BooleanField(default=True)
     require_digit = models.BooleanField(default=True)
     require_special = models.BooleanField(default=True)
     expiration_days = models.PositiveSmallIntegerField(default=45)
     warning_days = models.PositiveSmallIntegerField(default=4)
-    history_count = models.PositiveSmallIntegerField(default=5)
-    active = models.BooleanField(default=True)
+    history_count = models.PositiveSmallIntegerField(default=5)    
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='auth_passwordpolicies_created')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
     class Meta:
         db_table = 'auth_passwordpolicy'
         ordering = ['-created_at']
@@ -25,7 +25,7 @@ class PasswordPolicy(models.Model):
         return self.name
     @classmethod
     def get_active_policy(cls):
-        return cls.objects.filter(active=True).order_by('-id').first()
+        return cls.objects.filter(is_active=True).order_by('-id').first()
     def validate_password(self, password):
         errors = []
         if len(password) < self.min_length:
@@ -40,21 +40,31 @@ class PasswordPolicy(models.Model):
             errors.append('Debe incluir carácter especial.')
         return errors
 
+class PasswordHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='auth_password_histories')
+    hashed_password = models.CharField(max_length=256)
+    created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        db_table = 'auth_passwordhistory'
+        ordering = ['-created_at']
+    def __str__(self):
+        return f'PasswordHistory user={self.user_id}'
+
 class Credential(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='credential')
-    active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
     force_password_change = models.BooleanField(default=True)
     last_password_change = models.DateTimeField(null=True, blank=True)
     allow_multiple_sessions = models.BooleanField(default=False)
     is_locked = models.BooleanField(default=False)
     failed_attempts = models.PositiveSmallIntegerField(default=0)
-    lock_until = models.DateTimeField(null=True, blank=True)
+    # lock_until = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     class Meta:
         db_table = 'auth_credential'
     def __str__(self):
-        return f'Credential {self.user.username}'
+        return f'{self.user.username}'
     def is_password_expired(self):
         policy = PasswordPolicy.get_active_policy()
         if not policy or not self.last_password_change:
@@ -76,16 +86,6 @@ class Credential(models.Model):
         if days_left is None:
             return False
         return days_left <= policy.warning_days and not self.is_password_expired()
-
-class PasswordHistory(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='auth_password_histories')
-    hashed_password = models.CharField(max_length=256)
-    created_at = models.DateTimeField(auto_now_add=True)
-    class Meta:
-        db_table = 'auth_passwordhistory'
-        ordering = ['-created_at']
-    def __str__(self):
-        return f'PasswordHistory user={self.user_id}'
 
 class LoginSession(models.Model):
     STATUS_CHOICES = [
