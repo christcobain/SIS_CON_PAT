@@ -143,6 +143,12 @@ class LoginSessionRepository:
             status='active',
         )
     @staticmethod
+    def get_active_session_by_user(user) -> Optional['LoginSession']:
+        return LoginSession.objects.filter(
+            user=user,
+            status='active'
+        ).first()
+    @staticmethod
     def get_active_sessions(dni: str | None = None):
         qs = LoginSession.objects.filter(status="active").select_related("user")
         if dni:

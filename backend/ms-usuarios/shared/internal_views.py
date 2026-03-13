@@ -9,7 +9,7 @@ from roles.permissions import IsSysAdmin
 
 
 class InternalPermissionsView(APIView):
-    permission_classes     = [IsSysAdmin,IsAuthenticated]
+    permission_classes     = []
     def get(self, request):
         service_key  = request.headers.get('X-Service-Key', '')
         expected_key = getattr(settings, 'SERVICE_SYNC_KEY', '')

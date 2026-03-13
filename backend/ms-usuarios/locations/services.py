@@ -1,10 +1,97 @@
-from .repositories import (SedeRepository, ModuloRepository,
+from .repositories import (EmpresaRepository,SedeRepository, ModuloRepository,
                            DepartamentoRepository,ProvinciaRepository,DistritoRepository,
                            UbicacionRepository)
 from typing import  Dict, Any
 from django.db import transaction
 from rest_framework.exceptions import ValidationError,NotFound
 
+
+
+class EmpresaService:
+    @staticmethod
+    def get_all() -> Dict[str, Any]:
+        result = EmpresaRepository.get_all()
+        if not result.exists():
+            return {
+                'success': False,
+                'error': 'No hay empresas registradas.'
+            }
+        return {'success': True, 'data': result}
+    @staticmethod
+    def get_by_id(empresa_id: int) -> Dict[str, Any]:
+        empresa = EmpresaRepository.get_by_id(empresa_id)
+        if not empresa:
+            return {'success': False, 'error': 'Empresa no encontrada.'}
+        return {'success': True, 'data': empresa}
+    @staticmethod
+    @transaction.atomic
+    def create(data: Dict[str, Any]) -> Dict[str, Any]:
+        if EmpresaRepository.get_by_nombre(data.get('nombre', '')):
+            raise ValidationError(
+                'Ya existe una empresa con el mismo nombre.'
+            )
+        if EmpresaRepository.get_by_nombre_corto(data.get('nombre_corto', '')):
+            raise ValidationError(
+                'Ya existe una empresa con el mismo nombre corto.'
+            )
+        empresa = EmpresaRepository.create(data)
+        return {
+            'success': True,
+            'message': 'Empresa creada exitosamente.',
+            'data': empresa
+        }
+
+    @staticmethod
+    @transaction.atomic
+    def update(empresa_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        empresa = EmpresaRepository.get_by_id(empresa_id)
+        if not empresa:
+            raise ValidationError('Empresa no encontrada.')
+
+        new_nombre = data.get('nombre')
+        if new_nombre:
+            existing = EmpresaRepository.get_by_nombre(new_nombre)
+            if existing and existing.id != empresa.id:
+                raise ValidationError(
+                    'Ya existe una empresa con el mismo nombre.'
+                )
+
+        new_corto = data.get('nombre_corto')
+        if new_corto:
+            existing = EmpresaRepository.get_by_nombre_corto(new_corto)
+            if existing and existing.id != empresa.id:
+                raise ValidationError(
+                    'Ya existe una empresa con el mismo nombre corto.'
+                )
+
+        EmpresaRepository.update(empresa, data)
+        return {
+            'success': True,
+            'message': 'Empresa actualizada exitosamente.'
+        }
+
+    @staticmethod
+    def activate(empresa_id: int) -> Dict[str, Any]:
+        empresa = EmpresaRepository.get_by_id(empresa_id)
+        if not empresa:
+            raise ValidationError('Empresa no encontrada.')
+        if empresa.is_active:
+            raise ValidationError('La empresa ya se encuentra activa.')
+        EmpresaRepository.activate(empresa)
+        return {'success': True, 'message': 'Empresa activada exitosamente.'}
+
+    @staticmethod
+    def deactivate(empresa_id: int) -> Dict[str, Any]:
+        empresa = EmpresaRepository.get_by_id(empresa_id)
+        if not empresa:
+            raise ValidationError('Empresa no encontrada.')
+        if not empresa.is_active:
+            raise ValidationError('La empresa ya se encuentra inactiva.')
+        EmpresaRepository.deactivate(empresa)
+        return {
+            'success': True,
+            'message': 'Empresa desactivada exitosamente.'
+        }
 class DepartamentoService:
     @staticmethod
     def get_all()-> Dict[str, Any]:
@@ -49,8 +136,7 @@ class DistritoService:
         return {
             "success": True,
             "data": byId
-        }    
-        
+        }            
 class SedeService:
     @staticmethod
     def get_all()-> Dict[str, Any]:
@@ -198,26 +284,16 @@ class ModuloService:
     @transaction.atomic
     def update(_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
         modulo =  ModuloRepository.get_by_id(_id)
-        if not modulo:
-            return {
-                "success": False,
-                "error": "Modulo no encontradp."
-            }        
+        if not modulo:      
+            raise ValidationError(f'Modulo no encontrado.')  
         new_name = data.get("nombre")
         if new_name:
             existing = ModuloRepository.get_by_name(new_name)
             if existing and existing.id != modulo.id:
                 if existing.is_active:
-                    return {
-                        "success": False,
-                        "error": "Ya existe un modulo Activo con el mismo nombre."
-                    }
+                    raise ValidationError(f'Ya existe un modulo Activo con el mismo nombre.')  
                 else:
-                    return {
-                        "success": False,
-                        "error": "Ya existe un modulo Inactivo con el mismo nombre. Por favor active el modulo o use otro nombre."
-                    }
-      
+                    raise ValidationError(f'Ya existe un modulo Inactivo con el mismo nombre. Por favor active el modulo o use otro nombre') 
         ModuloRepository.update(modulo, data)
         return {
             "success": True,
@@ -227,15 +303,9 @@ class ModuloService:
     def activate(_id:int) -> Dict[str, Any]:
         modulo=ModuloRepository.get_by_id(_id)
         if not modulo:
-            return {
-            "success": False,
-            "error": "Modulo no encontrado."
-        }
+            raise ValidationError(f'Modulo no encontrado.')  
         if modulo.is_active:
-            return {
-                "success": False,
-                "error": "El modulo ya se encuentra activo."                
-            }
+            raise ValidationError(f'El modulo ya se encuentra activo.')  
         ModuloRepository.activate(modulo)
         return {
             "success": True,
@@ -245,15 +315,9 @@ class ModuloService:
     def deactivate_dependency(_id:int) -> Dict[str, Any]:
         modulo=ModuloRepository.get_by_id(_id)
         if not modulo:
-            return {
-            "success": False,
-            "error": "Modulo no encontrado."
-        }
+            raise ValidationError(f'Modulo no encontrado.')  
         if not modulo.is_active:
-            return {
-                "success": False,
-                "error": "El modulo  ya se encuentra inactivo."                
-            }
+            raise ValidationError(f'El modulo  ya se encuentra inactivo.')  
         ModuloRepository.deactivate(modulo)
         return {
             "success": True,

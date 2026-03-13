@@ -1,7 +1,40 @@
-from locations.models import Sede, Modulo,  Departamento, Provincia, Distrito,Ubicacion
+from locations.models import Empresa,Sede, Modulo,  Departamento, Provincia, Distrito,Ubicacion
 from django.db.models import QuerySet
 from django.db import transaction
 from typing import Optional, Dict, Any
+
+class EmpresaRepository:
+    @staticmethod
+    def get_all():
+        return Empresa.objects.all().order_by('nombre')
+    @staticmethod
+    def get_by_id(empresa_id: int):
+        return Empresa.objects.filter(id=empresa_id).first()
+    @staticmethod
+    def get_by_nombre(nombre: str):
+        return Empresa.objects.filter(nombre__iexact=nombre.strip()).first()
+    @staticmethod
+    def get_by_nombre_corto(nombre_corto: str):
+        return Empresa.objects.filter(
+            nombre_corto__iexact=nombre_corto.strip()
+        ).first()
+    @staticmethod
+    def create(data: dict) -> Empresa:
+        return Empresa.objects.create(**data)
+    @staticmethod
+    def update(empresa: Empresa, data: dict) -> Empresa:
+        for field, value in data.items():
+            setattr(empresa, field, value)
+        empresa.save()
+        return empresa
+    @staticmethod
+    def activate(empresa: Empresa) -> None:
+        empresa.is_active = True
+        empresa.save(update_fields=['is_active', 'updated_at'])
+    @staticmethod
+    def deactivate(empresa: Empresa) -> None:
+        empresa.is_active = False
+        empresa.save(update_fields=['is_active', 'updated_at'])
 
 class DepartamentoRepository:
     @staticmethod

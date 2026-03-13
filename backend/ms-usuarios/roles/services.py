@@ -7,15 +7,19 @@ from typing import  Dict, Any
 _log = logging.getLogger('apps.roles')
 
 class PermissionService:
-    def listar(self, active_only=True, ms_name=None, app_label=None):
+    @staticmethod
+    def listar(active_only=True, ms_name=None, app_label=None):
         return PermissionRepository.get_all(active_only=active_only, ms_name=ms_name, app_label=app_label)
-    def tree(self) -> list:
+    @staticmethod
+    def tree() -> list:
         return PermissionRepository.tree_for_frontend()
-    def microservices(self) -> list:
+    @staticmethod
+    def microservices() -> list:
         return PermissionRepository.known_microservices()
 
 class RoleService:
-    def listar( active_only=True):
+    @staticmethod
+    def listar( ):
         result= RoleRepository.get_all().order_by("id")
         if not result:
                 raise ValidationError(f'No hay Roles registradas.')   
@@ -23,31 +27,32 @@ class RoleService:
             "success": True,
             "data": result
         }
+    @staticmethod
     def obtener(pk: int):
         role = RoleRepository.get_by_id(pk)
         if not role:
             raise NotFound(f'Rol {pk} no encontrado.')
         return role
-    @transaction.atomic
-    def crear(self, data: dict, permission_ids: list, creado_por) -> Any:
+    @staticmethod
+    def crear(data: dict, permission_ids: list, creado_por) -> Any:
         if RoleRepository.exists_name(data.get('name', '')):
             raise ValidationError({'name': 'Ya existe un rol con ese nombre.'})
-        self._validate_permissions(permission_ids)
-        role = RoleRepository.create(data, permission_ids, created_by=creado_por)
+        RoleService._validate_permissions(permission_ids)
+        role = RoleRepository.create(data, permission_ids, creado_por)
         _log.info(f'Rol creado: {role.name} por {creado_por}')
         return {
             "success":True,
             "message":"Rol creado exitosamente."
         }
-    @transaction.atomic
-    def actualizar(self, pk: int, data: dict, permission_ids, actualizado_por) -> Any:
-        role = self.obtener(pk)
+    @staticmethod
+    def actualizar(pk: int, data: dict, permission_ids, actualizado_por) -> Any:
+        role = RoleService.obtener(pk)
         name = data.get('name', role.name)
         if RoleRepository.exists_name(name, exclude_pk=pk):
             raise ValidationError({'name': 'Ya existe otro rol con ese nombre.'})
         role = RoleRepository.update(role, data)
         if permission_ids is not None:
-            self._validate_permissions(permission_ids)
+            RoleService._validate_permissions(permission_ids)
             RolePermissionRepository.replace_all(role, permission_ids, created_by=actualizado_por)
         _log.info(f'Rol actualizado: {role.name} por {actualizado_por}')
         return {
@@ -81,7 +86,7 @@ class RoleService:
             "message": "Role desactivado exitosamente."
         }    
     @staticmethod
-    def sync_permissions( role_pk: int, permission_ids: list[int], created_by):
+    def sync_permissions( role_pk: int, permission_ids: list[int], created_by:int):
         role = RoleService.obtener(role_pk)
         if role.name == "SYSADMIN":
             raise ValidationError({"detail": "No se pueden modificar los permisos del rol SYSADMIN."})
@@ -94,8 +99,9 @@ class RoleService:
             "success": True,
             "message": "Permisos sincronizados exitosamente."        
         }
-    def permisos_del_rol(self, pk: int):
-        role = self.obtener(pk)
+    @staticmethod
+    def permisos_del_rol(pk: int):
+        role = RoleService.obtener(pk)
         return RolePermissionRepository.get_by_role(role).order_by("id")
     @staticmethod
     def _validate_permissions(ids: list) -> None:

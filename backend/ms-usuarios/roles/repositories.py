@@ -88,11 +88,11 @@ class PermissionRepository:
 
 class RoleRepository:
     @staticmethod
-    def get_all(active_only: bool = True) -> QuerySet:
+    def get_all() -> QuerySet:
         qs = Role.objects.prefetch_related(
             Prefetch('permissions',queryset=Permission.objects.filter(is_active=True))
         )
-        return (qs.filter(is_active=True) if active_only else qs).order_by('name')
+        return qs
     @staticmethod
     def get_by_id(pk: int):
         return (
@@ -154,7 +154,7 @@ class RolePermissionRepository:
             ignore_conflicts=True,
         )
     @staticmethod
-    def sync(role, permission_ids: list[int], created_by=None):
+    def sync(role, permission_ids: list[int], created_by):
         current_ids = set(
             RolePermission.objects.filter(role=role)
             .values_list("permission_id", flat=True)

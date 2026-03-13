@@ -12,7 +12,8 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse
 from .services import ( LoginSessionService, CredentialService,
     PasswordPolicyService,PasswordHistoryService )
 from .serializers import (PasswordPolicySerializer,PasswordHistoryQuerySerializer,PasswordHistorySerializer,
-                          LoginRequestSerializer,LoginResponseSerializer,ActiveSessionSerializer, AdminResetPasswordSerializer,
+                          LoginRequestSerializer,LoginResponseSerializer,ActiveSessionSerializer,MultipleSessionSerializer,
+                          AdminResetPasswordSerializer,
                           UserChangePasswordSerializer,SuccessResponseSerializer, ErrorResponseSerializer)
 from roles.permissions import IsSysAdmin
 from django.contrib.auth import get_user_model
@@ -66,11 +67,18 @@ class LoginViewSet(ViewSet):
         if not result.get('success'):
             return Response({'error': result.get('message')}, status=status.HTTP_401_UNAUTHORIZED)
         user_data = {
+            'id':                  result['id'],
+            'username':            result['username'],
             'nombres':                  result['nombres'],
             'apellidos':                result['apellidos'],
             'role':                     result['role'],
             'permissions':              result['permissions'],
+            'permissions_flat':         result['permissions_flat'],
             'sedes':                    result['sedes'],
+            'modulo_id':                result.get('modulo_id'), 
+            'modulo_nombre'         : result.get('modulo_nombre'), 
+            'empresa_id':               result.get('empresa_id'),   
+            'empresa_nombre':           result.get('empresa_nombre'), 
             'password_expires_in_days': result.get('password_expires_in_days'),
             'needs_password_warning':   result.get('needs_password_warning', False),
         }
@@ -78,7 +86,11 @@ class LoginViewSet(ViewSet):
         return _set_cookies(response, result['access'], result['refresh'])
 
 class LoginSessionViewSet(ViewSet): 
-    permission_classes= [IsSysAdmin]
+    def get_permissions(self):
+        perms = {            
+            'list':  [HasJWTPermission('ms-usuarios:authentication:view_loginattempt')],          
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Autenticación'],
         summary='Ver sesión Activa',
@@ -155,12 +167,16 @@ class RefreshTokenViewSet(ViewSet):
         try:
             result = LoginSessionService.refresh(refresh_token)
             user_data = {
+                'id':                  result['id'],
                 'nombres':                  result['nombres'],
                 'apellidos':                result['apellidos'],
                 'role':                     result['role'],
                 'permissions':              result['permissions'],
                 'sedes':                    result['sedes'],
-                'dependencia':              result['dependencia'],
+                'modulo_id':                result.get('modulo_id'), 
+                'modulo_nombre': result.get('modulo_nombre'), 
+                'empresa_id':               result.get('empresa_id'),   
+                'empresa_nombre':           result.get('empresa_nombre'), 
                 'password_expires_in_days': result.get('password_expires_in_days'),
                 'needs_password_warning':   result.get('needs_password_warning', False),
             }
@@ -170,11 +186,16 @@ class RefreshTokenViewSet(ViewSet):
             return Response({'error': 'Token inválido o expirado.'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class MultipleSessionViewSet(ViewSet):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        perms = {            
+            'create':  [HasJWTPermission('ms-usuarios:authentication:add_credential')],          
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Autenticación'],
         summary='Multiple sesión',
-        description='Activa o Inactiva el acceso a múltiples sesiones',
+        description='Activa o Inactiva el acceso a múltiples sesiones (varias PCs)',
+        request=MultipleSessionSerializer,
         responses={
             200: OpenApiResponse(response=SuccessResponseSerializer),
             401: OpenApiResponse(
@@ -184,8 +205,10 @@ class MultipleSessionViewSet(ViewSet):
         }
     )
     def create(self, request):
-        username = request.data.get("username")
-        option_id = request.data.get("option_id")
+        serializer = MultipleSessionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data.get("username")
+        option_id = serializer.validated_data.get("option_id")
         if not username or not option_id:
             return Response("username y option_id son requeridos.",status=status.HTTP_400_BAD_REQUEST)
         result = CredentialService.update_multiple_sessions(
@@ -193,9 +216,12 @@ class MultipleSessionViewSet(ViewSet):
             option_id=int(option_id)
         )
         return Response(result, status=status.HTTP_200_OK)
+    
 class ChangePasswordViewSet(ViewSet):
     def get_permissions(self):
-        perms = {'create':[HasJWTPermission('ms-usuarios:users:view_user')],}
+        perms = {            
+            'create':  [HasJWTPermission('ms-usuarios:authentication:add_credential')],          
+        }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Autenticación'],
@@ -215,17 +241,17 @@ class ChangePasswordViewSet(ViewSet):
     )
     def create(self, request):
         requester = request.user
-        if requester.role and requester.role.name == "SYSADMIN":
+        if requester.role and requester.role.name == "SYSADMIN" :
             serializer = AdminResetPasswordSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             username = serializer.validated_data["username"]
             new_password = serializer.validated_data.get("new_password")
             result = CredentialService.reset_by_admin(
-                username=username,
-                new_password=new_password
-            )
+                    username=username,
+                    new_password=new_password
+                )
             response= Response(result, status=status.HTTP_200_OK)
-        return response
+        return response    
         
 class chancePasswordUserViewSet(ViewSet):
     def get_permissions(self):
@@ -259,18 +285,24 @@ class chancePasswordUserViewSet(ViewSet):
             current_password=current_password,
             new_password=new_password
         )
-        response = Response({
-            "success": True,
-            "message": result.get("message"),
-            "requires_relogin": True,
-        }, status=status.HTTP_200_OK)
+        response = Response(result, status=status.HTTP_200_OK)
 
         response.delete_cookie(settings.JWT_AUTH_COOKIE, path="/")
         response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path="/")
         return response
 
 class PasswordPolicyView(ViewSet):
-    permission_classes = [IsSysAdmin]
+    def get_permissions(self):
+        perms = {            
+            'list':               [ HasJWTPermission('ms-usuarios:authentication:view_passwordpolicy')],
+            'retrieve':           [HasJWTPermission('ms-usuarios:authentication:view_passwordpolicy')],
+            'create':  [HasJWTPermission('ms-usuarios:authentication:add_passwordhistory')],
+            'update':             [HasJWTPermission('ms-usuarios:authentication:change_passwordpolicy')],
+            'activate':        [ HasJWTPermission('ms-usuarios:authentication:change_passwordpolicy')],
+            'dectivate':   [HasJWTPermission('ms-usuarios:authentication:change_passwordpolicy')],
+            'active':   [HasJWTPermission('ms-usuarios:authentication:view_passwordpolicy')],            
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         tags=['Autenticación'],
         summary="Listado de políticas de contraseña",
@@ -386,7 +418,7 @@ class PasswordPolicyView(ViewSet):
             404: ErrorResponseSerializer
         }
     )
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    @action(detail=False, methods=['get'])
     def active(self, request):
         policy = PasswordPolicyService.get_active()
         if not policy:
@@ -399,7 +431,7 @@ class PasswordPolicyView(ViewSet):
 class PasswordHistoryView(ViewSet):
     def get_permissions(self):
         perms = {
-            'create':       [IsSysAdmin()],
+            'create':  [HasJWTPermission('ms-usuarios:authentication:add_passwordhistory')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(

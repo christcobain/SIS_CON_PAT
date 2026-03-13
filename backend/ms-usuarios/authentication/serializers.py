@@ -16,7 +16,6 @@ class PasswordPolicySerializer(serializers.ModelSerializer):
             "expiration_days",
             "warning_days",
             "history_count",
-            "created_by",
             "is_active",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
@@ -41,9 +40,7 @@ class PasswordHistorySerializer(serializers.ModelSerializer):
             "id",
             "user",
             "created_at",
-        ]   
-        
-   
+        ]          
 class LoginRequestSerializer(serializers.Serializer):
     username= serializers.CharField(max_length=150)
     password= serializers.CharField(max_length=255, write_only=True)
@@ -79,6 +76,10 @@ class LoginResponseSerializer(serializers.Serializer):
     password_expires_in_days= serializers.IntegerField(allow_null=True)
     needs_password_warning = serializers.BooleanField()
 
+class MultipleSessionSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    option_id = serializers.IntegerField()
+
 class AdminResetPasswordSerializer(serializers.Serializer):
     username = serializers.CharField()
     new_password = serializers.CharField(required=False, allow_blank=True)
@@ -90,7 +91,6 @@ class UserChangePasswordSerializer(serializers.Serializer):
 class SuccessResponseSerializer(serializers.Serializer):
     success= serializers.BooleanField()
     message= serializers.CharField()
-
 class ErrorResponseSerializer(serializers.Serializer):
     error= serializers.CharField()
     error= serializers.CharField(max_length=500)

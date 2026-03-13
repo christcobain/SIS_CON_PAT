@@ -17,7 +17,11 @@ from roles.permissions import HasJWTPermission
 _log = logging.getLogger('roles.views')
 
 class PermissionTreeViewSet(ViewSet):
-    permission_classes = [IsSysAdmin]
+    def get_permissions(self):
+        perms = {
+            'list': [HasJWTPermission('ms-usuarios:roles:view_role')],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         summary="Árbol completo de permisos",
         description="Retorna la estructura jerárquica de permisos agrupados por microservicio y app_label.",
@@ -31,7 +35,11 @@ class PermissionTreeViewSet(ViewSet):
         return Response(service.tree())
 
 class PermissionListViewSet(ViewSet):
-    permission_classes = [IsSysAdmin]
+    def get_permissions(self):
+        perms = {
+            'list': [HasJWTPermission('ms-usuarios:roles:view_role')],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         summary="Listado de permisos",
         description="Lista permisos con filtros opcionales por microservicio, app_label y estado.",
@@ -68,7 +76,11 @@ class PermissionListViewSet(ViewSet):
         return Response(PermissionSerializer(qs, many=True).data)
 
 class KnownMicroservicesViewSet(ViewSet):
-    permission_classes = [IsSysAdmin]
+    def get_permissions(self):
+        perms = {
+            'list': [HasJWTPermission('ms-usuarios:roles:view_role')],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
         summary="Microservicios conocidos",
         description="Devuelve la lista de microservicios detectados dinámicamente desde la tabla de permisos.",
@@ -82,9 +94,9 @@ class KnownMicroservicesViewSet(ViewSet):
 class RoleViewSet(ViewSet):
     def get_permissions(self):
         perms = {
-            'filters':           [HasJWTPermission('ms-usuarios:users:view_role')],
-            'list':           [HasJWTPermission('ms-usuarios:users:view_role')],
-            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_role')],
+            'filters':           [HasJWTPermission('ms-usuarios:roles:view_role')],
+            'list':           [HasJWTPermission('ms-usuarios:roles:view_role')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:roles:view_role')],
             'create':         [IsSysAdmin()],
             'partial_update':           [IsSysAdmin()],
             'activate':        [IsSysAdmin()],   
@@ -124,9 +136,9 @@ class RoleViewSet(ViewSet):
         tags=["Roles"]
     )
     def create(self, request):
-        s = CreateRoleSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
-        data = s.validated_data
+        serializer = CreateRoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
         pids = data.pop('permission_ids', [])
         creado_por=request.user
         role = RoleService.crear(data, pids, creado_por)
@@ -144,7 +156,7 @@ class RoleViewSet(ViewSet):
         data = serializer.validated_data
         pids = data.pop('permission_ids', None)
         role = RoleService().actualizar(pk, data, pids, actualizado_por=request.user)
-        return Response(RoleDetailSerializer(role).data)
+        return Response(role,status=status.HTTP_201_CREATED)
     @extend_schema(
         summary="Activar rol",
         description="Activa un rol. Solo SYSADMIN.",

@@ -1,6 +1,24 @@
 from django.db import models
 from django.conf import settings
 
+class Empresa(models.Model):
+    nombre        = models.CharField(max_length=200, unique=True)
+    nombre_corto  = models.CharField(max_length=20, unique=True,help_text="Ej: CSJLN, CSJLS, CSJLE")
+    descripcion   = models.TextField(blank=True)
+    ruc           = models.CharField(max_length=11, blank=True,help_text="RUC de la institución")
+    is_active     = models.BooleanField(default=True)
+    created_by    = models.ForeignKey(settings.AUTH_USER_MODEL,null=True, blank=True,on_delete=models.SET_NULL,related_name='empresas_creadas')
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+    class Meta:
+        db_table = 'locations_empresa'
+        ordering = ['nombre']
+        indexes = [
+            models.Index(fields=['nombre_corto']),
+            models.Index(fields=['is_active']),
+        ]
+    def __str__(self):
+        return f'{self.nombre_corto} — {self.nombre}'
    
 class Departamento(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
@@ -52,6 +70,7 @@ class Sede(models.Model):
     nombre = models.CharField(max_length=200)
     direccion = models.CharField(max_length=300)
     distrito = models.ForeignKey(Distrito, on_delete=models.SET_NULL, null=True, related_name='sedes')
+    empresa = models.ForeignKey(Empresa,null=True, blank=True,on_delete=models.SET_NULL,related_name='sedes')
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='sedes_creadas')
     created_at = models.DateTimeField(auto_now_add=True)

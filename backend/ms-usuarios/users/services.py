@@ -5,6 +5,8 @@ from datetime import datetime
 from rest_framework.exceptions import ValidationError, NotFound
 import requests
 from authentication.services import CredentialService
+
+
 class BDEmpleadosService:
     @staticmethod
     def get_by_dni(dni: str) -> Optional[Any]:
@@ -12,12 +14,13 @@ class BDEmpleadosService:
         if not response:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')    
         return response       
-class BDEmpleadosClient:
-    BASE_URL = "http://127.0.0.1:8000/api/v1/users/empleados"
+class BDEmpleadosClient:    
+    BASE_URL = "http://127.0.0.1:8000/api/v1/users/empleados"    
     @classmethod
     def get_by_dni(cls, dni: str) -> dict:
         try:
             response = requests.get(f"{cls.BASE_URL}/{dni}/", timeout=5)
+            print('response==',response)
             if response.status_code == 404:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos.')
             if response.status_code != 200:
@@ -41,7 +44,7 @@ class BDEmpleadosClient:
             
 class DependencyService:
     @staticmethod
-    def get_all_dependencies()-> Dict[str, Any]:#REPOSITORUES CON QURYSET
+    def get_all_dependencies()-> Dict[str, Any]:
         result=DependenciaRepository.get_all()
         if not result.exists():
             return {
@@ -56,7 +59,7 @@ class DependencyService:
     def get_dependency_by_name(nombre: str) -> Optional[Any]:
         return DependenciaRepository.get_dependency_by_name(nombre)
     @staticmethod
-    def get_dependency_by_id(dependency_id: int)-> Dict[str, Any]:#REPOSITORUES CON Optional[Dependencia]
+    def get_dependency_by_id(dependency_id: int)-> Dict[str, Any]:
         byId=DependenciaRepository.get_by_id(dependency_id)
         if not byId:
             return {
@@ -134,138 +137,140 @@ class DependencyService:
             "message": "Dependencia desactivada exitosamente."
         }
 
-class UserService:     
+class UserService:
+    @staticmethod
+    def _resolver_empresa(nombre_empresa_rrhh: str):
+        result=UserRepository._resolver_empresa(nombre_empresa_rrhh)
+        if not result:
+            raise NotFound('Empresa no encontrada.')
+        return result    
     @staticmethod
     def list_users() -> Dict[str, Any]:
-        usuarios=UserRepository.get_all()
-        if not usuarios:       
-             raise NotFound(f'No hay usuarios registrados.')
-        return {
-            "success": True,
-            "data": usuarios
-        }
+        usuarios = UserRepository.get_all()
+        if not usuarios:
+            raise NotFound('No hay usuarios registrados.')
+        return {"success": True, "data": usuarios}
     @staticmethod
     def get_user_by_id(user_id: int) -> Dict[str, Any]:
-        result=UserRepository.get_by_id(user_id)
+        result = UserRepository.get_by_id(user_id)
         if not result:
-            raise NotFound(f'Usuario no encontrado.')
-        return {
-            "success": True,
-            "data": result
-        }
+            raise NotFound('Usuario no encontrado.')
+        return {"success": True, "data": result}
     @staticmethod
-    def filter_users(filters: Dict[str, Any]):
-        dni = filters.get("dni")
-        cargo = filters.get("cargo")
-        role_id = filters.get("role_id")
-        sede_ids = filters.get("sede_ids")
-        dependencia_id = filters.get("dependencia_id")
+    def filter_users(filters: Dict[str, Any]) -> Dict[str, Any]:
+        dni             = filters.get("dni")
+        cargo           = filters.get("cargo")
+        role_id         = filters.get("role_id")
+        sede_ids        = filters.get("sede_ids")
+        dependencia_id  = filters.get("dependencia_id")
+        empresa_id      = filters.get("empresa_id")  
+        modulo_id   = filters.get('modulo_id')
         es_usuario_sistema = filters.get("es_usuario_sistema")
-        fecha_desde = filters.get("fecha_desde")
-        fecha_hasta = filters.get("fecha_hasta")
-        search = filters.get("search")
+        fecha_desde     = filters.get("fecha_desde")
+        fecha_hasta     = filters.get("fecha_hasta")
+        search          = filters.get("search")
+
         if dni and len(dni) < 3:
-            raise NotFound(f'El DNI debe tener al menos 3 caracteres.')        
+            raise NotFound('El DNI debe tener al menos 3 caracteres.')
         if fecha_desde:
             fecha_desde = datetime.strptime(fecha_desde, "%Y-%m-%d").date()
         if fecha_hasta:
             fecha_hasta = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
-        if fecha_desde and fecha_hasta and fecha_desde > fecha_hasta:  
-            raise NotFound(f'La fecha inicial no puede ser mayor que la final.')      
+        if fecha_desde and fecha_hasta and fecha_desde > fecha_hasta:
+            raise NotFound('La fecha inicial no puede ser mayor que la final.')
         if sede_ids and isinstance(sede_ids, str):
             sede_ids = [int(x) for x in sede_ids.split(",") if x.isdigit()]
         if role_id:
             role_id = int(role_id)
         if dependencia_id:
             dependencia_id = int(dependencia_id)
+        if empresa_id:
+            empresa_id = int(empresa_id)
+        if modulo_id:
+            modulo_id = int(modulo_id)
         if es_usuario_sistema is not None:
             if isinstance(es_usuario_sistema, str):
                 es_usuario_sistema = es_usuario_sistema.lower() == "true"
-        usuarios=UserRepository.filter_users(
+        usuarios = UserRepository.filter_users(
             dni=dni,
             cargo=cargo,
             role_id=role_id,
             sede_ids=sede_ids,
             dependencia_id=dependencia_id,
+            empresa_id=empresa_id,  
+            modulo_id=modulo_id,       
             es_usuario_sistema=es_usuario_sistema,
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
             search=search,
         )
-        if not usuarios:       
-            raise NotFound(f'No hay usuarios registrados.')  
-        return {
-            "success": True,
-            "data": usuarios
-        }
+        if not usuarios:
+            raise NotFound('No hay usuarios registrados.')
+        return {"success": True, "data": usuarios}
     @staticmethod
     @transaction.atomic
-    def create_user(data: Dict[str, Any], sede_ids=None) -> Any:
-        from authentication.services import CredentialService
-        dni=data.get("dni")
+    def create_user(data: Dict[str, Any], sede_ids=None,created_by=None) -> Dict[str, Any]:
+        dni = data.get("dni")
         empleado_response = BDEmpleadosClient.get_by_dni(dni)
         if not empleado_response.get("success"):
             return empleado_response
-        empleado = empleado_response.get("data")     
-        usuario=UserRepository.get_by_dni(dni)
+        empleado = empleado_response.get("data")
+        usuario = UserRepository.get_by_dni(dni)
         if usuario:
             if usuario.is_active:
-                raise ValidationError(f'Ya existe un usuario Activo con el mismo DNI.')  
+                raise ValidationError('Ya existe un usuario Activo con el mismo DNI.')
             else:
-                raise ValidationError(f'Ya existe un usuario Inactivo con el mismo DNI. Por favor active el usuario o use otro DNI.') 
+                raise ValidationError(
+                    'Ya existe un usuario Inactivo con el mismo DNI. '
+                    'Por favor active el usuario o use otro DNI.'
+                )
+        empresa_obj = UserService._resolver_empresa(empleado.get("empresa", ""))
         data.update({
-            "username": dni, 
-            "password": dni,
-            "dni": empleado.get("dni") or "",
-            "first_name": empleado.get("first_name") or "",
-            "last_name": empleado.get("last_name") or "",
-            "cargo": empleado.get("cargo") or "",
-            "modulo_rrhh":empleado.get("modulo") or "",
-            "empresa": empleado.get("empresa") or "",  
+            "username":    dni,
+            "password":    dni,
+            "dni":         empleado.get("dni") or "",
+            "first_name":  empleado.get("first_name") or "",
+            "last_name":   empleado.get("last_name") or "",
+            "cargo":       empleado.get("cargo") or "",
+            "modulo_rrhh": empleado.get("modulo") or "",
+            "empresa":     empresa_obj,   
+            "created_by":   created_by
         })
         user = UserRepository.create(data=data, sede_ids=sede_ids)
-        es_usuario_sistema = data.get("es_usuario_sistema")             
-        if es_usuario_sistema:
-            CredentialService.create(user)             
-        return {
-            "success": True,
-            "message": "Usuario creado exitosamente.",
-        }     
+        if data.get("es_usuario_sistema"):
+            CredentialService.create(user)
+        return {"success": True, "message": "Usuario creado exitosamente."}
     @staticmethod
     @transaction.atomic
-    def update_user(user_id:int, data: Dict[str, Any], sede_ids=None) -> Dict[str, Any]:
+    def update_user(user_id: int, data: Dict[str, Any], sede_ids=None) -> Dict[str, Any]:
         user = UserRepository.get_by_id(user_id)
         if not user:
-            raise ValidationError(f'Usuario no encontrado.')  
-        UserRepository.update(user, data, sede_ids)                        
-        return {
-            "success": True,
-            "message": "Usuario actualizado exitosamente.",
-        }
+            raise ValidationError('Usuario no encontrado.')
+        UserRepository.update(user, data, sede_ids)
+        if not data.get("es_usuario_sistema"):
+            CredentialService.deactivate_user(user)
+        else: 
+            CredentialService.activate(user)
+        return {"success": True, "message": "Usuario actualizado exitosamente."}
     @staticmethod
-    def activate_user(user_id:int) -> Dict[str, Any]:
-        result=UserRepository.get_by_id(user_id)
+    def activate_user(user_id: int) -> Dict[str, Any]:
+        result = UserRepository.get_by_id(user_id)
         if not result:
-            raise ValidationError(f'Usuario no encontrado.') 
+            raise ValidationError('Usuario no encontrado.')
         if result.is_active:
-            raise ValidationError(f'El usuario ya se encuentra activo.')  
+            raise ValidationError('El usuario ya se encuentra activo.')
+        if result.es_usuario_sistema:
+            CredentialService.activate(result)
         UserRepository.activate(result)
-        return {
-            "success": True,
-            "message": "Usuario activado exitosamente."
-        }
+        return {"success": True, "message": "Usuario activado exitosamente."}
     @staticmethod
-    def deactivate_user(user_id:int) -> Dict[str, Any]:
-        result=UserRepository.get_by_id(user_id)
+    def deactivate_user(user_id: int) -> Dict[str, Any]:
+        result = UserRepository.get_by_id(user_id)
         if not result:
-            raise ValidationError(f'Usuario no encontrado.') 
+            raise ValidationError('Usuario no encontrado.')
         if not result.is_active:
-            raise ValidationError(f'El usuario ya se encuentra desactivado.')
+            raise ValidationError('El usuario ya se encuentra desactivado.')
         UserRepository.deactivate(result)
-        if result.get("es_usuario_sistema"):
-            CredentialService.deactivate_user
-        return {
-            "success": True,
-            "message": "Usuario desactivado exitosamente."
-        }
-    
+        if result.es_usuario_sistema:
+            CredentialService.deactivate_user(result)
+        return {"success": True, "message": "Usuario desactivado exitosamente."}

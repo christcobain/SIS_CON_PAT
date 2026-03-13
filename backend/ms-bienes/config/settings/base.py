@@ -30,11 +30,10 @@ THIRD_PARTY_APPS = [
 ]
 LOCAL_APPS = [
     'bienes.apps.BienesConfig',
-    'mantenimiento.apps.MantenimientoConfig',
+    'mantenimientos.apps.MantenimientosConfig',
     'transferencias.apps.TransferenciasConfig',
     'bajas.apps.BajasConfig',
     'catalogos.apps.CatalogosConfig',
-    'shared.apps.SharedConfig',
 ]
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
@@ -61,7 +60,7 @@ TEMPLATES = [{
 }]
 DATABASES = {
     'default': {
-        'ENGINE':   'django.db.backends.postgresql',
+        'ENGINE':   os.getenv('DB_ENGINE'),
         'NAME':     os.getenv('DB_NAME'),
         'USER':     os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
@@ -71,7 +70,7 @@ DATABASES = {
         'OPTIONS': {'connect_timeout': 10},
     }
 }
-# JWT compartido con ms-usuarios — MISMA SIGNING_KEY
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME':  timedelta(minutes=int(os.getenv('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', '480'))),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=int(os.getenv('JWT_REFRESH_TOKEN_LIFETIME_DAYS', '1'))),
@@ -84,6 +83,7 @@ JWT_AUTH_COOKIE         = 'sisconpat_access'
 JWT_AUTH_REFRESH_COOKIE = 'sisconpat_refresh'
 JWT_AUTH_COOKIE_SECURE  = os.getenv('JWT_COOKIE_SECURE', 'False').lower() == 'true'
 JWT_AUTH_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
+MS_USUARIOS_BASE_URL = os.getenv('MS_USUARIOS_BASE_URL', 'http://127.0.0.1:8000/api/v1')
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',

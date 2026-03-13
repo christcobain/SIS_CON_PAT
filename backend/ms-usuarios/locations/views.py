@@ -4,22 +4,119 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from roles.permissions import IsSysAdmin
-from .services import (SedeService, ModuloService,DepartamentoService,
+from .services import (EmpresaService,SedeService, ModuloService,DepartamentoService,
                        ProvinciaService,DistritoService,UbicacionService)
 from drf_spectacular.utils import extend_schema,  OpenApiTypes
-from .serializers import (
+from .serializers import (EmpresaSerializer,EmpresaCreateSerializer,EmpresaUpdateSerializer,
     DepartamentoSerializer,ProvinciaSerializer,DistritoSerializer,SedeSerializer,SedeCreateUpdateSerializer,
     ModuloSerializer,ModuloCreateUpdateSerializer,UbicacionSerializer,UbicacionCreateUpdateSerializer
 )
 from roles.permissions import HasJWTPermission
 
 
+class EmpresaViewSet(ViewSet):
+    def get_permissions(self):
+        perms = {
+            'list':       [HasJWTPermission('ms-usuarios:locations:view_empresa')],
+            'retrieve':   [HasJWTPermission('ms-usuarios:locations:view_empresa')],
+            'create':     [IsSysAdmin()],
+            'update':     [IsSysAdmin()],
+            'activate':   [IsSysAdmin()],
+            'deactivate': [IsSysAdmin()],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
+    @extend_schema(
+        tags=['Locations'],
+        summary='Listar empresas',
+        description='Retorna todas las empresas/cortes registradas.',
+        responses={200: EmpresaSerializer(many=True)},
+    )
+    def list(self, request):
+        result = EmpresaService.get_all()
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        serializer = EmpresaSerializer(result['data'], many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary='Obtener empresa por ID',
+        description='Retorna el detalle de una empresa.',
+        responses={200: EmpresaSerializer},
+    )
+    def retrieve(self, request, pk=None):
+        result = EmpresaService.get_by_id(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_404_NOT_FOUND)
+        serializer = EmpresaSerializer(result['data'])
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary='Crear empresa',
+        description='Crea una nueva empresa o corte superior.',
+        request=EmpresaCreateSerializer,
+        responses={
+            201: EmpresaSerializer,
+            400: OpenApiTypes.OBJECT,
+        },
+    )
+    def create(self, request):
+        serializer = EmpresaCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        data['created_by'] = request.user
+        result = EmpresaService.create(data)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        out = EmpresaSerializer(result['data'])
+        return Response(
+            {'success': True, 'message': result['message'], 'data': out.data},
+            status=status.HTTP_201_CREATED,
+        )
+    @extend_schema(
+        tags=['Locations'],
+        summary='Actualizar empresa',
+        description='Actualiza parcial o totalmente una empresa.',
+        request=EmpresaUpdateSerializer,
+        responses={200: OpenApiTypes.OBJECT},
+    )
+    def update(self, request, pk=None):
+        serializer = EmpresaUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        result = EmpresaService.update(pk, serializer.validated_data)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary='Activar empresa',
+        description='Activa una empresa inactiva.',
+        responses={200: OpenApiTypes.OBJECT},
+    )
+    @action(detail=True, methods=['patch'])
+    def activate(self, request, pk=None):
+        result = EmpresaService.activate(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_200_OK)
+    @extend_schema(
+        tags=['Locations'],
+        summary='Desactivar empresa',
+        description='Desactiva una empresa activa.',
+        responses={200: OpenApiTypes.OBJECT},
+    )
+    @action(detail=True, methods=['patch'])
+    def deactivate(self, request, pk=None):
+        result = EmpresaService.deactivate(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_200_OK)
+    
 class DepartamentoViewSet(ViewSet):
     def get_permissions(self):
         perms = {
-            'filters':           [HasJWTPermission('ms-usuarios:users:view_departamento')],
-            'list':           [HasJWTPermission('ms-usuarios:users:view_departamento')],
-            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_departamento')],
+            'filters':           [HasJWTPermission('ms-usuarios:locations:view_departamento')],
+            'list':           [HasJWTPermission('ms-usuarios:locations:view_departamento')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:locations:view_departamento')],
             'create':         [IsSysAdmin()],
             'update':           [IsSysAdmin()],
             'activate':        [IsSysAdmin()],   
@@ -54,9 +151,9 @@ class DepartamentoViewSet(ViewSet):
 class ProvinciaViewSet(ViewSet):
     def get_permissions(self):
         perms = {
-            'filters':           [HasJWTPermission('ms-usuarios:users:view_provincia')],
-            'list':           [HasJWTPermission('ms-usuarios:users:view_provincia')],
-            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_provincia')],
+            'filters':           [HasJWTPermission('ms-usuarios:locations:view_provincia')],
+            'list':           [HasJWTPermission('ms-usuarios:locations:view_provincia')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:locations:view_provincia')],
             'create':         [IsSysAdmin()],
             'update':           [IsSysAdmin()],
             'activate':        [IsSysAdmin()],   
@@ -88,9 +185,9 @@ class ProvinciaViewSet(ViewSet):
 class DistritoViewSet(ViewSet):
     def get_permissions(self):
         perms = {
-            'filters':           [HasJWTPermission('ms-usuarios:users:view_distrito')],
-            'list':           [HasJWTPermission('ms-usuarios:users:view_distrito')],
-            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_distrito')],
+            'filters':           [HasJWTPermission('ms-usuarios:locations:view_distrito')],
+            'list':           [HasJWTPermission('ms-usuarios:locations:view_distrito')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:locations:view_distrito')],
             'create':         [IsSysAdmin()],
             'update':           [IsSysAdmin()],
             'activate':        [IsSysAdmin()],   
@@ -122,13 +219,13 @@ class DistritoViewSet(ViewSet):
 class SedeViewSet(ViewSet):
     def get_permissions(self):
         perms = {
-            'filters':           [HasJWTPermission('ms-usuarios:users:view_sede')],
-            'list':           [HasJWTPermission('ms-usuarios:users:view_sede')],
-            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_sede')],
-            'create':         [IsSysAdmin()],
-            'update':           [IsSysAdmin()],
-            'activate':        [IsSysAdmin()],   
-            'deactivate':           [IsSysAdmin()],
+            'filters':           [HasJWTPermission('ms-usuarios:locations:view_sede')],
+            'list':           [HasJWTPermission('ms-usuarios:locations:view_sede')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:locations:view_sede')],
+            'create':         [HasJWTPermission('ms-usuarios:locations:add_sede')],
+            'update':           [HasJWTPermission('ms-usuarios:locations:change_sede')],
+            'activate':        [HasJWTPermission('ms-usuarios:locations:change_sede')],   
+            'deactivate':           [HasJWTPermission('ms-usuarios:locations:delete_sede')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
@@ -212,13 +309,13 @@ class SedeViewSet(ViewSet):
 class ModuloViewSet(ViewSet):
     def get_permissions(self):
         perms = {
-            'filters':           [HasJWTPermission('ms-usuarios:users:view_modulo')],
-            'list':           [HasJWTPermission('ms-usuarios:users:view_modulo')],
-            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_modulo')],
-            'create':         [IsSysAdmin()],
-            'update':           [IsSysAdmin()],
-            'activate':        [IsSysAdmin()],   
-            'deactivate':           [IsSysAdmin()],
+            'filters':           [HasJWTPermission('ms-usuarios:locations:view_modulo')],
+            'list':           [HasJWTPermission('ms-usuarios:locations:view_modulo')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:locations:view_modulo')],
+            'create':         [HasJWTPermission('ms-usuarios:locations:add_modulo')],
+            'update':           [HasJWTPermission('ms-usuarios:locations:change_modulo')],
+            'activate':        [HasJWTPermission('ms-usuarios:locations:change_modulo')],   
+            'deactivate':           [HasJWTPermission('ms-usuarios:locations:change_modulo')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
@@ -302,9 +399,9 @@ class ModuloViewSet(ViewSet):
 class UbicacionViewSet(ViewSet):
     def get_permissions(self):
         perms = {
-            'filters':           [HasJWTPermission('ms-usuarios:users:view_ubicacion')],
-            'list':           [HasJWTPermission('ms-usuarios:users:view_ubicacion')],
-            'retrieve':       [HasJWTPermission('ms-usuarios:users:view_ubicacion')],
+            'filters':           [HasJWTPermission('ms-usuarios:locations:view_ubicacion')],
+            'list':           [HasJWTPermission('ms-usuarios:locations:view_ubicacion')],
+            'retrieve':       [HasJWTPermission('ms-usuarios:locations:view_ubicacion')],
             'create':         [IsSysAdmin()],
             'update':           [IsSysAdmin()],
             'activate':        [IsSysAdmin()],   

@@ -3,7 +3,7 @@ from django.db.models import Q, QuerySet
 from typing import Optional, Dict, Any,List
 from datetime import date
 from .models import User,Dependencia,BDEmpleados
-
+from locations.models import Empresa
 
 class BDEmpleadosRepository:
     @staticmethod
@@ -15,7 +15,7 @@ class DependenciaRepository:
     def get_all() -> QuerySet:#queryset se usa para muchos o ningun registro
         return Dependencia.objects.order_by('id')
     @staticmethod
-    def get_dependency_by_name(nombre: str) -> Optional[Dependencia]:#un solo obteno o ninguno
+    def get_dependency_by_name(nombre: str) -> Optional[Dependencia]:
         return Dependencia.objects.filter(nombre__iexact=nombre).first()
     @staticmethod
     def get_by_id(dependencia_id: int) ->  Optional[Dependencia]:
@@ -25,7 +25,7 @@ class DependenciaRepository:
         return Dependencia.objects.filter(codigo=codigo).first()
     @staticmethod
     @transaction.atomic
-    def create(data: Dict[str, Any]) -> Optional[Dependencia]:#si o si un objeto
+    def create(data: Dict[str, Any]) -> Optional[Dependencia]:
         dependencia = Dependencia(**data)
         dependencia.save()
         return dependencia
@@ -50,7 +50,31 @@ class DependenciaRepository:
 class UserRepository:
     @staticmethod
     def base_queryset() -> QuerySet:
-        return User.objects.select_related('role','dependencia', 'created_by').prefetch_related('sedes')
+        return (
+            User.objects
+            .select_related(
+                'role',
+                'dependencia',
+                'empresa',    
+                'modulo',  
+                'created_by',
+            )
+            .prefetch_related('sedes')
+        )
+    @staticmethod
+    def _resolver_empresa(nombre_empresa_rrhh: str):        
+        if not nombre_empresa_rrhh:
+            return None
+        empresa = Empresa.objects.filter(
+            nombre_corto__iexact=nombre_empresa_rrhh.strip(),
+            is_active=True
+        ).first()
+        if not empresa:
+            empresa = Empresa.objects.filter(
+                nombre__icontains=nombre_empresa_rrhh.strip(),
+                is_active=True
+            ).first()
+        return empresa    
     @staticmethod
     def get_all():
         return UserRepository.base_queryset().all()
@@ -67,6 +91,7 @@ class UserRepository:
         role_id: Optional[int] = None,
         sede_ids: Optional[List[int]] = None,
         dependencia_id: Optional[int] = None,
+        empresa_id=None, modulo_id=None,
         es_usuario_sistema: Optional[bool] = None,
         fecha_desde: Optional[date] = None,
         fecha_hasta: Optional[date] = None,
@@ -83,6 +108,10 @@ class UserRepository:
             filters &= Q(sedes__id__in=sede_ids)
         if dependencia_id:
             filters &= Q(dependencia_id=dependencia_id)
+        if empresa_id:                     
+            filters &= Q(empresa_id=empresa_id)
+        if modulo_id:                         
+            filters &= Q(modulo_id=modulo_id)
         if es_usuario_sistema is not None:
             filters &= Q(es_usuario_sistema=es_usuario_sistema)
         if fecha_desde:

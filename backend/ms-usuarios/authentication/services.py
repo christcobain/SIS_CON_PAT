@@ -1,4 +1,5 @@
 import hashlib
+from django.contrib.auth import get_user_model
 from typing import Optional, Dict, Any, List
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError,NotFound
@@ -10,7 +11,6 @@ from .repositories import (
     PasswordPolicyRepository, PasswordHistoryRepository,
     CredentialRepository, LoginSessionRepository, LoginAttemptRepository,
 )
-# from users.models import User
 
 
 class PasswordPolicyService:
@@ -116,13 +116,13 @@ class CredentialService:
         return True
     @staticmethod
     def reset_by_admin(username: str, new_password: str = None) -> Dict[str, Any]:
-        user = CredentialService.get_by_username(username=username)
-        if not user:
+        credential  = CredentialService.get_by_username(username=username)
+        if not credential :
             raise ValidationError("Usuario no encontrado.")
+        user = credential.user         
         password_to_set = new_password if new_password else user.username
         user.set_password(password_to_set)
         user.save(update_fields=["password"])
-        credential = CredentialRepository.get_by_user(user)
         if not credential:
             raise ValidationError("Usuario sin credenciales configuradas.")
         credential.force_password_change = True
@@ -162,12 +162,12 @@ class CredentialService:
         }  
     @staticmethod
     def increment_failed_attempts(username):
-        user = CredentialService.get_by_username(username=username)
-        if not user:
+        credential  = CredentialService.get_by_username(username)
+        if not credential :
             return None
-        credential = CredentialRepository.get_by_user(user)
-        if not credential:
-            return None
+        # credential = CredentialRepository.get_by_user(user)
+        # if not credential:
+        #     return None
         return CredentialRepository.increment_failed_attempts(credential)
     @staticmethod
     def update_multiple_sessions(username: str, option_id: int):
@@ -237,21 +237,43 @@ class LoginSessionService:
         return user.role.build_jwt_permissions()
     @staticmethod
     def login(username: str, password: str, ip_address: str, device_info: str) -> Dict[str, Any]:
-        user = authenticate(username=username, password=password)      
-        if not user:
-            credential = CredentialService.increment_failed_attempts(username)
-            if credential and credential.is_locked:
-                LoginAttemptService.create(
-                    username, ip_address, device_info,
-                    'locked', False, 'Cuenta bloqueada'
-                )
-                raise ValidationError('Cuenta bloqueada. Contacte al administrador.')
+        credential = CredentialService.get_by_username(username)
+        if not credential:
+            LoginAttemptService.create(
+                username, ip_address, device_info,
+                'user_not_found', False, 'Usuario no existe en credenciales'
+            )
+            raise ValidationError('Usuario no existe.')     
+        user = credential.user 
+        role_name = user.role.name if user.role else None
+        if not credential.is_active:
+            LoginAttemptService.create(
+                username, ip_address, device_info,
+                'inactive', False, 'Usuario inactivo'
+            )
+            raise ValidationError('Usuario inactivo.')
+        if credential.is_locked and role_name != "SYSADMIN":
+            LoginAttemptService.create(
+                username, ip_address, device_info,
+                'locked', False, 'Cuenta bloqueada'
+            )
+            raise ValidationError('Cuenta bloqueada. Contacte al administrador.') 
+        
+        authenticated_user = authenticate(username=username, password=password) 
+        if not authenticated_user:
+            if role_name != "SYSADMIN":
+                credential = CredentialService.increment_failed_attempts(username)
+                if credential.is_locked:
+                    LoginAttemptService.create(
+                        username, ip_address, device_info,
+                        'locked', False, 'Cuenta bloqueada'
+                    )
+                    raise ValidationError('Cuenta bloqueada. Contacte al administrador.')
             LoginAttemptService.create(
                 username, ip_address, device_info,
                 'invalid_password', False, 'Credenciales inválidas'
             )
-            raise ValidationError('Credenciales inválidas.')
-        credential = CredentialService.get_by_user(user)
+            raise ValidationError('Credenciales inválidas.')        
         if not credential:
                 raise ValidationError(f'Usuario sin credenciales configuradas.')
         if not credential.is_active:
@@ -263,9 +285,18 @@ class LoginSessionService:
         if credential.force_password_change:
                 LoginAttemptService.create(username, ip_address, device_info, 'force_password_change', False, 'Cambio requerido')
                 raise ValidationError(f'Debe cambiar su contraseña antes de continuar.')
-        if CredentialService.is_password_expired(user):
+        is_password_expired=CredentialService.is_password_expired(user)
+        if is_password_expired:
                 LoginAttemptService.create(username, ip_address, device_info, 'password_expired', False, 'Contraseña expirada')
-                raise ValidationError(f'Contraseña expirada. Debe cambiarla.')
+                raise ValidationError(is_password_expired)
+        sesion_activa = LoginSessionRepository.get_active_session_by_user(user)
+        if sesion_activa:
+            if not credential.allow_multiple_sessions:
+                LoginAttemptService.create(username, ip_address, device_info, 'multiple_sessions', False, 'Sesión activa existente')
+                raise ValidationError(
+                    'Ya tiene una sesión activa. '
+                    'Cierre la sesión actual o habilite múltiples sesiones.'
+                )
         if not credential.allow_multiple_sessions:
                 LoginSessionRepository.logout_all_user_sessions(user)
         refresh = RefreshToken.for_user(user)
@@ -282,6 +313,7 @@ class LoginSessionService:
                 'permissions':      permissions_grouped,
                 'permissions_flat': permissions_flat,
                 'sedes_ids':        [s['id'] for s in sedes],
+                'modulo_id':        user.modulo_id,                   
             }
         for key, value in extra_claims.items():
                 refresh[key]              = value
@@ -293,11 +325,18 @@ class LoginSessionService:
         LoginAttemptService.create(user.username, ip_address, device_info, 'success', True, 'Exitoso')
         return {
                 'success':                  True,
+                'id':                       user.id,
+                'username':                 user.username,
                 'nombres':                  user.first_name,
                 'apellidos':                user.last_name,
                 'role':                     user.role.name if user.role else None,
                 'permissions':              permissions_grouped,
+                'permissions_flat':         permissions_flat,
                 'sedes':                    sedes,
+                'modulo_id':                user.modulo_id, 
+                'modulo_nombre'             : user.modulo.nombre if user.modulo else None,
+                'empresa_id':               user.empresa_id,       
+                'empresa_nombre':           user.empresa.nombre if user.empresa else None,
                 'access':                   str(refresh.access_token),
                 'refresh':                  str(refresh),
                 'session_id':               session.id,
@@ -331,12 +370,17 @@ class LoginSessionService:
         sedes = list(user.sedes.values('id', 'nombre', 'codigo'))
         return {
             'success':                  True,
+            'id':                       user.id,
+            'username':                 user.username,
             'nombres':                  user.first_name,
             'apellidos':                user.last_name,
             'role':                     user.role.name if user.role else None,
             'permissions':              permissions_grouped,
             'sedes':                    sedes,
-            'dependencia':              user.dependencia.nombre if getattr(user, 'dependencia', None) else None,
+            'modulo_id':                user.modulo_id, 
+            'modulo_nombre'             : user.modulo.nombre if user.modulo else None,
+            'empresa_id':               user.empresa_id,       
+            'empresa_nombre':           user.empresa.nombre if user.empresa else None,
             'access':                   str(access),
             'refresh':                  str(refresh),
             'password_expires_in_days': CredentialService.days_until_expiry(user),

@@ -1,3 +1,4 @@
+## ms-reportes/shared/
 from rest_framework.permissions import BasePermission
 
 class IsSysAdmin(BasePermission):

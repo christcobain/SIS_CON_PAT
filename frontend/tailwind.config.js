@@ -4,38 +4,41 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+
+darkMode: 'class',
+
   theme: {
     extend: {
       colors: {
         primary: {
-          50:  '#f0f4ff',
-          100: '#e0e9ff',
-          200: '#c7d6ff',
-          300: '#a4b8fd',
-          400: '#818efb',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
+          DEFAULT: '#7F1D1D',
+          hover:   '#991B1B',
+          light:   '#FECACA',
+          muted:   '#FCA5A5',
         },
-        judiciary: {
-          dark:   '#1a237e',
-          medium: '#283593',
-          light:  '#3949ab',
-          accent: '#c62828',
-          gold:   '#f9a825',
-        }
+        'background-light': '#f8f6f6',
+       'background-dark':  '#0f172a',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans:    ['Public Sans', 'system-ui', 'sans-serif'],
+        display: ['Public Sans', 'system-ui', 'sans-serif'],
+        mono:    ['JetBrains Mono', 'ui-monospace', 'monospace'],
+      },
+      borderRadius: {
+        DEFAULT: '0.375rem',
+        lg:      '0.5rem',
+        xl:      '0.75rem',
+        '2xl':   '1rem',
+        '3xl':   '1.5rem',
+        full:    '9999px',
       },
       boxShadow: {
-        'card': '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)',
-        'card-hover': '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
-      }
+        card:    '0 1px 3px 0 rgb(0 0 0 / .06), 0 1px 2px -1px rgb(0 0 0 / .06)',
+        modal:   '0 20px 60px -10px rgb(0 0 0 / .25)',
+        sidebar: '2px 0 12px 0 rgb(0 0 0 / .08)',
+      },
     },
   },
+
   plugins: [],
 }

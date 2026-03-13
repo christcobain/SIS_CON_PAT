@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import models
 from django.core.validators import RegexValidator
 from roles.models import Role
-from locations.models import Sede
+from locations.models import Empresa,Sede
 
 #--TABLA INDEPENDIENTE CONMO SI FUERA UNA BBD EXTERNA DE OTRA ENTIDAD---
 class BDEmpleados(models.Model):
@@ -50,9 +50,10 @@ class User(AbstractUser):
     modulo_rrhh=models.CharField(max_length=150, blank=True)
     dependencia = models.ForeignKey(Dependencia,null=True,blank=True,on_delete=models.SET_NULL,related_name='usuarios')
     sedes= models.ManyToManyField(Sede,related_name='usuarios')
+    modulo   = models.ForeignKey( 'locations.Modulo',null=True, blank=True,on_delete=models.SET_NULL,related_name='usuarios',)
     es_usuario_sistema = models.BooleanField(default=False)
     role = models.ForeignKey(Role,on_delete=models.PROTECT,related_name='usuarios')
-    empresa = models.CharField(max_length=150)
+    empresa = models.ForeignKey(Empresa,null=True, blank=True,on_delete=models.SET_NULL,related_name='usuarios')
     fecha_baja = models.DateField(null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL,null=True,blank=True,on_delete=models.SET_NULL,related_name='usuarios_creados')
     is_active = models.BooleanField(default=True)
