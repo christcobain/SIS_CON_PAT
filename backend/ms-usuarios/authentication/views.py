@@ -9,11 +9,12 @@ from users.models import User
 from rest_framework.exceptions import NotFound
 from rest_framework_simplejwt.exceptions import TokenError
 from drf_spectacular.utils import extend_schema, OpenApiResponse
-from .services import ( LoginSessionService, CredentialService,
+from .services import ( LoginSessionService, CredentialService,LoginAttemptService,
     PasswordPolicyService,PasswordHistoryService )
 from .serializers import (PasswordPolicySerializer,PasswordHistoryQuerySerializer,PasswordHistorySerializer,
-                          LoginRequestSerializer,LoginResponseSerializer,ActiveSessionSerializer,MultipleSessionSerializer,
-                          AdminResetPasswordSerializer,
+                          LoginRequestSerializer,LoginResponseSerializer,ActiveSessionSerializer,
+                          MultipleSessionSerializer,LoginAttemptSerializer,
+                          AdminResetPasswordSerializer,LoginSessionHistorialSerializer,CredentialListSerializer,UnlockCredentialSerializer,
                           UserChangePasswordSerializer,SuccessResponseSerializer, ErrorResponseSerializer)
 from roles.permissions import IsSysAdmin
 from django.contrib.auth import get_user_model
@@ -84,6 +85,33 @@ class LoginViewSet(ViewSet):
         }
         response = Response(user_data, status=status.HTTP_200_OK)
         return _set_cookies(response, result['access'], result['refresh'])
+class CredentialViewSet(ViewSet):
+    def get_permissions(self):
+        perms = {
+            'list':   [HasJWTPermission('ms-usuarios:authentication:add_credential')],
+            'unlock': [HasJWTPermission('ms-usuarios:authentication:add_credential')],
+        }
+        return perms.get(self.action, [IsAuthenticated()])
+    def list(self, request):
+        def parse_bool(val):
+            if val is None: return None
+            return val.lower() in ('true', '1')
+        result = CredentialService.get_all(
+            dni=request.query_params.get('dni'),
+            is_locked=parse_bool(request.query_params.get('is_locked')),
+            is_active=parse_bool(request.query_params.get('is_active')),
+        )
+        return Response(CredentialListSerializer(result, many=True).data)
+
+    @action(detail=False, methods=['post'], url_path='unlock')
+    def unlock(self, request):
+        ser = UnlockCredentialSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        try:
+            result = CredentialService.unlock(ser.validated_data['username'])
+            return Response(result, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({'error': str(e.message)}, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginSessionViewSet(ViewSet): 
     def get_permissions(self):
@@ -112,6 +140,39 @@ class LoginSessionViewSet(ViewSet):
         result = LoginSessionService.get_active_sessions(dni=dni)
         serializer = ActiveSessionSerializer(result, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class LoginSessionHistorialViewSet(ViewSet):
+    def get_permissions(self):
+        return [HasJWTPermission('ms-usuarios:authentication:view_loginattempt')]
+
+
+    def list(self, request):
+        dni    = request.query_params.get('dni')
+        status_filter = request.query_params.get('status')
+        limit  = int(request.query_params.get('limit', 100))
+        result = LoginSessionService.get_all_sessions(dni=dni, status=status_filter, limit=limit)
+        return Response(LoginSessionHistorialSerializer(result, many=True).data)
+
+
+class LoginAttemptViewSet(ViewSet):
+    def get_permissions(self):
+        return [HasJWTPermission('ms-usuarios:authentication:view_loginattempt')]
+
+
+    def list(self, request):
+        dni          = request.query_params.get('dni')
+        success_raw  = request.query_params.get('success')
+        attempt_type = request.query_params.get('attempt_type')
+        limit        = int(request.query_params.get('limit', 200))
+        success = None
+        if success_raw is not None:
+            success = success_raw.lower() in ('true', '1', 'yes')
+        result = LoginAttemptService.get_all(
+            dni=dni, success=success, attempt_type=attempt_type, limit=limit
+        )
+        return Response(LoginAttemptSerializer(result, many=True).data)
+
+  
 
 class LogoutViewSet(ViewSet):    
     permission_classes = [IsAuthenticated]
@@ -240,19 +301,17 @@ class ChangePasswordViewSet(ViewSet):
         }
     )
     def create(self, request):
-        requester = request.user
-        if requester.role and requester.role.name == "SYSADMIN" :
-            serializer = AdminResetPasswordSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            username = serializer.validated_data["username"]
-            new_password = serializer.validated_data.get("new_password")
-            result = CredentialService.reset_by_admin(
+        serializer = AdminResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data["username"]
+        new_password = serializer.validated_data.get("new_password")
+        result = CredentialService.reset_by_admin(
                     username=username,
                     new_password=new_password
                 )
-            response= Response(result, status=status.HTTP_200_OK)
+        response= Response(result, status=status.HTTP_200_OK)
         return response    
-        
+            
 class chancePasswordUserViewSet(ViewSet):
     def get_permissions(self):
         self.permission_classes = [AllowAny]
@@ -274,7 +333,6 @@ class chancePasswordUserViewSet(ViewSet):
         }
     )
     def create(self, request):
-        requester = request.user
         serializer = UserChangePasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.validated_data["username"]
@@ -286,10 +344,10 @@ class chancePasswordUserViewSet(ViewSet):
             new_password=new_password
         )
         response = Response(result, status=status.HTTP_200_OK)
-
         response.delete_cookie(settings.JWT_AUTH_COOKIE, path="/")
         response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path="/")
         return response
+    
 
 class PasswordPolicyView(ViewSet):
     def get_permissions(self):
@@ -324,13 +382,11 @@ class PasswordPolicyView(ViewSet):
         }
     )
     def retrieve(self, request, pk=None):
-        policy = PasswordPolicyService.get_all().filter(pk=pk).first()
-        if not policy:
-            return Response(
-                {'detail': 'Política no encontrada.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        return Response(PasswordPolicySerializer(policy).data)
+        result = PasswordPolicyService.get_by_id(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_404_NOT_FOUND)
+        return Response(PasswordPolicySerializer(result['data']).data)
+    
     @extend_schema(
         tags=['Autenticación'],
         summary="Crear política de contraseña",
@@ -360,25 +416,12 @@ class PasswordPolicyView(ViewSet):
         }
     )
     def update(self, request, pk=None):
-        policy = PasswordPolicyService.get_all().filter(pk=pk).first()
-        if not policy:
-            return Response(
-                {
-                    "success": False,
-                    "error": "Política no encontrada."
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-        serializer = PasswordPolicySerializer(policy, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        result = PasswordPolicyService.update(policy, serializer.validated_data)
-        if not result["success"]:
-            return Response(
-                {
-                    "success": False,
-                    "error": result["error"]
-                },status=status.HTTP_400_BAD_REQUEST )
-        return Response(result,status=status.HTTP_200_OK)
+        ser = PasswordPolicySerializer(data=request.data, partial=True)
+        ser.is_valid(raise_exception=True)
+        result = PasswordPolicyService.update(pk, ser.validated_data)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result,status=status.HTTP_200_OK)    
     @extend_schema(
         tags=['Autenticación'],
         summary="Activar política de contraseña",
@@ -423,9 +466,7 @@ class PasswordPolicyView(ViewSet):
         policy = PasswordPolicyService.get_active()
         if not policy:
             return Response(
-                {'detail': 'No hay política activa.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+                {'detail': 'No hay política activa.'},status=status.HTTP_404_NOT_FOUND)
         return Response(PasswordPolicySerializer(policy).data)
 
 class PasswordHistoryView(ViewSet):

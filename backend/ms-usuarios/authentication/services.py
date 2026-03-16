@@ -21,72 +21,47 @@ class PasswordPolicyService:
     def get_all():
         return PasswordPolicyRepository.get_all()
     @staticmethod
-    def get_by_id(id: int)-> Dict[str, Any]:
-        return PasswordPolicyRepository.get_by_id(id)         
-    @staticmethod
-    def create(data: Dict[str, Any]):
-        PasswordPolicyRepository.create(data)
-        return {
-                "success": True,
-                "message": "Politica Creada Exitosamente"
-            }
-    @staticmethod
-    def update(instance, data: Dict[str, Any]):
-        try:
-            updated = PasswordPolicyRepository.update(instance, data)
-            return {
-                "success": True,
-                "message": "Politica Actualizada"
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
-    @staticmethod
-    def activate(_id:int) -> Dict[str, Any]:
-        policy = PasswordPolicyService.get_all().filter(pk=_id).first()
+    def get_by_id(pk: int)-> Dict[str, Any]:
+        policy = PasswordPolicyRepository.get_by_id(pk)
         if not policy:
-            return {
-            "success": False,
-            "error": "Politica no encontrada."
-        }
-        if policy.is_active:
-            return {
-                "success": False,
-                "error": "La Politica ya se encuentra activa."                
-            } 
+            raise ValidationError(f'Política no encontrada.') 
+        return {"success": True, "data": policy}        
+    @staticmethod
+    def create(data: Dict[str, Any], created_by=None):     
+        data['created_by'] = created_by
+        policy = PasswordPolicyRepository.create(data)
+        return {"success": True, "message": "Politica Creada Exitosamente"}
+    @staticmethod
+    def update(pk, data: Dict[str, Any]):
+        policy = PasswordPolicyRepository.get_by_id(pk)
+        if not policy:
+            return {"success": False, "error": "Política no encontrada."}
+        updated = PasswordPolicyRepository.update(policy, data)
+        return {"success": True, "message": "Politica Actualizada Exitosamente"}
+    @staticmethod
+    def activate(pk:int) -> Dict[str, Any]:
+        policy = PasswordPolicyRepository.get_by_id(pk)
+        if not policy:
+            raise ValidationError(f'Política no encontrada.') 
         PasswordPolicyRepository.activate(policy)
-        return {
-            "success": True,
-            "message": "Politica Activada exitosamente."
-        }
+        return {"success": True, "message": "Política Activada exitosamente."}
     @staticmethod
-    def deactivate(_id:int) -> Dict[str, Any]:
-        policy = PasswordPolicyService.get_all().filter(pk=_id).first()
+    def deactivate(pk:int) -> Dict[str, Any]:
+        policy = PasswordPolicyRepository.get_by_id(pk)
         if not policy:
-            return {
-            "success": False,
-            "error": "Politica no encontrada."
-        }
+            raise ValidationError(f'Política no encontrada.') 
         if not policy.is_active:
-            return {
-                "success": False,
-                "error": "La Politica ya se encuentra Inactiva."                
-            } 
+            raise ValidationError(f'Política no encontrada.') 
         PasswordPolicyRepository.deactivate(policy)
-        return {
-            "success": True,
-            "message": "Politica Desactivada exitosamente."
-        }
+        return {"success": True, "message": "Política Desactivada exitosamente."}
     @staticmethod
     def validate_password(password: str) -> List[str]:
         return PasswordPolicyRepository.validate_password(password)
 
 class PasswordHistoryService:
     @staticmethod
-    def get_recent(user, limit:int):
-        return PasswordHistoryRepository.get_recent(user=user,limit=limit)   
+    def get_recent(user, limit: int):
+        return PasswordHistoryRepository.get_recent(user=user, limit=limit)
     @staticmethod
     def create(user, plain_password: str):
         return PasswordHistoryRepository.create(user, plain_password)
@@ -101,6 +76,9 @@ class CredentialService:
     @staticmethod
     def get_by_username(username):
         return CredentialRepository.get_by_username(username)
+    @staticmethod
+    def get_all(dni: str = None, is_locked: bool = None, is_active: bool = None):
+        return CredentialRepository.get_all(dni=dni, is_locked=is_locked, is_active=is_active)
     @staticmethod
     def create(user):
         existing = CredentialRepository.get_by_user(user)
@@ -140,6 +118,15 @@ class CredentialService:
             "message": "Contraseña reseteada correctamente."
         }
     @staticmethod
+    def unlock(username: str) -> Dict[str, Any]:
+        credential = CredentialService.get_by_username(username=username)
+        if not credential:
+            raise ValidationError("Usuario no encontrado.")
+        if not credential.is_locked:
+            raise ValidationError("La cuenta no está bloqueada.")
+        CredentialRepository.unlock(credential)
+        return {"success": True, "message": "Cuenta desbloqueada exitosamente."}
+    @staticmethod
     def change_password_by_user(username: str, current_password: str, new_password: str) -> Dict[str, Any]:
         user = authenticate(username=username, password=current_password)
         if not user:
@@ -147,8 +134,9 @@ class CredentialService:
         errors = PasswordPolicyService.validate_password(new_password)
         if errors:
             raise ValidationError(errors)
+        cantidad=PasswordPolicyService.get_active().history_count
         if PasswordHistoryService.is_password_in_history(user, new_password):
-            raise ValidationError("La contraseña no puede ser igual a las 5 últimas usadas.")
+            raise ValidationError(f'La contraseña no puede ser igual a las ${cantidad} últimas usadas.')
         user.set_password(new_password)
         user.save(update_fields=["password"])
         PasswordHistoryService.create(user, new_password)
@@ -165,9 +153,6 @@ class CredentialService:
         credential  = CredentialService.get_by_username(username)
         if not credential :
             return None
-        # credential = CredentialRepository.get_by_user(user)
-        # if not credential:
-        #     return None
         return CredentialRepository.increment_failed_attempts(credential)
     @staticmethod
     def update_multiple_sessions(username: str, option_id: int):
@@ -183,29 +168,23 @@ class CredentialService:
             "allow_multiple_sessions": allow
         }
     @staticmethod
-    def activate(user_id:int) -> Dict[str, Any]:
-        result=CredentialRepository.get_by_id(user_id)
+    def activate(user_id: int) -> Dict[str, Any]:
+        result = CredentialRepository.get_by_id(user_id)
         if not result:
-            raise ValidationError(f'Credencial no encontrada.') 
+            raise ValidationError('Credencial no encontrada.')
         if result.is_active:
-            raise ValidationError(f'Credencial ya se encuentra activa.')  
+            raise ValidationError('Credencial ya se encuentra activa.')
         CredentialRepository.activate(result)
-        return {
-            "success": True,
-            "message": "Credencial Activada exitosamente."
-        }
+        return {"success": True, "message": "Credencial Activada exitosamente."}
     @staticmethod
-    def deactivate_user(user_id:int) -> Dict[str, Any]:
-        result=CredentialRepository.get_by_id(user_id)
+    def deactivate_user(user_id: int) -> Dict[str, Any]:
+        result = CredentialRepository.get_by_id(user_id)
         if not result:
-            raise ValidationError(f'Credencial no encontrada.') 
+            raise ValidationError('Credencial no encontrada.')
         if not result.is_active:
-            raise ValidationError(f'Credencial ya se encuentra desactivada.')
+            raise ValidationError('Credencial ya se encuentra desactivada.')
         CredentialRepository.deactivate(result)
-        return {
-            "success": True,
-            "message": "Credencial desactivada exitosamente."
-        }
+        return {"success": True, "message": "Credencial desactivada exitosamente."}
     @staticmethod
     def is_password_expired(user) -> bool:
         return CredentialRepository.is_password_expired(user)
@@ -217,6 +196,11 @@ class CredentialService:
         return CredentialRepository.needs_password_warning(user)
 
 class LoginAttemptService:
+    @staticmethod
+    def get_all(dni: str = None, success: bool = None, attempt_type: str = None, limit: int = 200):
+        return LoginAttemptRepository.get_all(
+            dni=dni, success=success, attempt_type=attempt_type, limit=limit
+        )
     @staticmethod
     def create(username, ip_address, device_info, attempt_type, success, error_message=''):
         return LoginAttemptRepository.create(
@@ -235,6 +219,15 @@ class LoginSessionService:
         if not user.role:
             return {}
         return user.role.build_jwt_permissions()
+    @staticmethod
+    def get_active_sessions(dni: str = None):
+        result=LoginSessionRepository.get_active_sessions(dni=dni)
+        if not result:
+            raise NotFound("No hay Sesiones Activas")
+        return result   
+    @staticmethod
+    def get_all_sessions(dni: str = None, status: str = None, limit: int = 100):
+        return LoginSessionRepository.get_all_sessions(dni=dni, status=status, limit=limit)
     @staticmethod
     def login(username: str, password: str, ip_address: str, device_info: str) -> Dict[str, Any]:
         credential = CredentialService.get_by_username(username)
@@ -356,39 +349,46 @@ class LoginSessionService:
         return {'success': True, 'message': 'Sesión cerrada correctamente.'}
     @staticmethod
     def refresh(refresh_token: str) -> Dict[str, Any]:
-        if not refresh_token:
-            raise TokenError('No refresh token')
-        refresh = RefreshToken(refresh_token)
-        access  = refresh.access_token
-        user_id = refresh.get('user_id')
-        from users.models import User
-        try:
-            user = User.objects.select_related('role', 'dependencia').prefetch_related('sedes').get(pk=user_id)
-        except User.DoesNotExist:
-            raise TokenError('Usuario no encontrado')
+        from rest_framework_simplejwt.tokens import RefreshToken as RFToken
+        token = RFToken(refresh_token)
+        user_id = token.payload.get('user_id')
+        from users.models import User as UserModel
+        user = UserModel.objects.select_related('role', 'modulo', 'empresa').get(pk=user_id)
         permissions_grouped = LoginSessionService._build_permissions(user)
-        sedes = list(user.sedes.values('id', 'nombre', 'codigo'))
-        return {
-            'success':                  True,
-            'id':                       user.id,
-            'username':                 user.username,
-            'nombres':                  user.first_name,
-            'apellidos':                user.last_name,
-            'role':                     user.role.name if user.role else None,
-            'permissions':              permissions_grouped,
-            'sedes':                    sedes,
-            'modulo_id':                user.modulo_id, 
-            'modulo_nombre'             : user.modulo.nombre if user.modulo else None,
-            'empresa_id':               user.empresa_id,       
-            'empresa_nombre':           user.empresa.nombre if user.empresa else None,
-            'access':                   str(access),
-            'refresh':                  str(refresh),
-            'password_expires_in_days': CredentialService.days_until_expiry(user),
-            'needs_password_warning':   CredentialService.needs_password_warning(user),
+        permissions_flat = [
+            f'{ms}:{app}:{cod}'
+            for ms, apps in permissions_grouped.items()
+            for app, cods in apps.items()
+            for cod in cods
+        ]
+        sedes = list(user.sedes.values('id', 'nombre'))
+        new_refresh = RFToken.for_user(user)
+        extra_claims = {
+            'role': user.role.name if user.role else None,
+            'permissions': permissions_grouped,
+            'permissions_flat': permissions_flat,
+            'sedes_ids': [s['id'] for s in sedes],
+            'modulo_id': user.modulo_id,
         }
-    @staticmethod
-    def get_active_sessions(dni: str | None = None):
-        result=LoginSessionRepository.get_active_sessions(dni=dni)
-        if not result:
-            raise NotFound("No hay Sesiones Activas")
-        return result
+        for key, value in extra_claims.items():
+            new_refresh[key] = value
+            new_refresh.access_token[key] = value
+        return {
+            'success': True,
+            'id': user.id,
+            'nombres': user.first_name,
+            'apellidos': user.last_name,
+            'role': user.role.name if user.role else None,
+            'permissions': permissions_grouped,
+            'permissions_flat': permissions_flat,
+            'sedes': sedes,
+            'modulo_id': user.modulo_id,
+            'modulo_nombre': user.modulo.nombre if user.modulo else None,
+            'empresa_id': user.empresa_id,
+            'empresa_nombre': user.empresa.nombre if user.empresa else None,
+            'access': str(new_refresh.access_token),
+            'refresh': str(new_refresh),
+            'password_expires_in_days': CredentialService.days_until_expiry(user),
+            'needs_password_warning': CredentialService.needs_password_warning(user),
+        }
+    

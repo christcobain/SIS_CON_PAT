@@ -32,8 +32,16 @@ const authService = {
     });
     return response.data;
   },
+  resetPasswordByDni: async (username) => {
+    const response = await axiosUsuarios.post('/auth/changepassword/', { username });
+    return response.data;
+  },
   getPasswordPolicyActive: async () => {
     const response = await axiosUsuarios.get('/auth/passwordpolicy/active/');
+    return response.data;
+  },
+  listarPoliticas: async () => {
+    const response = await axiosUsuarios.get('/auth/passwordpolicy/');
     return response.data;
   },
   // ==========================================
@@ -41,6 +49,23 @@ const authService = {
   getSessions: async (dni = null) => {
     const params = dni ? { dni } : {};
     const response = await axiosUsuarios.get('/auth/login/sessions/', { params });
+    return response.data;
+  },
+  getSessionsHistorial: async (params = {}) => {
+    const response = await axiosUsuarios.get('/auth/login/sessions/historial/', { params });
+    return response.data;
+  },
+   getLoginAttempts: async (params = {}) => {
+    const response = await axiosUsuarios.get('/auth/login/attempts/', { params });
+    return response.data;
+  },
+ 
+  getCredentials: async (params = {}) => {
+    const response = await axiosUsuarios.get('/auth/credentials/', { params });
+    return response.data;
+  },
+  unlockCredential: async (username) => {
+    const response = await axiosUsuarios.post('/auth/credentials/unlock/', { username });
     return response.data;
   },
   setMultipleSession: async (username, optionId) => {

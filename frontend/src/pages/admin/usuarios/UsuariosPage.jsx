@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useUsuarios }     from '../../../hooks/useUsuarios';
-import { useToast }        from '../../../hooks/useToast';
-import ConfirmDialog       from '../../../components/feedback/ConfirmDialog';
-import UsuariosStats       from './components/UsuariosStats';
-import UsuariosFiltros     from './components/UsuariosFiltros';
-import UsuariosTabla       from './components/UsuariosTabla';
-import ModalUsuario        from './modal/ModalUsuario ';
-import ModalDependencia    from './modal/ModalDependencia';
-import ModalDetalleUsuario from './modal/ModalDetalleUsuario';
+import { useUsuarios }          from '../../../hooks/useUsuarios';
+import { useToast }             from '../../../hooks/useToast';
+import ConfirmDialog            from '../../../components/feedback/ConfirmDialog';
+import UsuariosStats            from './components/UsuariosStats';
+import UsuariosFiltros          from './components/UsuariosFiltros';
+import UsuariosTabla            from './components/UsuariosTabla';
+import ModalUsuario             from './modal/ModalUsuario ';
+import ModalDependencia         from './modal/ModalDependencia';
+import ModalDetalleUsuario      from './modal/ModalDetalleUsuario';
+import ModalDetalleDependencia  from './modal/ModalDetalleDependencia';
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
@@ -58,29 +59,31 @@ export default function UsuariosPage() {
 
   const [activeTab,     setActiveTab]     = useState('usuarios');
   const [filtros,       setFiltros]       = useState(FILTROS_INICIALES);
-  const [modalUsuario,      setModalUsuario]      = useState(false);
-  const [modalDependencia,  setModalDependencia]  = useState(false);
-  const [modalDetalle,      setModalDetalle]      = useState(false);
+
+  const [modalUsuario,         setModalUsuario]         = useState(false);
+  const [modalDependencia,     setModalDependencia]     = useState(false);
+  const [modalDetalleUsuario,  setModalDetalleUsuario]  = useState(false);
+  const [modalDetalleDep,      setModalDetalleDep]      = useState(false);
+
   const [itemEditarUsuario, setItemEditarUsuario] = useState(null);
   const [itemEditarDep,     setItemEditarDep]     = useState(null);
   const [itemDetalle,       setItemDetalle]       = useState(null);
   const [confirmToggle,     setConfirmToggle]     = useState(false);
   const [itemToggle,        setItemToggle]        = useState(null);
 
-  const onFiltroChange   = (key, val) => setFiltros((prev) => ({ ...prev, [key]: val }));
+  const onFiltroChange   = (key, val) => setFiltros(prev => ({ ...prev, [key]: val }));
   const onLimpiarFiltros = () => setFiltros(FILTROS_INICIALES);
 
   const itemsFiltrados = useMemo(() => {
     const lista = activeTab === 'usuarios' ? usuarios : dependencias;
     const txt   = filtros.search.toLowerCase().trim();
-    return lista.filter((item) => {
+    return lista.filter(item => {
       const matchSearch = !txt || (() => {
         if (activeTab === 'usuarios') {
           const rolNombre = typeof item.role === 'object' ? item.role?.name : item.role;
-          return [item.first_name, item.last_name, item.dni, rolNombre, item.cargo]
-            .some((c) => c?.toLowerCase().includes(txt));
+          return [item.first_name, item.last_name, item.dni, rolNombre, item.cargo].some(c => c?.toLowerCase().includes(txt));
         }
-        return [item.nombre, item.codigo].some((c) => c?.toLowerCase().includes(txt));
+        return [item.nombre, item.codigo].some(c => c?.toLowerCase().includes(txt));
       })();
       const matchEstado = filtros.is_active === '' || String(item.is_active) === filtros.is_active;
       const matchRol    = !filtros.role || activeTab !== 'usuarios' ||
@@ -94,36 +97,37 @@ export default function UsuariosPage() {
   const refetchActivo = activeTab === 'usuarios' ? refetchUsuarios  : fetchDependencias;
 
   const handleNuevo = () => {
-    if (activeTab === 'usuarios') {
-      setItemEditarUsuario(null);
-      setModalUsuario(true);
-    } else {
-      setItemEditarDep(null);
-      setModalDependencia(true);
-    }
+    if (activeTab === 'usuarios') { setItemEditarUsuario(null); setModalUsuario(true); }
+    else                          { setItemEditarDep(null);     setModalDependencia(true); }
   };
 
   const handleEditar = (item) => {
     if (activeTab === 'usuarios') {
       setItemEditarUsuario(item);
       setModalUsuario(true);
+      setModalDetalleUsuario(false);
     } else {
       setItemEditarDep(item);
       setModalDependencia(true);
+      setModalDetalleDep(false);
     }
   };
 
-  const handleVerDetalle = (item) => { setItemDetalle(item); setModalDetalle(true); };
-  const handleToggle     = (item) => { setItemToggle(item); setConfirmToggle(true); };
+  const handleVerDetalle = (item) => {
+    setItemDetalle(item);
+    if (activeTab === 'usuarios') setModalDetalleUsuario(true);
+    else                          setModalDetalleDep(true);
+  };
+
+  const handleToggle = (item) => { setItemToggle(item); setConfirmToggle(true); };
 
   const handleConfirmToggle = async () => {
     setConfirmToggle(false);
     if (!itemToggle) return;
     const { id, is_active } = itemToggle;
-    const nombreItem = activeTab === 'usuarios'
+    const nombre = activeTab === 'usuarios'
       ? `${itemToggle.first_name ?? ''} ${itemToggle.last_name ?? ''}`.trim()
       : (itemToggle.nombre ?? '');
-
     try {
       let res;
       if (activeTab === 'usuarios') {
@@ -133,17 +137,13 @@ export default function UsuariosPage() {
         try {
           res = is_active ? await desactivarDependencia(id) : await activarDependencia(id);
           await fetchDependencias();
-        } finally {
-          setActualizandoDeps(false);
-        }
+        } finally { setActualizandoDeps(false); }
       }
-      toast.success(res?.message ?? `"${nombreItem}" ${is_active ? 'desactivado' : 'activado'}.`);
-      if(activeTab === 'usuarios') refetchUsuarios();
+      toast.success(res?.message ?? `"${nombre}" ${is_active ? 'desactivado' : 'activado'}.`);
+      if (activeTab === 'usuarios') refetchUsuarios();
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Error al cambiar el estado.');
-    } finally {
-      setItemToggle(null);
-    }
+    } finally { setItemToggle(null); }
   };
 
   const btnLabel = activeTab === 'usuarios'
@@ -152,8 +152,7 @@ export default function UsuariosPage() {
 
   return (
     <div className="gap-1 p-4 max-w-[1600px] animate-in fade-in duration-500 h-auto pb-20">
-      
-      {/* ── CABECERA Y TABS ────────────────────────────────────────── */}
+
       <div className="card p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-1">
           <div className="flex items-center gap-2">
@@ -165,22 +164,11 @@ export default function UsuariosPage() {
               <p className="page-subtitle">Administre usuarios, accesos y dependencias del Poder Judicial.</p>
             </div>
           </div>
-
           <div className="flex items-center gap-2">
-            <button 
-              onClick={refetchActivo} 
-              disabled={loadingActivo}
-              className="btn-icon bg-surface border border-border"
-              title="Sincronizar"
-            >
+            <button onClick={refetchActivo} disabled={loadingActivo} className="btn-icon bg-surface border border-border" title="Sincronizar">
               <Icon name="sync" className={`text-[18px] ${loadingActivo ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
-            
-            <button 
-              onClick={handleNuevo} 
-              disabled={actualizando || actualizandoDeps} 
-              className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
-            >
+            <button onClick={handleNuevo} disabled={actualizando || actualizandoDeps} className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm">
               <Icon name={btnLabel.icon} className="text-[18px]" />
               <span className="font-black uppercase tracking-widest text-[10px]">{btnLabel.text}</span>
             </button>
@@ -189,13 +177,10 @@ export default function UsuariosPage() {
 
         <div className="flex gap-6 mt-4 border-t border-border pt-3">
           {TABS.map(({ id, label, icon }) => (
-            <button
-              key={id}
+            <button key={id}
               onClick={() => { setActiveTab(id); onLimpiarFiltros(); }}
               className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all ${
-                activeTab === id 
-                ? 'text-primary border-b-2 border-primary' 
-                : 'text-faint hover:text-main'
+                activeTab === id ? 'text-primary border-b-2 border-primary' : 'text-faint hover:text-main'
               }`}
             >
               <Icon name={icon} className="text-[16px]" />
@@ -206,22 +191,8 @@ export default function UsuariosPage() {
       </div>
 
       <div className="page-content custom-scrollbar">
-        {/* KPI Stats */}
-        <UsuariosStats
-          usuarios={usuarios}
-          dependencias={dependencias}
-          loading={loadingUsuarios || loadingDeps}
-        />
-
-        {/* Filtros */}
-        <UsuariosFiltros
-          filtros={filtros}
-          onFiltroChange={onFiltroChange}
-          onLimpiar={onLimpiarFiltros}
-          activeTab={activeTab}
-        />
-
-        {/* Tabla / Grid */}
+        <UsuariosStats usuarios={usuarios} dependencias={dependencias} loading={loadingUsuarios || loadingDeps} />
+        <UsuariosFiltros filtros={filtros} onFiltroChange={onFiltroChange} onLimpiar={onLimpiarFiltros} activeTab={activeTab} />
         <UsuariosTabla
           activeTab={activeTab}
           items={itemsFiltrados}
@@ -234,33 +205,31 @@ export default function UsuariosPage() {
         />
       </div>
 
-      {/* ── Modales ────────────────────────────────────────────────────────── */}
       <ModalUsuario
         open={modalUsuario}
         onClose={() => { setModalUsuario(false); setItemEditarUsuario(null); }}
         item={itemEditarUsuario}
-        onGuardado={() => {
-          setModalUsuario(false);
-          setItemEditarUsuario(null);
-          refetchUsuarios();
-        }}
+        onGuardado={() => { setModalUsuario(false); setItemEditarUsuario(null); refetchUsuarios(); }}
       />
 
       <ModalDependencia
         open={modalDependencia}
         onClose={() => { setModalDependencia(false); setItemEditarDep(null); }}
         item={itemEditarDep}
-        onGuardado={() => {
-          setModalDependencia(false);
-          setItemEditarDep(null);
-          fetchDependencias();
-        }}
+        onGuardado={() => { setModalDependencia(false); setItemEditarDep(null); fetchDependencias(); }}
       />
 
       <ModalDetalleUsuario
-        open={modalDetalle}
-        onClose={() => setModalDetalle(false)}
-        item={itemDetalle}
+        open={modalDetalleUsuario}
+        onClose={() => setModalDetalleUsuario(false)}
+        item={activeTab === 'usuarios' ? itemDetalle : null}
+        onEditar={handleEditar}
+      />
+
+      <ModalDetalleDependencia
+        open={modalDetalleDep}
+        onClose={() => setModalDetalleDep(false)}
+        item={activeTab === 'dependencias' ? itemDetalle : null}
         onEditar={handleEditar}
       />
 

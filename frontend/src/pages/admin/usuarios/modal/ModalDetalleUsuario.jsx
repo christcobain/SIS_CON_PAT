@@ -1,126 +1,71 @@
 import { useState, useEffect } from 'react';
-import Modal           from '../../../../components/modal/Modal';
-import ModalHeader     from '../../../../components/modal/ModalHeader';
-import ModalBody       from '../../../../components/modal/ModalBody';
-import ModalFooter     from '../../../../components/modal/ModalFooter';
-import EmptyState      from '../../../../components/feedback/EmptyState';
-import ErrorState      from '../../../../components/feedback/ErrorState';
-import { useUsuarios } from '../../../../hooks/useUsuarios';
-import { useAuth }     from '../../../../hooks/useAuth';
-import { useBienes }   from '../../../../hooks/useBienes';
-import { useToast }    from '../../../../hooks/useToast';
+import Modal         from '../../../../components/modal/Modal';
+import ModalHeader   from '../../../../components/modal/ModalHeader';
+import ModalBody     from '../../../../components/modal/ModalBody';
+import ModalFooter   from '../../../../components/modal/ModalFooter';
+import ConfirmDialog from '../../../../components/feedback/ConfirmDialog';
+import { useUsuarios }  from '../../../../hooks/useUsuarios';
+import { useAuth }      from '../../../../hooks/useAuth';
+import { useBienes }    from '../../../../hooks/useBienes';
+import { useToast }     from '../../../../hooks/useToast';
+import { useAuthStore } from '../../../../store/authStore';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
 );
 
-// ── Config ────────────────────────────────────────────────────────────────────
 const ROL_CFG = {
-  SYSADMIN:      { label: 'SysAdmin',        bg: 'bg-primary/10',  color: 'var(--color-primary)', icon: 'shield_person'  },
-  coordSistema:  { label: 'Coord. Sistema',  bg: 'bg-blue-100',    color: '#1d4ed8',              icon: 'hub'            },
-  adminSede:     { label: 'Admin Sede',      bg: 'bg-purple-100',  color: '#7c3aed',              icon: 'corporate_fare' },
-  asistSistema:  { label: 'Asist. Sistema',  bg: 'bg-amber-100',   color: '#b45309',              icon: 'person_edit'    },
-  segurSede:     { label: 'Segur. Sede',     bg: 'bg-orange-100',  color: '#c2410c',              icon: 'security'       },
-  userCorte:  { label: 'Usuario Final',   bg: 'bg-slate-100',   color: '#475569',              icon: 'person'         },
+  SYSADMIN:     { label: 'SysAdmin',       icon: 'shield_person',  bg: 'rgb(127 29 29 / 0.1)',  color: 'var(--color-primary)' },
+  coordSistema: { label: 'Coord. Sistema', icon: 'hub',            bg: 'rgb(37 99 235 / 0.1)',  color: '#1d4ed8' },
+  adminSede:    { label: 'Admin Sede',     icon: 'corporate_fare', bg: 'rgb(124 58 237 / 0.1)', color: '#7c3aed' },
+  asistSistema: { label: 'Asist. Sistema', icon: 'person_edit',   bg: 'rgb(180 83 9 / 0.1)',   color: '#b45309' },
+  segurSede:    { label: 'Segur. Sede',    icon: 'security',       bg: 'rgb(194 65 12 / 0.1)',  color: '#c2410c' },
+  userCorte:    { label: 'Usuario Final',  icon: 'person',         bg: 'rgb(71 85 105 / 0.1)',  color: '#475569' },
 };
 const MS_LABEL = { 'ms-bienes': 'Bienes', 'ms-usuarios': 'Usuarios', 'ms-reportes': 'Reportes' };
 const TABS = [
-  { id: 'general', label: 'Información',     icon: 'person'      },
-  { id: 'acceso',  label: 'Seguridad / Rol', icon: 'shield'      },
-  { id: 'bienes',  label: 'Bienes',          icon: 'inventory_2' },
+  { id: 'general',   label: 'Información',    icon: 'person'      },
+  { id: 'acceso',    label: 'Rol / Permisos', icon: 'shield'      },
+  { id: 'seguridad', label: 'Seguridad',      icon: 'lock'        },
+  { id: 'bienes',    label: 'Bienes',         icon: 'inventory_2' },
 ];
-const ESTADO_BIEN_CLS = (e) => ({
-  'BUENO': 'badge-activo', 'REGULAR': 'badge-pendiente',
-  'MALO': 'badge-cancelado', 'DADO DE BAJA': 'badge-cancelado',
-}[e?.toUpperCase()] ?? 'badge-inactivo');
+const fmt  = (iso) => !iso ? '—' : new Date(iso).toLocaleDateString('es-PE', { dateStyle: 'medium' });
+const fmtT = (iso) => !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
-// ── Primitivos UI ─────────────────────────────────────────────────────────────
-function Dato({ icon, label, value, mono = false, span2 = false }) {
+function DatoRow({ icon, label, value, mono = false }) {
   if (value === null || value === undefined || value === '') return null;
   return (
-    <div className={`flex items-start gap-2.5 py-2.5 ${span2 ? 'col-span-2' : ''}`}
-         style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-      <Icon name={icon} className="text-[14px] mt-0.5 shrink-0" style={{ color: 'var(--color-text-faint)' }} />
-      <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>
-          {label}
-        </p>
-        <p className={`text-sm font-semibold mt-0.5 break-words ${mono ? 'font-mono' : ''}`}
-           style={{ color: 'var(--color-text-primary)' }}>
-          {value}
-        </p>
+    <div className="flex items-start gap-3 py-2.5" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+      <Icon name={icon} className="text-[16px] mt-0.5 shrink-0" style={{ color: 'var(--color-text-faint)' }} />
+      <div className="min-w-0 flex-1">
+        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>{label}</p>
+        <p className={`text-sm font-semibold mt-0.5 ${mono ? 'font-mono' : ''}`} style={{ color: 'var(--color-text-primary)' }}>{value}</p>
       </div>
     </div>
   );
 }
 
-function Spinner() {
+function TabGeneral({ data }) {
+  const sedes = data.sedes ?? [];
   return (
-    <div className="flex items-center justify-center py-16">
-      <svg className="animate-spin h-5 w-5" style={{ color: 'var(--color-primary)' }}
-           fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-      </svg>
-    </div>
-  );
-}
-
-function formatFecha(iso) {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-// ── Tab: Información General ──────────────────────────────────────────────────
-function TabGeneral({ item }) {
-  const sedes    = item.sedes ?? [];
-  const depLabel = item.dependencia
-    ? `${item.dependencia.nombre}${item.dependencia.codigo ? ` (${item.dependencia.codigo})` : ''}`
-    : null;
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-x-6">
-        <Dato icon="badge"           label="DNI"             value={item.dni}            mono />
-        <Dato icon="work_outline"    label="Cargo"           value={item.cargo}               />
-        <Dato icon="account_tree"    label="Dependencia"     value={depLabel}                 />
-        <Dato icon="widgets"         label="Módulo"          value={item.modulo?.nombre}      />
-        <Dato icon="dns"             label="Módulo RRHH"     value={item.modulo_rrhh}         />
-        <Dato icon="calendar_today"  label="Alta en sistema" value={formatFecha(item.date_joined)} />
-        {item.fecha_baja && (
-          <Dato icon="event_busy"    label="Fecha de baja"   value={formatFecha(item.fecha_baja)} />
-        )}
-        <Dato icon="business"        label="Empresa"
-              value={item.empresa ? `${item.empresa.nombre_corto} — ${item.empresa.nombre}` : null}
-              span2 />
-        {item.created_by && (
-          <Dato icon="manage_accounts" label="Creado por"
-                value={`${item.created_by.first_name} ${item.created_by.last_name}`.trim()}
-                span2 />
-        )}
-      </div>
-
+    <div className="space-y-0.5">
+      <DatoRow icon="badge"           label="DNI"              value={data.dni}                 mono />
+      <DatoRow icon="person"          label="Nombres"          value={data.first_name}              />
+      <DatoRow icon="family_restroom" label="Apellidos"        value={data.last_name}               />
+      <DatoRow icon="work_outline"    label="Cargo"            value={data.cargo}                   />
+      <DatoRow icon="account_tree"    label="Dependencia"      value={data.dependencia?.nombre}     />
+      <DatoRow icon="widgets"         label="Módulo funcional" value={data.modulo?.nombre}          />
+      <DatoRow icon="calendar_today"  label="Fecha de ingreso" value={fmt(data.date_joined)}        />
+      {data.fecha_baja && <DatoRow icon="event_busy" label="Fecha de baja" value={fmt(data.fecha_baja)} />}
       {sedes.length > 0 && (
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-widest mb-2"
-             style={{ color: 'var(--color-text-muted)' }}>
-            Sedes asignadas ({sedes.length})
-          </p>
-          <div className="space-y-2">
-            {sedes.map((s) => (
-              <div key={s.id} className="flex items-start gap-3 p-3 rounded-xl"
-                   style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border-light)' }}>
-                <Icon name="location_on" className="text-[14px] mt-0.5 shrink-0"
-                      style={{ color: 'var(--color-primary)' }} />
-                <div>
-                  <p className="text-xs font-black" style={{ color: 'var(--color-text-primary)' }}>{s.nombre}</p>
-                  {(s.direccion || s.distrito?.nombre) && (
-                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-                      {[s.direccion, s.distrito?.nombre].filter(Boolean).join(' · ')}
-                    </p>
-                  )}
-                </div>
-              </div>
+        <div className="pt-3">
+          <p className="text-[9px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--color-text-muted)' }}>Sedes asignadas</p>
+          <div className="flex flex-wrap gap-2">
+            {sedes.map(s => (
+              <span key={s.id} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold"
+                style={{ background: 'rgb(127 29 29 / 0.06)', border: '1px solid rgb(127 29 29 / 0.2)', color: 'var(--color-primary)' }}>
+                <Icon name="location_on" className="text-[13px]" />{s.nombre}
+              </span>
             ))}
           </div>
         </div>
@@ -129,120 +74,52 @@ function TabGeneral({ item }) {
   );
 }
 
-// ── Tab: Seguridad / Rol ──────────────────────────────────────────────────────
-function TabAcceso({ item }) {
-  const toast = useToast();
-  const { configurarSesionMultiple, cambiarPasswordUsuario } = useAuth();
-  const rolKey   = item.role?.name ?? '';
-  const rolCfg   = ROL_CFG[rolKey] ?? { label: rolKey || 'Sin rol', bg: 'bg-slate-100', color: '#64748b', icon: 'manage_accounts' };
-  const permisos = item.role?.permissions ?? [];
-  const permsByMs = permisos.reduce((acc, p) => {
-    const ms = p.microservice_name?.split(':')?.[0] ?? 'otros';
+function TabAcceso({ data }) {
+  const rolKey = data.role?.name ?? '';
+  const rolCfg = ROL_CFG[rolKey] ?? { label: rolKey || '—', icon: 'manage_accounts', bg: 'var(--color-border-light)', color: 'var(--color-text-muted)' };
+  const permisos = data.role?.permissions ?? [];
+  const porMs = permisos.reduce((acc, p) => {
+    const ms = p.microservice_name ?? 'general';
     if (!acc[ms]) acc[ms] = [];
-    acc[ms].push(p);
+    acc[ms].push(p.codename);
     return acc;
   }, {});
-  const [multiSesion,    setMultiSesion]    = useState(null);
-  const [loadingSession, setLoadingSession] = useState(false);
-  const [loadingClave, setLoadingClave] = useState(false);
-  const [claveReset,   setClaveReset]   = useState(false); 
-  const handleMultiSesion = async (optionId) => {
-    setLoadingSession(true);
-    try {
-      await configurarSesionMultiple(item.dni, optionId);
-      setMultiSesion(optionId === 1);
-      toast.success(`Múltiple sesión ${optionId === 1 ? 'habilitada' : 'deshabilitada'}`);
-    } catch (e) {
-      toast.error(e?.response?.data?.error ?? 'Error al cambiar configuración de sesión');
-    } finally {
-      setLoadingSession(false);
-    }
-  };
-  const handleResetClave = async () => {
-    setLoadingClave(true);
-    try {
-      await cambiarPasswordUsuario(item.dni, item.dni); 
-      setClaveReset(true);
-      toast.success(`Contraseña reseteada. Nueva clave: DNI (${item.dni})`);
-    } catch (e) {
-      toast.error(e?.response?.data?.error ?? 'Error al resetear la contraseña');
-    } finally {
-      setLoadingClave(false);
-    }
-  };
-
   return (
     <div className="space-y-4">
-      {/* ── Bloque 1: Info de seguridad en filas compactas ────────────────── */}
-      <div className="rounded-xl overflow-hidden"
-           style={{ border: '1px solid var(--color-border)' }}>
-        {/* Fila: Estado de cuenta */}
-        <div className="flex items-center justify-between px-4 py-2.5"
-             style={{ borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-surface)' }}>
-          <span className="text-[9px] font-black uppercase tracking-widest"
-                style={{ color: 'var(--color-text-muted)' }}>Estado</span>
-          <div className="flex items-center gap-1">
-            <Icon name={item.is_active ? 'check_circle' : 'cancel'}
-                  className={`text-[13px] ${item.is_active ? 'text-emerald-500' : 'text-slate-400'}`} />
-            <span className="text-[10px] font-bold"
-                  style={{ color: item.is_active ? '#15803d' : 'var(--color-text-muted)' }}>
-              {item.is_active ? 'Cuenta activa' : 'Cuenta inactiva'}
-            </span>
-          </div>
+      <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+        <div className="size-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: rolCfg.bg }}>
+          <Icon name={rolCfg.icon} className="text-[24px]" style={{ color: rolCfg.color }} />
         </div>
-
-        {/* Fila: Acceso al sistema */}
-        <div className="flex items-center justify-between px-4 py-2.5"
-             style={{ borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-surface)' }}>
-          <span className="text-[9px] font-black uppercase tracking-widest"
-                style={{ color: 'var(--color-text-muted)' }}>Acceso</span>
-          <div className="flex items-center gap-1">
-            <Icon name={item.es_usuario_sistema ? 'manage_accounts' : 'person_off'}
-                  className={`text-[13px] ${item.es_usuario_sistema ? 'text-emerald-500' : 'text-slate-400'}`} />
-            <span className="text-[10px] font-bold"
-                  style={{ color: item.es_usuario_sistema ? '#15803d' : 'var(--color-text-muted)' }}>
-              {item.es_usuario_sistema ? 'Con acceso al sistema' : 'Sin acceso al sistema'}
-            </span>
-          </div>
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest mb-0.5" style={{ color: 'var(--color-text-muted)' }}>Rol asignado</p>
+          <p className="font-black text-sm" style={{ color: 'var(--color-text-primary)' }}>{rolCfg.label}</p>
+          <p className="text-[11px] font-mono" style={{ color: 'var(--color-text-muted)' }}>{rolKey}</p>
         </div>
-
-        {/* Fila: Rol de sistema */}
-        <div className="flex items-center justify-between px-4 py-2.5"
-             style={{ background: 'var(--color-surface)' }}>
-          <span className="text-[9px] font-black uppercase tracking-widest"
-                style={{ color: 'var(--color-text-muted)' }}>Rol de sistema</span>
-          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${rolCfg.bg}`}
-                style={{ color: rolCfg.color }}>
-            {rolKey || '—'}
+        <div className="ml-auto">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold"
+            style={{ background: data.is_active ? 'rgb(22 163 74 / 0.08)' : 'var(--color-border-light)', color: data.is_active ? '#16a34a' : 'var(--color-text-muted)', border: `1px solid ${data.is_active ? 'rgb(22 163 74 / 0.25)' : 'var(--color-border)'}` }}>
+            <span className={`size-1.5 rounded-full ${data.is_active ? 'bg-green-500' : 'bg-slate-400'}`} />
+            {data.is_active ? 'Activo' : 'Inactivo'}
           </span>
         </div>
       </div>
-
-      {/* ── Bloque 2: Permisos agrupados ──────────────────────────────────── */}
-      {permisos.length > 0 && (
+      {Object.keys(porMs).length > 0 ? (
         <div>
-          <p className="text-[9px] font-black uppercase tracking-widest mb-2"
-             style={{ color: 'var(--color-text-muted)' }}>
-            Permisos del rol ({permisos.length})
-          </p>
-          <div className="space-y-1.5">
-            {Object.entries(permsByMs).map(([ms, perms]) => (
-              <div key={ms} className="rounded-xl overflow-hidden"
-                   style={{ border: '1px solid var(--color-border-light)' }}>
-                <div className="flex items-center justify-between px-3 py-1.5"
-                     style={{ background: 'var(--color-surface-alt)' }}>
-                  <span className="text-[9px] font-black uppercase tracking-widest"
-                        style={{ color: 'var(--color-text-muted)' }}>{MS_LABEL[ms] ?? ms}</span>
-                  <span className="text-[9px] font-black" style={{ color: 'var(--color-primary)' }}>
-                    {perms.length}
-                  </span>
-                </div>
-                <div className="px-3 py-2 flex flex-wrap gap-1">
-                  {perms.map((p) => (
-                    <span key={p.id}
-                          className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded"
-                          style={{ background: 'var(--color-border-light)', color: 'var(--color-text-body)' }}>
-                      {p.codename}
+          <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Permisos — {permisos.length} total</p>
+          <div className="space-y-4">
+            {Object.entries(porMs).map(([ms, codes]) => (
+              <div key={ms}>
+                <p className="text-[10px] font-bold mb-2 flex items-center gap-1.5" style={{ color: 'var(--color-text-body)' }}>
+                  <Icon name="database" className="text-[14px]" style={{ color: 'var(--color-primary)' }} />
+                  {MS_LABEL[ms] ?? ms}
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-md font-black" style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>{codes.length}</span>
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {codes.map(c => (
+                    <span key={c} className="text-[10px] font-mono px-2 py-1 rounded-lg truncate"
+                      style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-body)' }}
+                      title={c}>
+                      {c}
                     </span>
                   ))}
                 </div>
@@ -250,379 +127,363 @@ function TabAcceso({ item }) {
             ))}
           </div>
         </div>
-      )}
-
-      {/* ── Bloque 3: Acciones administrativas compactas ──────────────────── */}
-      {item.es_usuario_sistema && (
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-widest mb-2"
-             style={{ color: 'var(--color-text-muted)' }}>
-            Acciones administrativas
-          </p>
-          <div className="rounded-2xl overflow-hidden"
-               style={{ border: '1px solid var(--color-border)' }}>
-            {/* Múltiple sesión — fila compacta con toggle */}
-            <div className="flex items-center justify-between px-4 py-3"
-                 style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Icon name="devices" className="text-[16px] shrink-0"
-                      style={{ color: 'var(--color-primary)' }} />
-                <div className="min-w-0">
-                  <p className="text-xs font-black" style={{ color: 'var(--color-text-primary)' }}>
-                    Múltiple sesión
-                  </p>
-                  <p className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>
-                    Acceso desde varias PCs simultáneamente
-                  </p>
-                </div>
-              </div>
-              {/* Toggle visual tipo switch */}
-              <div className="flex items-center gap-1 shrink-0 ml-3">
-                {[
-                  { optId: 1, label: 'Sí',  active: multiSesion === true,  bg: '#15803d', border: '#bbf7d0', textOk: '#15803d' },
-                  { optId: 2, label: 'No',  active: multiSesion === false, bg: '#dc2626', border: '#fecaca', textOk: '#dc2626' },
-                ].map(({ optId, label, active,  border, textOk }) => (
-                  <button
-                    key={optId}
-                    onClick={() => handleMultiSesion(optId)}
-                    disabled={loadingSession || active}
-                    className="px-3 py-1 rounded-full text-[10px] font-black transition-all"
-                    style={{
-                      background: active ? (optId === 1 ? '#f0fdf4' : '#fef2f2') : 'var(--color-surface-alt)',
-                      color:      active ? textOk : 'var(--color-text-muted)',
-                      border:     `1px solid ${active ? border : 'var(--color-border-light)'}`,
-                      opacity:    loadingSession ? 0.5 : 1,
-                    }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* Resetear contraseña — fila compacta con botón único */}
-            <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Icon name="key" className="text-[16px] shrink-0"
-                      style={{ color: 'var(--color-primary)' }} />
-                <div className="min-w-0">
-                  <p className="text-xs font-black" style={{ color: 'var(--color-text-primary)' }}>
-                    Resetear contraseña
-                  </p>
-                  <p className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>
-                    La nueva clave será el DNI: <span className="font-mono font-bold">{item.dni}</span>
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleResetClave}
-                disabled={loadingClave || claveReset}
-                className="shrink-0 ml-3 px-3 py-1 rounded-full text-[10px] font-black transition-all"
-                style={{
-                  background: claveReset ? '#f0fdf4' : 'var(--color-surface-alt)',
-                  color:      claveReset ? '#15803d' : 'var(--color-text-body)',
-                  border:     `1px solid ${claveReset ? '#bbf7d0' : 'var(--color-border-light)'}`,
-                  opacity:    loadingClave ? 0.5 : 1,
-                }}>
-                {loadingClave
-                  ? '…'
-                  : claveReset
-                    ? <span className="flex items-center gap-1"><Icon name="check" className="text-[12px]" />Hecho</span>
-                    : 'Resetear'}
-              </button>
-            </div>
-          </div>
+      ) : (
+        <div className="text-center py-6">
+          <Icon name="key_off" className="text-[36px]" style={{ color: 'var(--color-text-faint)' }} />
+          <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>Sin permisos registrados.</p>
         </div>
       )}
     </div>
   );
 }
 
-// ── Tab: Bienes ───────────────────────────────────────────────────────────────
-function TabBienes({ usuarioId, item }) {
-  const { listarPorUsuario } = useBienes();
-  const [bienes,      setBienes]      = useState([]);
-  const [loadBienes,  setLoadBienes]  = useState(false);
-  const [errorBienes, setErrorBienes] = useState(null);
+function TabSeguridad({ data }) {
+  const toast = useToast();
+  const { resetearPasswordPorDni, obtenerSesiones, configurarSesionMultiple, consultarHistorialContrasenas } = useAuth();
+  const currentRole = useAuthStore(s => s.role);
+  const currentPerms = useAuthStore(s => s.permissionsFlat ?? []);
+  const canReset = currentRole === 'SYSADMIN' || currentPerms.includes('ms-usuarios:authentication:add_credential');
+
+  const [confirmReset,   setConfirmReset]   = useState(false);
+  const [resetLoading,   setResetLoading]   = useState(false);
+  const [multiLoading,   setMultiLoading]   = useState(false);
+  const [sesiones,       setSesiones]       = useState([]);
+  const [loadingSes,     setLoadingSes]     = useState(false);
+  const [historial,      setHistorial]      = useState([]);
+  const [loadingHist,    setLoadingHist]    = useState(false);
 
   useEffect(() => {
-    if (!usuarioId) return;
-    let cancelled = false;
-    setLoadBienes(true);
-    setErrorBienes(null);
-    listarPorUsuario(usuarioId)
-      .then((d)  => { if (!cancelled) setBienes(Array.isArray(d) ? d : d?.results ?? []); })
-      .catch((e) => { if (!cancelled) setErrorBienes(e?.response?.data?.detail ?? 'Error al cargar bienes'); })
-      .finally(() => { if (!cancelled) setLoadBienes(false); });
-    return () => { cancelled = true; };
-  }, [usuarioId]);
+    if (!data?.dni) return;
+    setLoadingSes(true);
+    obtenerSesiones(data.dni)
+      .then(d => setSesiones(Array.isArray(d) ? d : []))
+      .catch(() => setSesiones([]))
+      .finally(() => setLoadingSes(false));
+    if (data?.id) {
+      setLoadingHist(true);
+      consultarHistorialContrasenas(data.id, 5)
+        .then(d => setHistorial(Array.isArray(d) ? d : []))
+        .catch(() => setHistorial([]))
+        .finally(() => setLoadingHist(false));
+    }
+  }, [data?.dni, data?.id]);
 
-  if (loadBienes) return <Spinner />;
-  if (errorBienes) return <ErrorState message={errorBienes} onRetry={() => setErrorBienes(null)} />;
-  if (bienes.length === 0) return (
-    <EmptyState
-      icon="inventory_2"
-      title="Sin bienes asignados"
-      description="Este usuario no tiene bienes patrimoniales asignados actualmente."
-    />
-  );
+  const confirmarReset = async () => {
+    setConfirmReset(false);
+    setResetLoading(true);
+    try {
+      await resetearPasswordPorDni(data.username ?? data.dni);
+      toast.success(`Contraseña restablecida. La nueva clave es el DNI del usuario.`);
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Error al restablecer la contraseña.');
+    } finally { setResetLoading(false); }
+  };
 
-  const sedePrincipal  = item?.sedes?.[0]?.nombre ?? null;
-  const moduloPrincipal = item?.modulo?.nombre     ?? null;
+  const toggleMulti = async (activar) => {
+    setMultiLoading(true);
+    try {
+      await configurarSesionMultiple(data.username ?? data.dni, activar ? 1 : 2);
+      toast.success(`Múltiples sesiones ${activar ? 'habilitadas' : 'deshabilitadas'}.`);
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Error al configurar sesiones.');
+    } finally { setMultiLoading(false); }
+  };
+
+  const SES_CFG = {
+    active:    { label: 'Activa',   color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)',  dot: 'bg-green-500' },
+    expired:   { label: 'Expirada', color: '#b45309', bg: 'rgb(180 83 9 / 0.1)',   dot: 'bg-amber-500' },
+    logout:    { label: 'Cerrada',  color: 'var(--color-text-muted)', bg: 'var(--color-border-light)', dot: 'bg-slate-400' },
+  };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
+      {canReset && (
+        <section>
+          <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+            <Icon name="lock_reset" className="text-[14px]" style={{ color: 'var(--color-primary)' }} />
+            Restablecer contraseña
+          </p>
+          <div className="flex items-start gap-4 p-4 rounded-xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold" style={{ color: 'var(--color-text-body)' }}>
+                Restablecer al valor por defecto
+              </p>
+              <p className="text-[11px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                La nueva contraseña será el DNI del usuario: <span className="font-mono font-black" style={{ color: 'var(--color-primary)' }}>{data.dni}</span>.
+                El sistema obligará al usuario a cambiarla en su próximo ingreso.
+              </p>
+            </div>
+            <button
+              onClick={() => setConfirmReset(true)}
+              disabled={resetLoading}
+              className="btn-primary flex items-center gap-2 shrink-0 whitespace-nowrap"
+            >
+              {resetLoading ? <span className="btn-loading-spin" /> : <Icon name="lock_reset" className="text-[16px]" />}
+              Resetear clave
+            </button>
+          </div>
+          <ConfirmDialog
+            open={confirmReset}
+            title="Confirmar restablecimiento"
+            message={`¿Resetear la contraseña de "${data.first_name} ${data.last_name}"? La nueva clave será su DNI (${data.dni}) y deberá cambiarla al ingresar.`}
+            confirmLabel="Sí, resetear" variant="danger" loading={resetLoading}
+            onConfirm={confirmarReset} onClose={() => setConfirmReset(false)} />
+        </section>
+      )}
 
-      {/* Encabezado de ubicación — sede y módulo del usuario */}
-      {(sedePrincipal || moduloPrincipal) && (
-        <div className="flex items-center gap-2 px-1">
-          <Icon name="location_on" className="text-[14px] shrink-0"
-                style={{ color: 'var(--color-primary)' }} />
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {sedePrincipal && (
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(127,29,29,0.08)', color: 'var(--color-primary)' }}>
-                {sedePrincipal}
-              </span>
-            )}
-            {moduloPrincipal && (
+      <section style={{ borderTop: canReset ? '1px solid var(--color-border-light)' : 'none', paddingTop: canReset ? '1.25rem' : 0 }}>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+          <Icon name="devices" className="text-[14px]" style={{ color: 'var(--color-primary)' }} />
+          Múltiples sesiones
+        </p>
+        <div className="flex items-center justify-between p-3.5 rounded-xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-body)' }}>Permitir acceso desde varias PCs</p>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>El usuario puede iniciar sesión en más de un dispositivo simultáneamente.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-4">
+            {multiLoading && <span className="w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />}
+            {canReset ? (
               <>
-                <Icon name="chevron_right" className="text-[12px]" style={{ color: 'var(--color-text-faint)' }} />
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
-                      style={{ background: 'var(--color-border-light)', color: 'var(--color-text-body)' }}>
-                  {moduloPrincipal}
-                </span>
+                <button onClick={() => toggleMulti(false)} disabled={multiLoading}
+                  className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                  style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)' }}>
+                  Deshabilitar
+                </button>
+                <button onClick={() => toggleMulti(true)} disabled={multiLoading}
+                  className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                  style={{ background: 'rgb(127 29 29 / 0.1)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.25)' }}>
+                  Habilitar
+                </button>
               </>
+            ) : (
+              <span className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>Sin permisos para configurar esto.</span>
             )}
-            {/* Si hay datos de piso, muestra el rango */}
-          {bienes.some((b) => b.piso) && (
-            <>
-            <Icon name="chevron_right" className="text-[12px]" style={{ color: 'var(--color-text-faint)' }} />
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
-                      style={{ background: 'var(--color-border-light)', color: 'var(--color-text-body)' }}>
-              Piso{bienes.filter((b) => b.piso).map((b) => ` ${b.piso}`).filter((v, i, a) => a.indexOf(v) === i).join(',')}
-            </span>
-            </>
-          )}
           </div>
         </div>
-      )}
-      {/* Tabla de bienes */}
-      <div className="table-wrapper">
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                {['Categoría / Tipo', 'Marca / Modelo', 'Cód. Patrim. / Serie', 'Estado', 'Funcionam.'].map((h) => (
-                  <th key={h} className="px-3 py-2.5 whitespace-nowrap text-[9px]">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {bienes.map((b) => (
-                <tr key={b.id}>
-                  {/* Categoría / Tipo */}
-                  <td className="px-3 py-2.5">
-                    <p className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                      {b.tipo_bien_nombre || '—'}
-                    </p>
-                    <p className="text-[9px]" style={{ color: 'var(--color-text-faint)' }}>
-                      {b.categoria_bien_nombre || ''}
-                    </p>
-                  </td>
-                  {/* Marca / Modelo */}
-                  <td className="px-3 py-2.5">
-                    <p className="text-xs font-semibold" style={{ color: 'var(--color-text-body)' }}>
-                      {b.marca_nombre || '—'}
-                    </p>
-                    {b.modelo && (
-                      <p className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>{b.modelo}</p>
-                    )}
-                  </td>
-                  {/* Serie / Cód. Patrimonial */}
-                  <td className="px-3 py-2.5">
-                    <p className="text-[10px] font-black font-mono" style={{ color: 'var(--color-text-primary)' }}>
-                      {b.codigo_patrimonial || '—'}
-                    </p>
-                    {b.numero_serie && (
-                      <p className="text-[9px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
-                        S/N: {b.numero_serie}
-                      </p>
-                    )}
-                  </td>
-                  {/* Estado del bien */}
-                  <td className="px-3 py-2.5">
-                    <span className={`badge text-[9px] ${ESTADO_BIEN_CLS(b.estado_bien_nombre)}`}>
-                      {b.estado_bien_nombre || '—'}
-                    </span>
-                  </td>
-                  {/* Estado de funcionamiento */}
-                  <td className="px-3 py-2.5">
-                    <span className="badge badge-inactivo text-[9px]">
-                      {b.estado_funcionamiento_nombre || '—'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {/* Footer con piso (si hay variación) */}
-        <div className="table-footer">
-          <p className="table-count">
-            <strong style={{ color: 'var(--color-text-primary)' }}>{bienes.length}</strong>
-            {' '}bien{bienes.length !== 1 ? 'es' : ''} asignado{bienes.length !== 1 ? 's' : ''}
+      </section>
+
+      <section style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '1.25rem' }}>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+          <Icon name="manage_history" className="text-[14px]" style={{ color: 'var(--color-primary)' }} />
+          Sesiones activas {sesiones.length > 0 && <span className="tab-count-inactive">{sesiones.length}</span>}
+        </p>
+        {loadingSes ? (
+          <div className="space-y-2">{[1, 2].map(i => <div key={i} className="skeleton h-14 rounded-xl" />)}</div>
+        ) : sesiones.length === 0 ? (
+          <div className="text-center py-5 rounded-xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+            <Icon name="wifi_off" className="text-[30px]" style={{ color: 'var(--color-text-faint)' }} />
+            <p className="text-xs mt-2" style={{ color: 'var(--color-text-muted)' }}>Sin sesiones activas</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {sesiones.map(s => {
+              const cfg = SES_CFG[s.status] ?? SES_CFG.logout;
+              return (
+                <div key={s.id} className="flex items-start gap-3 p-3 rounded-xl"
+                  style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+                  <Icon name="computer" className="text-[18px] mt-0.5 shrink-0" style={{ color: 'var(--color-text-faint)' }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>{s.device_info || 'Dispositivo desconocido'}</p>
+                    <p className="text-[11px] font-mono" style={{ color: 'var(--color-text-muted)' }}>{s.ip_address}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-faint)' }}>Inicio: {fmtT(s.login_at)}</p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg shrink-0"
+                    style={{ background: cfg.bg, color: cfg.color }}>
+                    <span className={`size-1.5 rounded-full ${cfg.dot}`} />{cfg.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {(loadingHist || historial.length > 0) && (
+        <section style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '1.25rem' }}>
+          <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+            <Icon name="history" className="text-[14px]" style={{ color: 'var(--color-primary)' }} />
+            Últimos cambios de contraseña
           </p>
-        </div>
+          {loadingHist ? (
+            <div className="space-y-1">{[1,2,3].map(i => <div key={i} className="skeleton h-8 rounded-lg" />)}</div>
+          ) : (
+            <div className="space-y-1.5">
+              {historial.map((h, i) => (
+                <div key={h.id} className="flex items-center gap-3 px-3 py-2 rounded-lg"
+                  style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border-light)' }}>
+                  <span className="size-5 rounded-full flex items-center justify-center text-[9px] font-black shrink-0"
+                    style={{ background: i === 0 ? 'rgb(127 29 29 / 0.1)' : 'var(--color-border-light)', color: i === 0 ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+                    {i + 1}
+                  </span>
+                  <p className="text-xs flex-1" style={{ color: 'var(--color-text-body)' }}>{fmtT(h.created_at)}</p>
+                  {i === 0 && <span className="text-[9px] font-black" style={{ color: 'var(--color-primary)' }}>Más reciente</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+function TabBienes({ usuarioId }) {
+  const { listarPorUsuario } = useBienes();
+  const [bienes, setBienes]   = useState([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (!usuarioId) return;
+    setLoading(true);
+    listarPorUsuario(usuarioId)
+      .then(d => setBienes(Array.isArray(d) ? d : d?.results ?? []))
+      .catch(() => setBienes([]))
+      .finally(() => setLoading(false));
+  }, [usuarioId]);
+  if (loading) return <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="skeleton h-14 rounded-xl" />)}</div>;
+  if (!bienes.length) return (
+    <div className="text-center py-10">
+      <Icon name="inventory_2" className="text-[40px]" style={{ color: 'var(--color-text-faint)' }} />
+      <p className="text-sm mt-2 font-semibold" style={{ color: 'var(--color-text-muted)' }}>Sin bienes asignados</p>
+    </div>
+  );
+  return (
+    <div>
+      <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>
+        {bienes.length} bien{bienes.length !== 1 ? 'es' : ''} asignado{bienes.length !== 1 ? 's' : ''}
+      </p>
+      <div className="space-y-2">
+        {bienes.map(b => (
+          <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl"
+            style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+            <div className="size-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgb(127 29 29 / 0.08)' }}>
+              <Icon name="devices" className="text-[18px]" style={{ color: 'var(--color-primary)' }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>{b.tipo_bien_nombre ?? 'Bien'}{b.marca_nombre ? ` — ${b.marca_nombre}` : ''}</p>
+              <p className="text-[11px] font-mono" style={{ color: 'var(--color-text-muted)' }}>{b.codigo_patrimonial ?? `#${b.id}`}</p>
+            </div>
+            <span className="text-[10px] font-black px-2 py-1 rounded-lg shrink-0"
+              style={{ background: b.is_active ? 'rgb(22 163 74 / 0.08)' : 'var(--color-border-light)', color: b.is_active ? '#16a34a' : 'var(--color-text-muted)' }}>
+              {b.estado_bien_nombre ?? (b.is_active ? 'Activo' : 'Inactivo')}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ── Sidebar: solo card RESUMEN ────────────────────────────────────────────────
-function SidebarResumen({ item }) {
-  const { listarPorUsuario } = useBienes();
-  const [totalBienes, setTotalBienes] = useState('…');
-  useEffect(() => {
-    if (!item?.id) return;
-    listarPorUsuario(item.id)
-      .then((d) => setTotalBienes(Array.isArray(d) ? d.length : d?.results?.length ?? 0))
-      .catch(() => setTotalBienes(0));
-  }, [item?.id]);
-  const rolKey = item.role?.name ?? '';
-  const rolCfg = ROL_CFG[rolKey] ?? { label: '—', icon: 'manage_accounts', color: '#64748b' };
-  const perms  = item.role?.permissions ?? [];
-  const sedes  = item.sedes ?? [];
+function ResumenLateral({ data, totalBienes }) {
+  const rolKey = data.role?.name ?? '';
+  const rolCfg = ROL_CFG[rolKey] ?? { label: '—', icon: 'manage_accounts', bg: 'var(--color-border-light)', color: 'var(--color-text-muted)' };
   return (
-    <section className="card p-4 space-y-3">
-      <h3 className="text-[9px] font-black uppercase tracking-widest"
-          style={{ color: 'var(--color-text-muted)' }}>
-        Resumen
-      </h3>
-      {[
-        { icon: 'inventory_2',    label: 'Bienes asignados', value: totalBienes  },
-        { icon: 'location_on',    label: 'Sedes',            value: sedes.length },
-        { icon: 'key',            label: 'Permisos',         value: perms.length },
-        { icon: 'manage_accounts',label: 'Rol',              value: rolCfg.label },
-        { icon: 'work_outline',   label: 'Cargo',            value: item.cargo ?? '—' },
-      ].map(({ icon, label, value, mono }) => (
-        <div key={label} className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <Icon name={icon} className="text-[13px] shrink-0" style={{ color: 'var(--color-text-faint)' }} />
-            <span className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{label}</span>
-          </div>
-          <span className={`text-xs font-black shrink-0 ${mono ? 'font-mono' : ''}`}
-                style={{ color: 'var(--color-text-primary)' }}>
-            {value}
-          </span>
+    <aside className="w-52 shrink-0 space-y-3">
+      <div className="flex flex-col items-center gap-2 p-4 rounded-xl text-center" style={{ background: rolCfg.bg, border: `1px solid ${rolCfg.color}30` }}>
+        <div className="size-14 rounded-2xl flex items-center justify-center" style={{ background: 'var(--color-surface)' }}>
+          <Icon name={rolCfg.icon} className="text-[28px]" style={{ color: rolCfg.color }} />
         </div>
-      ))}
-    </section>
+        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: rolCfg.color }}>{rolCfg.label}</p>
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
+          style={{ background: data.is_active ? 'rgb(22 163 74 / 0.12)' : 'var(--color-border-light)', color: data.is_active ? '#16a34a' : 'var(--color-text-muted)' }}>
+          <span className={`size-1.5 rounded-full ${data.is_active ? 'bg-green-500' : 'bg-slate-400'}`} />
+          {data.is_active ? 'Activo' : 'Inactivo'}
+        </span>
+      </div>
+      <div className="card p-3 space-y-2">
+        <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--color-text-muted)' }}>Resumen</p>
+        {[
+          { icon: 'inventory_2', label: 'Bienes',   value: totalBienes },
+          { icon: 'location_on', label: 'Sedes',    value: (data.sedes ?? []).length },
+          { icon: 'key',         label: 'Permisos', value: (data.role?.permissions ?? []).length },
+        ].map(s => (
+          <div key={s.label} className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Icon name={s.icon} className="text-[13px] shrink-0" style={{ color: 'var(--color-text-faint)' }} />
+              <span className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{s.label}</span>
+            </div>
+            <span className="text-xs font-black shrink-0" style={{ color: 'var(--color-text-primary)' }}>{s.value}</span>
+          </div>
+        ))}
+      </div>
+      {data.cargo && (
+        <div className="card p-3">
+          <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: 'var(--color-text-muted)' }}>Cargo</p>
+          <p className="text-xs font-semibold" style={{ color: 'var(--color-text-body)' }}>{data.cargo}</p>
+        </div>
+      )}
+    </aside>
   );
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
 export default function ModalDetalleUsuario({ open, onClose, item, onEditar }) {
   const { obtener } = useUsuarios();
-
-  const [tab,      setTab]      = useState('general');
-  const [usuario,  setUsuario]  = useState(null);
-  const [loadUser, setLoadUser] = useState(false);
+  const { listarPorUsuario } = useBienes();
+  const [tab,         setTab]        = useState('general');
+  const [usuario,     setUsuario]    = useState(null);
+  const [loading,     setLoading]    = useState(false);
+  const [totalBienes, setTotalBienes] = useState('…');
 
   useEffect(() => {
     if (!open || !item?.id) return;
-    setTab('general');
-    setUsuario(null);
+    setTab('general'); setUsuario(null); setTotalBienes('…');
     let cancelled = false;
-    setLoadUser(true);
+    setLoading(true);
     obtener(item.id)
-      .then((d)  => { if (!cancelled) setUsuario(d); })
-      .catch(()  => { if (!cancelled) setUsuario(item); })
-      .finally(() => { if (!cancelled) setLoadUser(false); });
+      .then(d  => { if (!cancelled) setUsuario(d); })
+      .catch(() => { if (!cancelled) setUsuario(item); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    listarPorUsuario(item.id)
+      .then(d => { if (!cancelled) setTotalBienes(Array.isArray(d) ? d.length : d?.results?.length ?? 0); })
+      .catch(() => { if (!cancelled) setTotalBienes(0); });
     return () => { cancelled = true; };
   }, [open, item?.id]);
 
   if (!item) return null;
-
-  const data           = usuario ?? item;
-  const nombreCompleto = `${data.first_name ?? ''} ${data.last_name ?? ''}`.trim();
+  const data = usuario ?? item;
+  const nombreCompleto = `${data.first_name ?? ''} ${data.last_name ?? ''}`.trim() || 'Sin nombre';
 
   return (
-    // size="xl" para que la tabla de bienes no quede apretada
-    <Modal open={open} onClose={onClose} size="xl" closeOnOverlay>
-
-      <ModalHeader
-        title="Detalle de Usuario"
-        icon="person_search"
-        onClose={onClose}
-      />
-
-      {/* Nombre completo — único, sin duplicar el DNI */}
-      {nombreCompleto && (
-        <div className="px-6 py-2.5 shrink-0"
-             style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-          <p className="text-[15px] font-black leading-tight" style={{ color: 'var(--color-text-primary)' }}>
-            {nombreCompleto}
-          </p>
-        </div>
-      )}
-
+    <Modal open={open} onClose={onClose} size="xl">
+      <ModalHeader icon="manage_accounts" title={nombreCompleto}
+        subtitle={`DNI ${data.dni ?? '—'} · ${data.cargo ?? 'Sin cargo'}`} onClose={onClose} />
       <ModalBody padding={false}>
-        <div className="flex flex-col" style={{ minHeight: 460 }}>
-
-          {/* Tabs pill */}
-          <div className="px-5 pt-3 pb-0 shrink-0">
-            <div className="flex gap-1 p-1 rounded-xl w-fit"
-                 style={{ background: 'var(--color-border-light)' }}>
-              {TABS.map((t) => {
-                const active = tab === t.id;
-                return (
-                  <button key={t.id} onClick={() => setTab(t.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all"
-                    style={{
-                      background: active ? 'var(--color-surface)' : 'transparent',
-                      color:      active ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                      boxShadow:  active ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                    }}>
-                    <Icon name={t.icon} className="text-[15px]" />
-                    {t.label}
+        {loading ? (
+          <div className="p-6 space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-12 rounded-xl" />)}</div>
+        ) : (
+          <div className="flex">
+            <div className="flex-1 min-w-0">
+              <div className="flex gap-6 px-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                {TABS.map(({ id, label, icon }) => (
+                  <button key={id} onClick={() => setTab(id)}
+                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-3 pt-4 transition-all border-b-2"
+                    style={{ borderBottomColor: tab === id ? 'var(--color-primary)' : 'transparent', color: tab === id ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+                    <Icon name={icon} className="text-[16px]" />
+                    {label}
+                    {id === 'bienes' && totalBienes !== '…' && Number(totalBienes) > 0 && (
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${tab === id ? 'tab-count-active' : 'tab-count-inactive'}`}>{totalBienes}</span>
+                    )}
                   </button>
-                );
-              })}
+                ))}
+              </div>
+              <div className="p-6 overflow-y-auto" style={{ maxHeight: '60vh' }}>
+                {tab === 'general'   && <TabGeneral   data={data} />}
+                {tab === 'acceso'    && <TabAcceso    data={data} />}
+                {tab === 'seguridad' && <TabSeguridad data={data} />}
+                {tab === 'bienes'    && <TabBienes    usuarioId={data.id} />}
+              </div>
+            </div>
+            <div className="p-4 shrink-0" style={{ borderLeft: '1px solid var(--color-border)' }}>
+              <ResumenLateral data={data} totalBienes={totalBienes} />
             </div>
           </div>
-
-          {loadUser ? (
-            <Spinner />
-          ) : (
-            <div className="grid grid-cols-12 gap-0 flex-1" style={{ minHeight: 0 }}>
-              {/* Área principal — 9 columnas */}
-              <div className="col-span-9 overflow-y-auto px-5 py-4"
-                   style={{ borderRight: '1px solid var(--color-border-light)' }}>
-                {tab === 'general' && <TabGeneral item={data} />}
-                {tab === 'acceso'  && <TabAcceso  item={data} />}
-                {tab === 'bienes'  && <TabBienes  usuarioId={data.id} item={data} />}
-              </div>
-              {/* Sidebar — 3 columnas, solo RESUMEN */}
-              <div className="col-span-3 overflow-y-auto p-4"
-                   style={{ background: 'var(--color-surface-alt)' }}>
-                <SidebarResumen item={data} />
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </ModalBody>
-
-      <ModalFooter align="between">
-        <span className="text-[9px] font-bold" style={{ color: 'var(--color-text-faint)' }}>
-          ID: {data.id} · DNI: {data.dni}
-        </span>
-        <div className="flex items-center gap-2">
-          <button onClick={onClose} className="btn-secondary">Cerrar</button>
-          {onEditar && (
-            <button onClick={() => { onClose(); onEditar(data); }} className="btn-primary">
-              <Icon name="edit" className="text-[16px]" /> Editar
-            </button>
-          )}
-        </div>
+      <ModalFooter align="right">
+        <button onClick={onClose} className="btn-secondary">Cerrar</button>
+        <button onClick={() => { onClose(); onEditar(item); }} className="btn-primary flex items-center gap-2">
+          <Icon name="edit" className="text-[16px]" /> Editar usuario
+        </button>
       </ModalFooter>
     </Modal>
   );

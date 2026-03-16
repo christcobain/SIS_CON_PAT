@@ -24,7 +24,7 @@ export default function LocacionesPage() {
   const toast = useToast();
 
   const {
-    sedes, modulos, ubicaciones, empresas,
+    sedes, modulos, ubicaciones, empresas, departamentos,
     loading, error, actualizando, refetch,
     crearSede,       actualizarSede,       activarSede,       desactivarSede,
     crearModulo,     actualizarModulo,     activarModulo,     desactivarModulo,
@@ -40,92 +40,74 @@ export default function LocacionesPage() {
   const [confirmToggle, setConfirmToggle] = useState(false);
   const [itemToggle,    setItemToggle]    = useState(null);
 
-  const onFiltroChange = (key, val) => setFiltros((prev) => ({ ...prev, [key]: val }));
-  
+  const onFiltroChange  = (key, val) => setFiltros((prev) => ({ ...prev, [key]: val }));
   const onLimpiarFiltros = () => setFiltros(FILTROS_INICIALES);
 
   const rawData = { sedes, modulos, ubicaciones };
 
   const itemsFiltrados = useMemo(() => {
     const lista = rawData[activeTab] ?? [];
-    return lista.filter((item) => {
-      const txt = filtros.search.toLowerCase().trim();
-      const matchSearch = !txt || (() => {
-        const campos = [item.nombre, item.descripcion, item.direccion,
-                        item.empresa_nombre, item.distrito_nombre,
-                        item.provincia_nombre, item.departamento_nombre];
-        return campos.some((c) => c?.toLowerCase().includes(txt));
-      })();
-      const matchEstado = filtros.is_active === '' || String(item.is_active) === filtros.is_active;
-      const matchEmpresa = !filtros.empresa_id || activeTab !== 'sedes' || String(item.empresa_id) === String(filtros.empresa_id);
-
+    const txt   = filtros.search.toLowerCase().trim();
+    return lista.filter(item => {
+      const matchSearch = !txt || [item.nombre, item.direccion, item.empresa_nombre, item.distrito_nombre]
+        .some(c => c?.toLowerCase().includes(txt));
+      const matchEstado    = filtros.is_active === '' || String(item.is_active) === filtros.is_active;
+      const matchEmpresa   = !filtros.empresa_id || activeTab !== 'sedes' ||
+        String(item.empresa_id) === String(filtros.empresa_id);
       return matchSearch && matchEstado && matchEmpresa;
     });
   }, [activeTab, sedes, modulos, ubicaciones, filtros]);
 
-  const handleNuevo         = ()     => { setItemEditar(null); setModalForm(true); };
-  const handleEditar        = (item) => { setItemEditar(item); setModalForm(true); };
-  const handleVerDetalle    = (item) => { setItemDetalle(item); setModalDetalle(true); };
-  const handleToggleEstado  = (item) => { setItemToggle(item); setConfirmToggle(true); };
+  const handleNuevo        = ()     => { setItemEditar(null);  setModalForm(true); };
+  const handleEditar       = (item) => { setItemEditar(item);  setModalForm(true); setModalDetalle(false); };
+  const handleVerDetalle   = (item) => { setItemDetalle(item); setModalDetalle(true); };
+  const handleToggleEstado = (item) => { setItemToggle(item);  setConfirmToggle(true); };
+  const handleGuardado     = ()     => { setModalForm(false);  setItemEditar(null); refetch(); };
 
   const handleConfirmToggle = async () => {
     setConfirmToggle(false);
     if (!itemToggle) return;
     const { id, is_active } = itemToggle;
     try {
-      let res;
-      if      (activeTab === 'sedes')   res = is_active ? await desactivarSede(id)    : await activarSede(id);
-      else if (activeTab === 'modulos') res = is_active ? await desactivarModulo(id)  : await activarModulo(id);
-      else                              res = is_active ? await desactivarUbicacion(id) : await activarUbicacion(id);
-      
-      toast.success(res?.message ?? `Registro ${is_active ? 'desactivado' : 'activado'}.`);
-      refetch(); // Sincronizar tras cambio
+      if (activeTab === 'sedes') {
+        is_active ? await desactivarSede(id) : await activarSede(id);
+      } else if (activeTab === 'modulos') {
+        is_active ? await desactivarModulo(id) : await activarModulo(id);
+      } else {
+        is_active ? await desactivarUbicacion(id) : await activarUbicacion(id);
+      }
+      toast.success(`"${itemToggle.nombre}" ${is_active ? 'desactivado' : 'activado'} correctamente.`);
     } catch (e) {
-      toast.error(e?.response?.data?.detail || 'Error al cambiar el estado.');
+      toast.error(e?.response?.data?.error || 'Error al cambiar el estado.');
     } finally {
       setItemToggle(null);
     }
   };
 
-  const handleGuardado = () => {
-    setModalForm(false);
-    setItemEditar(null);
-    refetch();
-  };
+  const btnLabels = { sedes: { icon: 'add_business', text: 'Nueva Sede' }, modulos: { icon: 'add', text: 'Nuevo Módulo' }, ubicaciones: { icon: 'add_location', text: 'Nueva Ubicación' } };
+  const btn = btnLabels[activeTab];
 
   return (
     <div className="gap-1 p-4 max-w-[1600px] animate-in fade-in duration-500 h-auto pb-20">
-      
-      {/* ── CABECERA Y TABS (Diseño Final) ────────────────────────── */}
+
       <div className="card p-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-1">
+          <div className="flex items-center gap-2">
             <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-              <Icon name="location_away" className="text-[24px]" />
+              <Icon name="location_city" className="text-[24px]" />
             </div>
             <div>
               <h1 className="page-title">Gestión de Locaciones</h1>
-              <p className="page-subtitle">Administre las sedes, módulos y ubicaciones físicas institucionales.</p>
+              <p className="page-subtitle">Administre sedes, módulos y ubicaciones del Poder Judicial.</p>
             </div>
           </div>
-
           <div className="flex items-center gap-2">
-            <button 
-              onClick={refetch} 
-              disabled={loading}
-              className="btn-icon bg-surface border border-border"
-              title="Sincronizar"
-            >
+            <button onClick={refetch} disabled={loading} className="btn-icon bg-surface border border-border" title="Sincronizar">
               <Icon name="sync" className={`text-[18px] ${loading ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
-            
-            <button 
-              onClick={handleNuevo} 
-              disabled={actualizando} 
-              className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
-            >
-              <Icon name="add_circle" className="text-[18px]" />
-              <span className="font-black uppercase tracking-widest text-[10px]">Nuevo Registro</span>
+            <button onClick={handleNuevo} disabled={actualizando} className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm">
+              <Icon name={btn.icon} className="text-[18px]" />
+              <span className="font-black uppercase tracking-widest text-[10px]">{btn.text}</span>
             </button>
           </div>
         </div>
@@ -136,9 +118,7 @@ export default function LocacionesPage() {
               key={id}
               onClick={() => { setActiveTab(id); onLimpiarFiltros(); }}
               className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all ${
-                activeTab === id 
-                ? 'text-primary border-b-2 border-primary' 
-                : 'text-faint hover:text-main'
+                activeTab === id ? 'text-primary border-b-2 border-primary' : 'text-faint hover:text-main'
               }`}
             >
               <Icon name={icon} className="text-[16px]" />
@@ -149,13 +129,10 @@ export default function LocacionesPage() {
       </div>
 
       <div className="page-content">
-        {/* ── Stats ────────────────────────────────────────────────────────── */}
         <LocacionesStats
           sedes={sedes} modulos={modulos} ubicaciones={ubicaciones}
           empresas={empresas} loading={loading}
         />
-
-        {/* ── Filtros ──────────────────────────────────────────────────────── */}
         <LocacionesFiltros
           filtros={filtros}
           onFiltroChange={onFiltroChange}
@@ -163,8 +140,6 @@ export default function LocacionesPage() {
           activeTab={activeTab}
           onLimpiar={onLimpiarFiltros}
         />
-
-        {/* ── Tabla ────────────────────────────────────────────────────────── */}
         <LocacionesTabla
           activeTab={activeTab}
           items={itemsFiltrados}
@@ -178,13 +153,13 @@ export default function LocacionesPage() {
         />
       </div>
 
-      {/* ── Modales ────────────────────────────────────────────────────────── */}
       <ModalLocacion
         open={modalForm}
         onClose={() => { setModalForm(false); setItemEditar(null); }}
         activeTab={activeTab}
         item={itemEditar}
         empresas={empresas}
+        departamentos={departamentos}
         crearSede={crearSede}           actualizarSede={actualizarSede}
         crearModulo={crearModulo}       actualizarModulo={actualizarModulo}
         crearUbicacion={crearUbicacion} actualizarUbicacion={actualizarUbicacion}

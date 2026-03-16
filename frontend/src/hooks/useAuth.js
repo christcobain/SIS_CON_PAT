@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { useNavigate }           from 'react-router-dom';
-import { useAuthStore }          from '../store/authStore';
-import authService               from '../services/auth.service';
+import { useNavigate }    from 'react-router-dom';
+import { useAuthStore }   from '../store/authStore';
+import authService        from '../services/auth.service';
 
 export function useAuth() {
   const navigate        = useNavigate();
@@ -23,7 +23,7 @@ export function useAuth() {
       setAuth(data);
       if (data.needs_password_warning) {
         window.dispatchEvent(new CustomEvent('sisconpat:openChangePassword', {
-          detail: { mode: 'warning', username: data.username ?? username }
+          detail: { mode: 'warning', username: data.username ?? username },
         }));
       } else {
         navigate('/dashboard');
@@ -37,11 +37,10 @@ export function useAuth() {
          String(errData?.error).includes('True'));
       if (isExpired) {
         window.dispatchEvent(new CustomEvent('sisconpat:openChangePassword', {
-          detail: { mode: 'expired', username }
+          detail: { mode: 'expired', username },
         }));
         return;
       }
-
       const msg = errData?.detail || errData?.error || errData?.non_field_errors?.[0] || 'Credenciales inválidas.';
       setError(typeof msg === 'string' ? msg : msg[0] ?? 'Error al iniciar sesión.');
       throw err;
@@ -50,7 +49,6 @@ export function useAuth() {
     }
   };
 
-  // ── Logout ────────────────────────────────────────────────────────────────
   const logout = async () => {
     setLoading(true);
     try {
@@ -65,7 +63,6 @@ export function useAuth() {
     }
   };
 
-  // ── Refresh ───────────────────────────────────────────────────────────────
   const refrescarToken = useCallback(async () => {
     try {
       return await authService.refreshToken();
@@ -76,7 +73,6 @@ export function useAuth() {
     }
   }, [clearAuth, navigate]);
 
-  // ── Contraseñas ───────────────────────────────────────────────────────────
   const cambiarPassword = async (passwordActual, passwordNuevo, usernameOverride) => {
     const username = usernameOverride || user?.username || sessionStorage.getItem('sisconpat_expired_user');
     if (!username) throw new Error('No hay usuario identificado.');
@@ -105,17 +101,35 @@ export function useAuth() {
     }
   };
 
-  // ── Política y Seguridad ──────────────────────────────────────────────────
-  const obtenerPolitica             = async ()              => authService.getPasswordPolicyActive();
-  const obtenerSesiones             = async (dni = null)    => authService.getSessions(dni);
-  const configurarSesionMultiple    = async (u, optId)      => authService.setMultipleSession(u, optId);
+  const resetearPasswordPorDni = async (username) => {
+    setLoading(true);
+    try {
+      return await authService.resetPasswordByDni(username);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Error al resetear contraseña.');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const obtenerPolitica               = async ()              => authService.getPasswordPolicyActive();
+  const listarPoliticas               = async ()              => authService.listarPoliticas();
+  const obtenerSesiones               = async (dni = null)    => authService.getSessions(dni);
+  const obtenerHistorialSesiones      = async (params = {})   => authService.getSessionsHistorial(params);
+  const obtenerIntentos               = async (params = {})   => authService.getLoginAttempts(params);
+  const obtenerCredenciales           = async (params = {})   => authService.getCredentials(params);
+  const desbloquearCredencial         = async (username)      => authService.unlockCredential(username);
+  const configurarSesionMultiple      = async (u, optId)      => authService.setMultipleSession(u, optId);
   const consultarHistorialContrasenas = async (userId, lim = 5) => authService.getPasswordHistory(userId, lim);
 
   return {
     user, role, sedes, empresaId, isAuthenticated, loading, error,
     login, logout, refrescarToken,
-    cambiarPassword, cambiarPasswordUsuario,
-    obtenerPolitica, obtenerSesiones,
+    cambiarPassword, cambiarPasswordUsuario, resetearPasswordPorDni,
+    obtenerPolitica, listarPoliticas,
+    obtenerSesiones, obtenerHistorialSesiones,
+    obtenerIntentos, obtenerCredenciales, desbloquearCredencial,
     configurarSesionMultiple, consultarHistorialContrasenas,
   };
 }

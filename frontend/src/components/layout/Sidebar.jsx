@@ -9,8 +9,7 @@ const MENU = [
     icon: 'manage_accounts',
     items: [
       { label: 'Usuarios', icon: 'group', to: '/admin/usuarios', perm: 'ms-usuarios:users:add_user' },
-      { label: 'Historial de Sesiones', icon: 'history', to: '/admin/sesiones', perm: 'ms-usuarios:authentication:view_loginattempt' },
-      { label: 'Políticas de Password', icon: 'policy', to: '/admin/politicas', perm: 'ms-usuarios:authentication:view_passwordpolicy' },
+      { label: 'Seguridad', icon: 'history', to: '/admin/seguridad', perm: 'ms-usuarios:authentication:view_loginattempt' },
       { label: 'Locaciones', icon: 'account_balance', to: '/admin/locaciones', perm: 'ms-usuarios:locations:view_sede' },
       { label: 'Roles y Permisos', icon: 'admin_panel_settings', to: '/admin/roles', perm: 'ms-usuarios:roles:view_role' },
     ],
