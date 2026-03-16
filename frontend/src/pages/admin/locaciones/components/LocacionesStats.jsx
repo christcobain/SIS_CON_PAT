@@ -27,9 +27,9 @@ export default function LocacionesStats({ sedes = [], modulos = [], ubicaciones 
           <div>
             {loading
               ? <div className="skeleton h-5 w-8 mb-1" />
-              : <p className="text-2xl font-black text-slate-900 leading-tight">{counts[key]}</p>
+              : <p className="text-2xl font-black  leading-tight">{counts[key]}</p>
             }
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+            <p className="text-[10px] font-bold  uppercase tracking-wider">{label}</p>
           </div>
         </div>
       ))}

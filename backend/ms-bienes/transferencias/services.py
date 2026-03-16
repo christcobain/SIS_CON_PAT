@@ -23,7 +23,7 @@ MODULO_COORD_INFORMATICA  = 1
 class TransferenciaService:
     @staticmethod
     def _rol_aprobador_adminsede(role: str) -> str:
-        return 'COORDSISTEMA' if role == 'coordSistema' else 'ADMINSEDE'
+        return role if role == 'coordSistema' else 'adminSede'
     @staticmethod
     def _validar_aprobador_adminsede(
         role, sede_aprobador_id, modulo_aprobador_id,
@@ -49,7 +49,6 @@ class TransferenciaService:
                 raise PermissionDenied('Solo adminSede puede aprobar traslados de esta sede.')
             if sede_aprobador_id != sede_origen_id:
                 raise PermissionDenied('Solo puede aprobar traslados de su propia sede.')
-
     @staticmethod
     def _validar_sede_segursede(sede_segur_id: int, sede_transferencia_id: int, role: str):
         if role == 'SYSADMIN':
@@ -63,9 +62,11 @@ class TransferenciaService:
     def _extraer_origen(bienes: list) -> Dict[str, Any]:
         bien_ref = bienes[0]
         return {
+            'usuario_origen_id': bien_ref.usuario_asignado_id,
             'sede_origen_id':    bien_ref.sede_id,
             'modulo_origen_id':  bien_ref.modulo_id,
-            'usuario_origen_id': bien_ref.usuario_asignado_id,
+            'ubicacion_origen_id': bien_ref.ubicacion_id,
+            'piso_origen':       bien_ref.piso,            
         }
     @staticmethod
     def _cambiar_estado_bienes(bienes: list, nombre_estado: str) -> None:
@@ -131,10 +132,7 @@ class TransferenciaService:
             raise NotFound(f'Transferencia con id={pk} no encontrada.')
         return t
     @staticmethod
-    def _registrar_aprobacion(
-        transferencia, rol_aprobador: str, accion: str,
-        usuario_id: int, detalle: str = None,
-    ) -> None:
+    def _registrar_aprobacion(transferencia, rol_aprobador: str, accion: str,usuario_id: int, detalle: str = None,) -> None:
         TransferenciaAprobacionRepository.create(
             transferencia = transferencia,
             rol_aprobador = rol_aprobador,
@@ -186,37 +184,95 @@ class TransferenciaService:
             'fecha_pdf': timezone.now(),
         })
     @staticmethod
-    def listar(filters: Dict[str, Any]) -> Dict[str, Any]:
-        qs = TransferenciaRepository.filter(filters)
-        return {"success": True, "data": qs}
+    def _enriquecer_transferencia(tr, token):
+        usuario = MsUsuariosClient.validar_usuario(tr.usuario_origen_id, token)
+        tr.usuario_origen_nombre= f"{usuario['first_name']} {usuario['last_name']}"
+        sede_origen = MsUsuariosClient.validar_sede(tr.sede_origen_id, token)
+        tr.sede_origen_nombre = sede_origen['nombre']
+        if tr.modulo_origen_id:
+            modulo = MsUsuariosClient.validar_modulo(tr.modulo_origen_id, token)
+            tr.modulo_origen_nombre = modulo['nombre']
+        else:
+            tr.modulo_destino_nombre = None  
+        if tr.ubicacion_origen_id:
+            ubicacion = MsUsuariosClient.validar_ubicacion(tr.ubicacion_origen_id, token)
+            tr.ubicacion_origen_nombre = ubicacion['nombre']
+        else:
+            tr.ubicacion_origen_nombre = None 
+        usuario = MsUsuariosClient.validar_usuario(tr.usuario_destino_id, token)
+        tr.usuario_destino_nombre = f"{usuario['first_name']} {usuario['last_name']}"        
+        sede_destino = MsUsuariosClient.validar_sede(tr.sede_destino_id, token)        
+        tr.sede_destino_nombre = sede_destino['nombre'] 
+        if tr.modulo_destino_id:
+            modulo = MsUsuariosClient.validar_modulo(tr.modulo_destino_id, token)
+            tr.modulo_destino_nombre = modulo['nombre']
+        else:
+            tr.modulo_destino_nombre = None
+            
+        if tr.ubicacion_destino_id:
+            ubicacion = MsUsuariosClient.validar_ubicacion(tr.ubicacion_destino_id, token)
+            tr.ubicacion_destino_nombre = ubicacion['nombre']
+        else:
+            tr.ubicacion_destino_nombre = None
+            
+        for aprob in tr.aprobaciones.all():
+            try:
+                u_aprob = MsUsuariosClient.validar_usuario(aprob.usuario_id, token)
+                aprob.rol_aprobador_nombre = f"{u_aprob['first_name']} {u_aprob['last_name']}"
+            except Exception:
+                aprob.rol_aprobador_nombre = "Usuario no identificado"
+        ultima = tr.aprobaciones.last()
+        if ultima:
+            try:
+                u_last = MsUsuariosClient.validar_usuario(ultima.usuario_id, token)
+                ultima.rol_aprobador_nombre = f"{u_last['first_name']} {u_last['last_name']}"
+            except Exception:
+                ultima.rol_aprobador_nombre = "Usuario no identificado"
+        return tr
     @staticmethod
-    def obtener(pk: int) -> Dict[str, Any]:
-        t = TransferenciaService._get_or_404(pk)
-        return {"success": True, "data": t}
     @staticmethod
-    def mis_transferencias(
-        usuario_id: int, role: str, sede_id: int,
-        filters: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        qs = TransferenciaRepository.get_mis_transferencias(usuario_id, role, sede_id)
+    def listar(filters, token):
+        qs = TransferenciaRepository.listar(filters)
+        for tr in qs:
+            TransferenciaService._enriquecer_transferencia(tr, token)
+            _ = list(tr.detalles.all())
+        return qs
+    @staticmethod
+    @staticmethod
+    def obtener(pk, token):
+        tr = TransferenciaRepository.get_by_id(pk)
+        if not tr:
+            raise ValidationError("Transferencia no existe")
+        TransferenciaService._enriquecer_transferencia(tr, token)
+        _ = list(tr.detalles.all())
+        return tr
+    @staticmethod
+    @staticmethod
+    def mis_transferencias(usuario_id: int, role: str, sede_id: int, filters: Dict[str, Any], token):
+        qs = TransferenciaRepository.get_mis_transferencias(usuario_id, role, sede_id)        
+        if hasattr(filters, 'dict'):
+            filters = filters.dict()
+        if filters.get('tipo'):
+            qs = qs.filter(tipo=filters['tipo'])            
         if filters.get('estado'):
             qs = qs.filter(estado=filters['estado'])
-        if filters.get('tipo'):
-            qs = qs.filter(tipo=filters['tipo'])
-        return {"success": True, "data": qs.order_by('-fecha_registro')}
+        qs = qs.order_by('-fecha_registro')        
+        lista_transferencias = list(qs)
+        for tr in lista_transferencias:
+            TransferenciaService._enriquecer_transferencia(tr, token)
+            _ = list(tr.detalles.all())            
+        return lista_transferencias
     @staticmethod
     @transaction.atomic
-    def crear_traslado_sede(
-        data: Dict[str, Any], usuario_registra_id: int,
-        sede_registra_id: int, role: str, token: str = None,
+    def crear_traslado_sede(data: Dict[str, Any], usuario_registra_id: int,sede_registra_id: int,role: str, token: str = None,
     ) -> Dict[str, Any]:
         if role not in ROLES_REGISTRA_TRASLADO:
             raise PermissionDenied('No tiene permiso para registrar traslados entre sedes.')
         bien_ids = data.pop('bien_ids', [])
         bienes   = TransferenciaService._get_bienes_validados(bien_ids)
         origen   = TransferenciaService._extraer_origen(bienes)
-        if origen['sede_origen_id'] != sede_registra_id:
-            raise PermissionDenied('Solo puede trasladar bienes que pertenecen a su propia sede.')
+        # if origen['sede_origen_id'] != sede_registra_id:
+        #     raise PermissionDenied('Solo puede trasladar bienes que pertenecen a su propia sede.')
         if data['sede_destino_id'] == origen['sede_origen_id']:
             raise ValidationError('La sede destino debe ser diferente a la sede origen.')
         MsUsuariosClient.validar_usuario(data['usuario_destino_id'], token)

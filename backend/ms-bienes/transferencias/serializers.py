@@ -1,32 +1,69 @@
 from rest_framework import serializers
 from .models import Transferencia, TransferenciaDetalle, TransferenciaAprobacion
+from bienes.services import MsUsuariosClient
 
 class AprobacionSerializer(serializers.ModelSerializer):
+    rol_aprobador_nombre= serializers.CharField(read_only=True)  
     class Meta:
         model  = TransferenciaAprobacion
-        fields = ['id', 'rol_aprobador', 'accion', 'usuario_id', 'detalle', 'fecha']
+        fields = ['id', 'rol_aprobador', 'accion',
+                  'usuario_id', 'rol_aprobador_nombre','detalle', 'fecha']
 class TransferenciaDetalleSerializer(serializers.ModelSerializer):
     class Meta:
         model  = TransferenciaDetalle
         fields = [
-            'id', 'bien_id',
-            'codigo_patrimonial', 'tipo_bien_nombre',
-            'marca_nombre', 'modelo', 'numero_serie',
+            'id','categoria_bien_nombre', 
+            'bien_id','tipo_bien_nombre',
+            'marca_nombre', 'modelo', 
+            'numero_serie','codigo_patrimonial',             
         ]
 class TransferenciaListSerializer(serializers.ModelSerializer):
-    motivo_nombre     = serializers.CharField(source='motivo.nombre',           read_only=True)
+    usuario_origen_nombre= serializers.CharField(read_only=True)   
+    sede_origen_nombre = serializers.CharField(read_only=True)
+    modulo_origen_nombre = serializers.CharField(read_only=True)
+    ubicacion_origen_nombre = serializers.CharField(read_only=True)
+    usuario_destino_nombre = serializers.CharField(read_only=True)
+    sede_destino_nombre = serializers.CharField(read_only=True)    
+    modulo_destino_nombre = serializers.CharField(read_only=True)
+    ubicacion_destino_nombre = serializers.CharField(read_only=True)     
+    motivo_nombre     = serializers.CharField(source='motivo.nombre',read_only=True)
     cancelacion_nombre = serializers.CharField(source='motivo_cancelacion.nombre', read_only=True)
     ultima_aprobacion = serializers.SerializerMethodField()
     tiene_pdf_firmado = serializers.SerializerMethodField()
+    bienes=TransferenciaDetalleSerializer(source='detalles',many=True,read_only=True)
+    aprobaciones=AprobacionSerializer(many=True,read_only=True)
     class Meta:
         model  = Transferencia
         fields = [
             'id', 'numero_orden', 'tipo', 'estado',
-            'usuario_origen_id', 'sede_origen_id', 'modulo_origen_id',
-            'usuario_destino_id', 'sede_destino_id', 'modulo_destino_id',
-            'motivo_nombre', 'motivo_devolucion', 'cancelacion_nombre',
+            'usuario_origen_id', 
+            "usuario_origen_nombre",
+            'sede_origen_id', 
+            "sede_origen_nombre",
+            'modulo_origen_id',
+            "modulo_origen_nombre",
+            "ubicacion_origen_id",
+            "ubicacion_origen_nombre",  
+            'piso_origen',
+            
+            "usuario_destino_id",
+            "usuario_destino_nombre",
+            'sede_destino_id', 
+            "sede_destino_nombre",
+            'modulo_destino_id',
+            "modulo_destino_nombre",
+            "ubicacion_destino_id",
+            "ubicacion_destino_nombre",    
+            'piso_destino',
+            
+            'descripcion',         
+            'motivo_nombre', 
+            'motivo_devolucion', 
+            'cancelacion_nombre',
             'fecha_registro', 'ultima_aprobacion',
             'pdf_path', 'tiene_pdf_firmado', 'fecha_pdf',
+            'bienes',
+            'aprobaciones'
         ]
     def get_ultima_aprobacion(self, obj):
         ultima = obj.aprobaciones.last()
@@ -36,24 +73,23 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
             'rol_aprobador': ultima.rol_aprobador,
             'accion':        ultima.accion,
             'usuario_id':    ultima.usuario_id,
+            'usuario_nombre': getattr(ultima, 'usuario_nombre', 'Cargando...'), 
             'detalle':       ultima.detalle,
             'fecha':         ultima.fecha,
         }
-
     def get_tiene_pdf_firmado(self, obj):
         return bool(obj.pdf_firmado_path)
 
 class TransferenciaDetailSerializer(serializers.ModelSerializer):
-    detalles          = TransferenciaDetalleSerializer(many=True, read_only=True)
-    aprobaciones      = AprobacionSerializer(many=True, read_only=True)
-    motivo_nombre     = serializers.CharField(source='motivo.nombre',           read_only=True)
-    cancelacion_nombre = serializers.CharField(source='motivo_cancelacion.nombre', read_only=True)
-    tiene_pdf_firmado = serializers.SerializerMethodField()
-
+    sede_origen_nombre = serializers.CharField(read_only=True)
+    sede_destino_nombre = serializers.CharField(read_only=True)
+    modulo_destino_nombre = serializers.CharField(read_only=True)
+    ubicacion_destino_nombre = serializers.CharField(read_only=True)
+    usuario_destino_nombre = serializers.CharField(read_only=True)
+    bienes = TransferenciaDetalleSerializer(source='detalles',many=True,read_only=True)
     class Meta:
-        model  = Transferencia
-        fields = '__all__'
-
+        model = Transferencia
+        fields = "__all__"
     def get_tiene_pdf_firmado(self, obj):
         return bool(obj.pdf_firmado_path)
 

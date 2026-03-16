@@ -10,7 +10,7 @@ const MENU = [
     icon: 'manage_accounts',
     items: [
       { label: 'Usuarios',              icon: 'group',                to: '/admin/usuarios',    perm: 'ms-usuarios:users:add_user' },
-      { label: 'Reseteo de Claves',     icon: 'lock_reset',           to: '/admin/reseteo',     perm: 'ms-usuarios:authentication:add_passwordhistory' },
+      // { label: 'Reseteo de Claves',     icon: 'lock_reset',           to: '/admin/reseteo',     perm: 'ms-usuarios:authentication:add_passwordhistory' },
       { label: 'Historial de Sesiones', icon: 'history',              to: '/admin/sesiones',    perm: 'ms-usuarios:authentication:view_loginattempt' },
       { label: 'Políticas de Password', icon: 'policy',               to: '/admin/politicas',   perm: 'ms-usuarios:authentication:view_passwordpolicy' },
       { label: 'Locaciones',            icon: 'account_balance',      to: '/admin/locaciones',  perm: 'ms-usuarios:locations:view_sede' },
@@ -22,7 +22,7 @@ const MENU = [
     grupo: 'Gestión de Bienes',
     icon: 'inventory_2',
     items: [
-      { label: 'Catálogos',             icon: 'category',             to: '/catalogos',         perm: 'ms-bienes:catalogos:view_cattipobien' },
+      { label: 'Catálogos',             icon: 'category',             to: '/catalogos',         perm: 'ms-bienes:catalogos:add_catcategoriabien' },
       { label: 'Inventario de Activos', icon: 'warehouse',            to: '/bienes',            perm: 'ms-bienes:bienes:view_bien' },
       { label: 'Mantenimiento',         icon: 'engineering',          to: '/mantenimientos',    perm: 'ms-bienes:mantenimientos:view_mantenimiento' },
       { label: 'Transferencias',        icon: 'swap_horiz',           to: '/transferencias',    perm: 'ms-bienes:transferencias:view_transferencia' },
@@ -110,30 +110,38 @@ export default function Sidebar({ collapsed, onToggle }) {
         }}
       >
         {/* Marca — siempre visible */}
-        <div
-          className="flex items-center justify-center rounded-lg font-black text-white shrink-0"
-          style={{
-            width: '32px', height: '32px',
-            background: '#7F1D1D',
-            fontSize: '13px', letterSpacing: '-0.5px',
-          }}
-        >
-          SP
-        </div>
+<div
+  className="flex items-center justify-center shrink-0 overflow-hidden transition-all duration-300"
+  style={{
+    width: '36px', 
+    height: '36px',
+    background: 'rgba(255, 255, 255, 0.03)', 
+    borderRadius: '8px',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    padding: '4px'
+  }}
+>
+  <img 
+    src="/src/assets/images/ICONO.png" 
+    alt="SISCONPAT Logo"
+    className="w-full h-full object-contain"
+    style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.3))' }}
+  />
+</div>
 
-        {/* Texto — se oculta al colapsar */}
-        {!collapsed && (
-          <div className="min-w-0 overflow-hidden">
-            <p className="font-black leading-none tracking-tight truncate"
-               style={{ color: '#f1f5f9', fontSize: '13px' }}>
-              SISCONPAT
-            </p>
-            <p className="font-bold uppercase tracking-widest truncate mt-0.5"
-               style={{ color: '#475569', fontSize: '9px', letterSpacing: '1.5px' }}>
-              Control Patrimonial
-            </p>
-          </div>
-        )}
+{/* Texto — se oculta al colapsar */}
+{!collapsed && (
+  <div className="min-w-0 overflow-hidden ml-1">
+    <p className="font-black leading-none tracking-tight truncate"
+       style={{ color: '#f1f5f9', fontSize: '13.5px', letterSpacing: '0.2px' }}>
+      SISCONPAT
+    </p>
+    <p className="font-bold uppercase tracking-widest truncate mt-1"
+       style={{ color: '#64748b', fontSize: '8.5px', letterSpacing: '1.2px' }}>
+      Control Patrimonial
+    </p>
+  </div>
+)}
       </div>
 
       {/* ── Navegación ────────────────────────────────────────────────────── */}

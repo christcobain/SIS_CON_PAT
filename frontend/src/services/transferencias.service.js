@@ -6,11 +6,17 @@ const transferenciasService = {
     return response.data;
   },
   obtener: async (id) => {
-    const response = await axiosBienes.get(`/${id}/`);
+    const response = await axiosBienes.get(`/transferencias/${id}/`);
     return response.data;
   },
-  misTransferencias: async (params = {}) => {
-    const response = await axiosBienes.get('/transferencias/mis-transferencias/', { params });
+  misTransferencias: async (usuarioI,params = {}) => {
+    // const response = await axiosBienes.get('/transferencias/mis-transferencias/', { params,usuarioId:usuarioI });
+    const response = await axiosBienes.get('/transferencias/mis-transferencias/', { 
+        params: { 
+            ...params, 
+            usuario_id: usuarioI 
+        } 
+    });
     return response.data;
   },
   descargarPDF: async (id) => {
@@ -30,33 +36,38 @@ const transferenciasService = {
     return response.data;
   },
   // ==========================================
-  // FLUJO DE APROBACIONES (PATCH)
    aprobarAdminSede: async (id) => {
     const response = await axiosBienes.patch(`/transferencias/${id}/aprobar-adminsede/`);
     return response.data;
   },
-  devolver: async (id, motivoDevolucion) => {
-    const response = await axiosBienes.patch(`/transferencias/${id}/devolver/`, {
-      motivo_devolucion: motivoDevolucion,
-    });
+  devolver: async (id, data) => {
+    const response = await axiosBienes.patch(`/transferencias/${id}/devolver/`, data);
     return response.data;
   },
   aprobarSalidaSeguridad: async (id, data = {}) => {
-    const response = await axiosBienes.patch(`/transferencias/${id}/aprobar-salida/`, data);
+    const response = await axiosBienes.patch(`/transferencias/${id}/aprobar-segur-salida/`, data);
     return response.data;
   },
   aprobarEntradaSeguridad: async (id, data = {}) => {
-    const response = await axiosBienes.patch(`/transferencias/${id}/aprobar-entrada/`, data);
+    const response = await axiosBienes.patch(`/transferencias/${id}/aprobar-segur-entrada/`, data);
+    return response.data;
+  },
+  rechazarSalidaSeguridad: async (id, data = {}) => {
+    const response = await axiosBienes.patch(`/transferencias/${id}/rechazar-segur-salida/`, data);
+    return response.data;
+  },
+  rechazarEntradaSeguridad: async (id, data = {}) => {
+    const response = await axiosBienes.patch(`/transferencias/${id}/rechazar-segur-entrada/`, data);
     return response.data;
   },
   // ==========================================
   // RETORNOS (NUEVO: Acciones para devoluciones de bienes)
   retornoSalida: async (id, data) => {
-    const response = await axiosBienes.post(`/transferencias/${id}/retorno-salida/`, data);
+    const response = await axiosBienes.post(`/transferencias/${id}/aprobar-retorno-salida/`, data);
     return response.data;
   },
   retornoEntrada: async (id, data) => {
-    const response = await axiosBienes.post(`/transferencias/${id}/retorno-entrada/`, data);
+    const response = await axiosBienes.post(`/transferencias/${id}/aprobar-retorno-entrada/`, data);
     return response.data;
   },
   // ==========================================
@@ -76,6 +87,11 @@ const transferenciasService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
+  },
+  confirmarRecepcion:async(id, data = {})=>{
+    const response = await axiosBienes.patch(`/transferencias/${id}/confirmar-recepcion/`, data);
+    return response.data;
+
   },
 };
 

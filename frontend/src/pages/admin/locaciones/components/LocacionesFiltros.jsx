@@ -110,7 +110,8 @@ function FiltroChip({ label, onRemove }) {
       style={{ background: 'var(--color-border-light)', color: 'var(--color-text-body)' }}
     >
       {label}
-      <button onClick={onRemove} className="hover:text-red-500 transition-colors leading-none">
+      <button onClick={onRemove} 
+      className="hover:text-red-500 transition-colors leading-none">
         <span className="material-symbols-outlined text-[13px]">close</span>
       </button>
     </span>

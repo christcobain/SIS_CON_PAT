@@ -96,7 +96,7 @@ class Modulo(models.Model):
             models.Index(fields=['is_active']),
         ]
     def __str__(self):
-        return f'{self.sede.nombre} - {self.nombre}'
+        return f'{self.nombre} - {self.is_active}'
 #---pool especialistas audiencia,pool espcausa, pool asistentes,area_informatica, administracion, subadministracion,coordinacion
 ## 1er juzgado civil,juzgadi jip, etc
 class Ubicacion(models.Model):

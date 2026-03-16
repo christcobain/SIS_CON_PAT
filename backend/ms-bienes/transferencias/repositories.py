@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import QuerySet
+from django.db.models import QuerySet,Q
 from .models import Transferencia, TransferenciaDetalle, TransferenciaAprobacion
 
 
@@ -13,6 +13,11 @@ class TransferenciaRepository:
             .first()
         )
     @staticmethod
+    def listar(filters: dict):
+        qs = TransferenciaRepository.filter(filters)
+        return qs
+    
+    @staticmethod
     def create(data: dict) -> Transferencia:
         return Transferencia.objects.create(**data)
     @staticmethod
@@ -22,28 +27,38 @@ class TransferenciaRepository:
         transferencia.save(update_fields=list(fields.keys()))
     @staticmethod
     def filter(filters: dict) -> QuerySet:
+        if hasattr(filters, 'dict'):
+            params = filters.dict()
+        else:
+            params = dict(filters)
         qs = Transferencia.objects.prefetch_related('detalles__bien', 'aprobaciones').all()
+        search_value = params.pop('search', None)        
+        if search_value:
+            qs = qs.filter(
+                Q(numero_orden__icontains=search_value) | 
+                Q(observacion_segursede__icontains=search_value) |
+                Q(motivo__icontains=search_value)
+            )
         for key, value in filters.items():
-            if value is not None:
+            if value:
                 qs = qs.filter(**{key: value})
         return qs.order_by('-fecha_registro')
     @staticmethod
     def get_mis_transferencias(usuario_id: int, role: str, sede_id: int) -> QuerySet:
-        qs = Transferencia.objects.prefetch_related('detalles__bien', 'aprobaciones')
-        ROLES_VE_TODOS = {'SYSADMIN', 'analistaSistema', 'coordSistema'}
-        if role in ROLES_VE_TODOS:
+        qs = Transferencia.objects.prefetch_related('detalles__bien')
+        if role=='SYSADMIN':
             return qs.all()
+        if role in ['coordSistema', 'asistSistema']:
+            return qs.filter(
+                models.Q(usuario_origen_id=usuario_id) | 
+                models.Q(usuario_destino_id=usuario_id)
+            )
         if role == 'adminSede':
-            return qs.filter(sede_origen_id=sede_id)
+            return qs.filter(sede_origen_id=sede_id)            
         if role == 'segurSede':
             return qs.filter(
                 models.Q(sede_origen_id=sede_id) | models.Q(sede_destino_id=sede_id),
-                tipo='TRASLADO_SEDE',
-            )
-        if role == 'asistSistema':
-            return qs.filter(
-                models.Q(usuario_origen_id=usuario_id) |
-                models.Q(usuario_destino_id=usuario_id)
+                tipo='TRASLADO_SEDE'
             )
         return qs.filter(usuario_destino_id=usuario_id)
     @staticmethod
@@ -61,7 +76,6 @@ class TransferenciaRepository:
         seq = int(last.split('-')[-1]) + 1 if last else 1
         return f'{prefix}{seq:05d}'
 
-
 class TransferenciaDetalleRepository:
     @staticmethod
     def bulk_create(transferencia: Transferencia, bienes: list) -> None:
@@ -70,6 +84,7 @@ class TransferenciaDetalleRepository:
             detalles.append(TransferenciaDetalle(
                 transferencia      = transferencia,
                 bien               = bien,
+                categoria_bien_nombre=bien.categoria_bien.nombre if bien.categoria_bien else 'SIN CATEGORÍA',
                 codigo_patrimonial = bien.codigo_patrimonial or '',
                 tipo_bien_nombre   = bien.tipo_bien.nombre if bien.tipo_bien else '',
                 marca_nombre       = bien.marca.nombre if bien.marca else '',
@@ -108,13 +123,8 @@ class TransferenciaDetalleRepository:
 
 class TransferenciaAprobacionRepository:
     @staticmethod
-    def create(
-        transferencia: Transferencia,
-        rol_aprobador: str,
-        accion: str,
-        usuario_id: int,
-        detalle: str = None,
-    ) -> TransferenciaAprobacion:
+    def create(transferencia: Transferencia,
+        rol_aprobador: str,accion: str,usuario_id: int,detalle: str = None,) -> TransferenciaAprobacion:
         return TransferenciaAprobacion.objects.create(
             transferencia = transferencia,
             rol_aprobador = rol_aprobador,

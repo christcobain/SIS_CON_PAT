@@ -14,7 +14,7 @@ class CatalogoRepository:
         return model.objects.all().order_by('id')
     @staticmethod
     def get_activos(model: Type[CatalogoBase]) -> QuerySet:
-        return model.objects.filter(is_active=True).order_by('id')
+        return model.objects.order_by('id')
     @staticmethod
     def get_by_id(model: Type[CatalogoBase], pk: int) -> Optional[CatalogoBase]:
         return model.objects.filter(pk=pk).first()

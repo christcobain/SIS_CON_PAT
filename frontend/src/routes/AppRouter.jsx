@@ -7,6 +7,10 @@ import Alertas           from '../pages/dashboard/Alertas';
 import UsuariosPage      from '../pages/admin/usuarios/UsuariosPage';
 import RolesPage         from '../pages/admin/roles/RolesPage';
 import LocacionesPage    from '../pages/admin/locaciones/LocacionesPage';
+
+import CatalogosPage    from '../pages/assets/catalogos/CatalogosPage'
+import BienesPage       from '../pages/assets/bienes/BienesPage';
+import TransferenciasPage from '../pages/assets/transferencias/TransferenciasPage';
 import ProtectedRoute    from './ProtectedRoute';
 import PermissionRoute   from './PermissionRoute';
 
@@ -46,11 +50,6 @@ export default function AppRouter() {
             <Route element={<PermissionRoute perm="ms-usuarios:users:add_user" />}>
               <Route path="admin/usuarios" element={<UsuariosPage />} />
             </Route>
-            <Route element={<PermissionRoute perm="ms-usuarios:users:view_user" />}>
-              <Route path="admin/usuarios" element={<UsuariosPage />} />
-            </Route>
-
-
             <Route element={<PermissionRoute perm="ms-usuarios:roles:view_role" />}>
               <Route path="admin/roles" element={<RolesPage />} />
             </Route>
@@ -58,18 +57,23 @@ export default function AppRouter() {
               <Route path="admin/locaciones" element={<LocacionesPage />} />
             </Route>
 
+
+
+            <Route element={<PermissionRoute perm="ms-bienes:catalogos:add_catcategoriabien" />}>
+              <Route path="catalogos" element={<CatalogosPage />} />
+            </Route>
+            <Route element={<PermissionRoute perm="ms-bienes:bienes:view_bien" />}>
+              <Route path="bienes" element={<BienesPage />} />
+            </Route>
+            <Route element={<PermissionRoute perm="ms-bienes:transferencias:view_transferencia" />}>
+              <Route path="transferencias" element={<TransferenciasPage />} />
+            </Route>
+
             {/* ── Próximas rutas (descomentar cuando existan) ─────────────
             <Route path="bienes"         element={<BienesPage />} />
             <Route path="transferencias" element={<TransferenciasPage />} />
             <Route path="mantenimientos" element={<MantenimientosPage />} />
-
-            <Route element={<PermissionRoute perm="ms-usuarios:users:view_user" />}>
-              <Route path="admin/usuarios" element={<UsuariosPage />} />
-            </Route>
-
-            <Route element={<PermissionRoute perm="ms-bienes:catalogos:view_cattipobien" />}>
-              <Route path="catalogos" element={<CatalogosPage />} />
-            </Route>
+            
             ─────────────────────────────────────────────────────────────── */}
           </Route>
         </Route>

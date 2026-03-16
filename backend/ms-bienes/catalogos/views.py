@@ -95,8 +95,8 @@ class CatalogoViewSet(ViewSet):
                 {"success": False, "error": f'Catálogo "{slug}" no encontrado.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        solo_activos = request.query_params.get('all', 'false').lower() != 'true'
-        result = CatalogoService.listar(model, solo_activos=solo_activos)
+        
+        result = CatalogoService.listar(model)
         serializer=serializer_class(result["data"], many=True)
         return Response(
             serializer.data,

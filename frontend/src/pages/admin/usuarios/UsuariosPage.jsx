@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useUsuarios }    from '../../../hooks/useUsuarios';
-import { useToast }       from '../../../hooks/useToast';
-import ConfirmDialog      from '../../../components/feedback/ConfirmDialog';
-import UsuariosStats      from './components/UsuariosStats';
-import UsuariosFiltros    from './components/UsuariosFiltros';
-import UsuariosTabla      from './components/UsuariosTabla';
-// import ModalUsuario    from './modals/ModalUsuario';     // pendiente
+import { useUsuarios }     from '../../../hooks/useUsuarios';
+import { useToast }        from '../../../hooks/useToast';
+import ConfirmDialog       from '../../../components/feedback/ConfirmDialog';
+import UsuariosStats       from './components/UsuariosStats';
+import UsuariosFiltros     from './components/UsuariosFiltros';
+import UsuariosTabla       from './components/UsuariosTabla';
+import ModalUsuario        from './modal/ModalUsuario ';
+import ModalDependencia    from './modal/ModalDependencia';
 import ModalDetalleUsuario from './modal/ModalDetalleUsuario';
 
 const Icon = ({ name, className = '' }) => (
@@ -23,19 +24,17 @@ const FILTROS_INICIALES = { search: '', role: '', is_active: '' };
 export default function UsuariosPage() {
   const toast = useToast();
 
-  // ── Hook principal: usuarios ──────────────────────────────────────────────
+  // ── Hook principal ────────────────────────────────────────────────────────
   const {
     usuarios,
-    loading:      loadingUsuarios,
-    error:        errorUsuarios,
+    loading:     loadingUsuarios,
+    error:       errorUsuarios,
     actualizando,
-    refetch:      refetchUsuarios,
+    refetch:     refetchUsuarios,
     activar,
     desactivar,
     // Dependencias via el mismo hook
     listarDependencias,
-    crearDependencia,
-    actualizarDependencia,
     activarDependencia,
     desactivarDependencia,
   } = useUsuarios();
@@ -59,18 +58,19 @@ export default function UsuariosPage() {
     }
   };
 
-  // Carga inicial de dependencias al montar
   useEffect(() => { fetchDependencias(); }, []);
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [activeTab,     setActiveTab]     = useState('usuarios');
   const [filtros,       setFiltros]       = useState(FILTROS_INICIALES);
-  const [modalForm,     setModalForm]     = useState(false);
-  const [modalDetalle,  setModalDetalle]  = useState(false);
-  const [itemEditar,    setItemEditar]    = useState(null);
-  const [itemDetalle,   setItemDetalle]   = useState(null);
-  const [confirmToggle, setConfirmToggle] = useState(false);
-  const [itemToggle,    setItemToggle]    = useState(null);
+  const [modalUsuario,      setModalUsuario]      = useState(false);
+  const [modalDependencia,  setModalDependencia]  = useState(false);
+  const [modalDetalle,      setModalDetalle]      = useState(false);
+  const [itemEditarUsuario, setItemEditarUsuario] = useState(null);
+  const [itemEditarDep,     setItemEditarDep]     = useState(null);
+  const [itemDetalle,       setItemDetalle]       = useState(null);
+  const [confirmToggle,     setConfirmToggle]     = useState(false);
+  const [itemToggle,        setItemToggle]        = useState(null);
 
   const onFiltroChange   = (key, val) => setFiltros((prev) => ({ ...prev, [key]: val }));
   const onLimpiarFiltros = () => setFiltros(FILTROS_INICIALES);
@@ -79,40 +79,47 @@ export default function UsuariosPage() {
   const itemsFiltrados = useMemo(() => {
     const lista = activeTab === 'usuarios' ? usuarios : dependencias;
     const txt   = filtros.search.toLowerCase().trim();
-
     return lista.filter((item) => {
-      // Búsqueda texto
       const matchSearch = !txt || (() => {
         if (activeTab === 'usuarios') {
           const rolNombre = typeof item.role === 'object' ? item.role?.name : item.role;
           return [item.first_name, item.last_name, item.dni, rolNombre, item.cargo]
             .some((c) => c?.toLowerCase().includes(txt));
         }
-        // dependencias: busca en nombre y codigo
-        return [item.nombre, item.codigo]
-          .some((c) => c?.toLowerCase().includes(txt));
+        return [item.nombre, item.codigo].some((c) => c?.toLowerCase().includes(txt));
       })();
-
-      // Filtro estado
-      const matchEstado = filtros.is_active === '' ||
-        String(item.is_active) === filtros.is_active;
-
-      // Filtro rol (solo usuarios)
-      const matchRol = !filtros.role || activeTab !== 'usuarios' ||
+      const matchEstado = filtros.is_active === '' || String(item.is_active) === filtros.is_active;
+      const matchRol    = !filtros.role || activeTab !== 'usuarios' ||
         (typeof item.role === 'object' ? item.role?.name : item.role) === filtros.role;
-
       return matchSearch && matchEstado && matchRol;
     });
   }, [activeTab, usuarios, dependencias, filtros]);
 
-  // ── Loading / error según tab activo ─────────────────────────────────────
   const loadingActivo = activeTab === 'usuarios' ? loadingUsuarios : loadingDeps;
   const errorActivo   = activeTab === 'usuarios' ? errorUsuarios   : errorDeps;
-  const refetchActivo = activeTab === 'usuarios' ? refetchUsuarios : fetchDependencias;
+  const refetchActivo = activeTab === 'usuarios' ? refetchUsuarios  : fetchDependencias;
 
-  // ── Handlers de tabla ─────────────────────────────────────────────────────
-  const handleNuevo      = ()     => { setItemEditar(null); setModalForm(true); };
-  const handleEditar     = (item) => { setItemEditar(item); setModalForm(true); };
+  // ── Handlers — separados por tab para no confundir items ─────────────────
+  const handleNuevo = () => {
+    if (activeTab === 'usuarios') {
+      setItemEditarUsuario(null);
+      setModalUsuario(true);
+    } else {
+      setItemEditarDep(null);
+      setModalDependencia(true);
+    }
+  };
+
+  const handleEditar = (item) => {
+    if (activeTab === 'usuarios') {
+      setItemEditarUsuario(item);
+      setModalUsuario(true);
+    } else {
+      setItemEditarDep(item);
+      setModalDependencia(true);
+    }
+  };
+
   const handleVerDetalle = (item) => { setItemDetalle(item); setModalDetalle(true); };
   const handleToggle     = (item) => { setItemToggle(item); setConfirmToggle(true); };
 
@@ -120,8 +127,6 @@ export default function UsuariosPage() {
     setConfirmToggle(false);
     if (!itemToggle) return;
     const { id, is_active } = itemToggle;
-
-    // Nombre legible para el toast
     const nombreItem = activeTab === 'usuarios'
       ? `${itemToggle.first_name ?? ''} ${itemToggle.last_name ?? ''}`.trim()
       : (itemToggle.nombre ?? '');
@@ -129,7 +134,6 @@ export default function UsuariosPage() {
     try {
       let res;
       if (activeTab === 'usuarios') {
-        setActualizandoDeps(false); // solo por limpieza
         res = is_active ? await desactivar(id) : await activar(id);
       } else {
         setActualizandoDeps(true);
@@ -150,15 +154,11 @@ export default function UsuariosPage() {
     }
   };
 
-  // Botón de acción cambia según tab
   const btnLabel = activeTab === 'usuarios'
     ? { icon: 'person_add', text: 'Nuevo Usuario' }
     : { icon: 'add',        text: 'Nueva Dependencia' };
 
-  const countTab = {
-    usuarios:     usuarios.length,
-    dependencias: dependencias.length,
-  };
+  const countTab = { usuarios: usuarios.length, dependencias: dependencias.length };
 
   return (
     <div className="page-wrapper">
@@ -173,42 +173,30 @@ export default function UsuariosPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={refetchActivo}
-              title="Recargar datos"
-              className="btn-icon"
-              disabled={loadingActivo}
-            >
-              <Icon name="refresh"
-                    className={`text-[18px] ${loadingActivo ? 'animate-spin' : ''}`} />
+            <button onClick={refetchActivo} title="Recargar datos" className="btn-icon" disabled={loadingActivo}>
+              <Icon name="refresh" className={`text-[18px] ${loadingActivo ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={handleNuevo}
               disabled={actualizando || actualizandoDeps}
-              className="btn-primary"
-            >
+              className="btn-primary">
               <Icon name={btnLabel.icon} className="text-[18px]" />
               {btnLabel.text}
             </button>
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="tab-bar">
           {TABS.map(({ id, label, icon }) => {
             const count  = countTab[id] ?? 0;
             const active = activeTab === id;
             return (
-              <button
-                key={id}
+              <button key={id}
                 onClick={() => { setActiveTab(id); onLimpiarFiltros(); }}
-                className={active ? 'tab-btn-active' : 'tab-btn-inactive'}
-              >
+                className={active ? 'tab-btn-active' : 'tab-btn-inactive'}>
                 <Icon name={icon} className="text-[17px]" />
                 {label}
-                <span className={active ? 'tab-count-active' : 'tab-count-inactive'}>
-                  {count}
-                </span>
+                <span className={active ? 'tab-count-active' : 'tab-count-inactive'}>{count}</span>
               </button>
             );
           })}
@@ -217,20 +205,17 @@ export default function UsuariosPage() {
 
       {/* ── Contenido ─────────────────────────────────────────────────────── */}
       <div className="page-content">
-
         <UsuariosStats
           usuarios={usuarios}
           dependencias={dependencias}
           loading={loadingUsuarios || loadingDeps}
         />
-
         <UsuariosFiltros
           filtros={filtros}
           onFiltroChange={onFiltroChange}
           onLimpiar={onLimpiarFiltros}
           activeTab={activeTab}
         />
-
         <UsuariosTabla
           activeTab={activeTab}
           items={itemsFiltrados}
@@ -244,26 +229,37 @@ export default function UsuariosPage() {
       </div>
 
       {/* ── Modales ────────────────────────────────────────────────────────── */}
-      {/* <ModalUsuario
-        open={modalForm}
-        onClose={() => { setModalForm(false); setItemEditar(null); }}
-        activeTab={activeTab}
-        item={itemEditar}
-        actualizando={actualizando || actualizandoDeps}
-        onGuardado={async () => {
-          setModalForm(false);
-          setItemEditar(null);
-          activeTab === 'dependencias' ? await fetchDependencias() : await refetchUsuarios();
-        }}
-      /> */}
 
+      {/* Modal crear/editar USUARIO */}
+      <ModalUsuario
+        open={modalUsuario}
+        onClose={() => { setModalUsuario(false); setItemEditarUsuario(null); }}
+        item={itemEditarUsuario}
+        onGuardado={() => {
+          setModalUsuario(false);
+          setItemEditarUsuario(null);
+          refetchUsuarios();
+        }}
+      />
+      {/* Modal crear/editar DEPENDENCIA — separado para no mezclar items */}
+      <ModalDependencia
+        open={modalDependencia}
+        onClose={() => { setModalDependencia(false); setItemEditarDep(null); }}
+        item={itemEditarDep}
+        onGuardado={() => {
+          setModalDependencia(false);
+          setItemEditarDep(null);
+          fetchDependencias();
+        }}
+      />
+      {/* Modal detalle USUARIO */}
       <ModalDetalleUsuario
         open={modalDetalle}
         onClose={() => setModalDetalle(false)}
         item={itemDetalle}
         onEditar={handleEditar}
       />
-
+      {/* ConfirmDialog toggle activar/desactivar */}
       <ConfirmDialog
         open={confirmToggle}
         title={

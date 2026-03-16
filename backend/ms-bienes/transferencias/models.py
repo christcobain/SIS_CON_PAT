@@ -1,6 +1,6 @@
 from django.db import models
 from catalogos.models import CatMotivoCancelacion, CatMotivoTransferencia
-from bienes.models import Bien
+
 
 class Transferencia(models.Model):
     TIPO_CHOICES = [
@@ -18,20 +18,27 @@ class Transferencia(models.Model):
     numero_orden = models.CharField(max_length=20, unique=True)
     tipo         = models.CharField(max_length=20, choices=TIPO_CHOICES)
     descripcion  = models.TextField(null=True, blank=True)
+    
     usuario_origen_id = models.IntegerField()
     sede_origen_id    = models.IntegerField()
     modulo_origen_id  = models.IntegerField(null=True, blank=True)
+    ubicacion_origen_id  = models.IntegerField(null=True, blank=True)
+    piso_origen          = models.SmallIntegerField(null=True, blank=True)
+    
     usuario_destino_id    = models.IntegerField()
     sede_destino_id       = models.IntegerField()
     modulo_destino_id     = models.IntegerField(null=True, blank=True)
     ubicacion_destino_id  = models.IntegerField(null=True, blank=True)
     piso_destino          = models.SmallIntegerField(null=True, blank=True)
+    
     motivo             = models.ForeignKey(CatMotivoTransferencia, on_delete=models.SET_NULL,null=True, blank=True, related_name='transferencias',)
-    motivo_cancelacion = models.ForeignKey(CatMotivoCancelacion, on_delete=models.SET_NULL,null=True, blank=True, related_name='transferencias_canceladas',)
+    
     estado              = models.CharField(max_length=25, choices=ESTADO_CHOICES, default='PENDIENTE_APROBACION')
     fecha_registro      = models.DateTimeField(auto_now_add=True)
     fecha_cancelacion   = models.DateTimeField(null=True, blank=True)
+    motivo_cancelacion = models.ForeignKey(CatMotivoCancelacion, on_delete=models.SET_NULL,null=True, blank=True, related_name='transferencias_canceladas')
     detalle_cancelacion = models.TextField(null=True, blank=True)
+    
     motivo_devolucion   = models.TextField(null=True, blank=True)
     aprobado_por_adminsede_id  = models.IntegerField(null=True, blank=True)
     fecha_aprobacion_adminsede = models.DateTimeField(null=True, blank=True)
@@ -67,6 +74,7 @@ class Transferencia(models.Model):
 
 class TransferenciaDetalle(models.Model):    
     transferencia = models.ForeignKey(Transferencia, on_delete=models.CASCADE, related_name='detalles')
+    categoria_bien_nombre = models.CharField(max_length=100)
     bien = models.ForeignKey('bienes.Bien', on_delete=models.PROTECT, related_name='transferencias')
     codigo_patrimonial = models.CharField(max_length=50)
     tipo_bien_nombre   = models.CharField(max_length=100)

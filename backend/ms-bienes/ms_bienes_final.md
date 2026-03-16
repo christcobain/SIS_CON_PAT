@@ -118,10 +118,10 @@ SYSADMIN o perfil con add_bienes registra el bien
   → Otros tipos         → bien + detalle_tecnico libre
 ```
 
-### Fase 2 — Traslado entre sedes (COORDSISTEMA/SYSADMIN → ASISTSISTEMA destino)
+### Fase 2 — Traslado entre sedes (analistaSistema/COORDSISTEMA/SYSADMIN → ASISTSISTEMA destino)
 
 ```
-COORDSISTEMA crea transferencia tipo TRASLADO_SEDE
+analistaSistema/COORDSISTEMA crea transferencia tipo TRASLADO_SEDE
   ├── usuario_destino_id = ASISTSISTEMA de la sede destino
   ├── sede_destino_id    = sede destino
   ├── modulo_destino_id  = módulo destino

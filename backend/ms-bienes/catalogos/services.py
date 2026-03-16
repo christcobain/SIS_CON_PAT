@@ -7,11 +7,9 @@ from .models import CatalogoBase
 
 class CatalogoService:
     @staticmethod
-    def listar(model: Type[CatalogoBase], solo_activos: bool = True) -> Dict[str, Any]:
+    def listar(model: Type[CatalogoBase]) -> Dict[str, Any]:
         qs = (
             CatalogoRepository.get_activos(model)
-            if solo_activos
-            else CatalogoRepository.get_all(model)
         )
         if not qs:
             raise NotFound(f'Lista vacía.')

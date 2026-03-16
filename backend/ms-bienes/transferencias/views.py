@@ -66,7 +66,7 @@ _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
             'del registro, y el historial completo de aprobaciones.'
         ),
         parameters=[_PK],
-        responses={200: TransferenciaDetailSerializer, 403: _403, 404: _404},
+        responses={200: TransferenciaListSerializer, 403: _403, 404: _404},
     ),
 )
 class TransferenciaViewSet(ViewSet):
@@ -103,35 +103,13 @@ class TransferenciaViewSet(ViewSet):
             raise ValidationError('El usuario no tiene sede asignada.')
         return sedes[0]
     def _get_modulo(self, request):
-        return request.auth.get('modulo_id', None) if request.auth else None
- 
+        return request.auth.get('modulo_id', None) if request.auth else None 
     def list(self, request):
-        filters = {
-            key: request.query_params.get(key)
-            for key in [
-                'tipo', 'estado', 'sede_origen_id', 'sede_destino_id',
-                'usuario_origen_id', 'usuario_destino_id',
-            ]
-        }
-        for k in ['sede_origen_id', 'sede_destino_id', 'usuario_origen_id', 'usuario_destino_id']:
-            if filters[k]:
-                try:
-                    filters[k] = int(filters[k])
-                except ValueError:
-                    filters[k] = None
-
-        result = TransferenciaService.listar(filters)
-        return Response(
-            TransferenciaListSerializer(result['data'], many=True).data,
-            status=status.HTTP_200_OK,
-        )
-
+        qs = TransferenciaService.listar(request.query_params, self._get_token(request))
+        return Response(TransferenciaListSerializer(qs, many=True).data)
     def retrieve(self, request, pk=None):
-        result = TransferenciaService.obtener(pk)
-        return Response(
-            TransferenciaDetailSerializer(result['data']).data,
-            status=status.HTTP_200_OK,
-        )
+        tr = TransferenciaService.obtener(pk,self._get_token(request))
+        return Response(TransferenciaListSerializer(tr).data)
     @extend_schema(
         tags=['Transferencias'],
         summary='Mis transferencias',
@@ -151,20 +129,11 @@ class TransferenciaViewSet(ViewSet):
     )
     @action(detail=False, methods=['get'], url_path='mis-transferencias')
     def mis_transferencias(self, request):
-        filters = {
-            'estado': request.query_params.get('estado'),
-            'tipo':   request.query_params.get('tipo'),
-        }
-        result = TransferenciaService.mis_transferencias(
-            request.user.id,
-            self._get_role(request),
-            self._get_sede(request),
-            filters,
-        )
-        return Response(
-            TransferenciaListSerializer(result['data'], many=True).data,
-            status=status.HTTP_200_OK,
-        )
+        qs = TransferenciaService.mis_transferencias(
+            request.user.id,self._get_role(request),
+            self._get_sede(request),request.query_params,
+            self._get_token(request))
+        return Response(TransferenciaListSerializer(qs, many=True).data)
     @extend_schema(
         tags=['Transferencias'],
         summary='Descargar PDF del acta de transferencia',
@@ -211,6 +180,7 @@ class TransferenciaViewSet(ViewSet):
     @action(detail=False, methods=['post'], url_path='traslado')
     def crear_traslado(self, request):
         ser = TrasladoSedeWriteSerializer(data=request.data)
+        print(ser)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.crear_traslado_sede(
             ser.validated_data,

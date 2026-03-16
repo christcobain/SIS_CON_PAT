@@ -3,7 +3,7 @@ import axiosUsuarios from '../api/axiosUsuarios';
 
 const usuariosService = {
   buscarEmpleadoPorDni: async (dni) => {
-    const response = await axiosUsuarios.get(`/empleados/${dni}/`);
+    const response = await axiosUsuarios.get(`/users/empleados/${dni}/`);
     return response.data;
   },
   listar: async (params = {}) => {

@@ -67,8 +67,7 @@ function EstadoBadge({ active }) {
 }
 
 // ── Acciones: SIEMPRE visibles, hover con color contextual ───────────────────
-// Patrón unificado con UsuariosTabla: los iconos están siempre presentes,
-// el hover revela el color de la acción (rojo/verde para toggle).
+
 function AccionesCell({ item, onVerDetalle, onEditar, onToggleEstado }) {
   return (
     <div className="flex justify-end items-center gap-1">

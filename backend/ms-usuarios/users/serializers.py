@@ -37,7 +37,7 @@ class DistritoSimpleSerializer(serializers.ModelSerializer):
 class PermissionSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
-        fields = ['id', 'codename']
+        fields = ['id','microservice_name', 'codename']
 class SedeSimpleSerializer(serializers.ModelSerializer):
     distrito  = DistritoSimpleSerializer(read_only=True)
     class Meta:
@@ -124,6 +124,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
             'es_usuario_sistema',
             'role',
         ]
+        extra_kwargs = {
+            "dni": {"validators": []}
+        }
 class UserUpdateSerializer(serializers.ModelSerializer):
     sedes = serializers.PrimaryKeyRelatedField(many=True,queryset=Sede.objects.all(),required=False,)
     # empresa = serializers.PrimaryKeyRelatedField(queryset=Empresa.objects.filter(is_active=True),required=False,allow_null=True,)

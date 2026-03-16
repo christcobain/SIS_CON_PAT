@@ -39,30 +39,21 @@ export default function LocacionesPage() {
   const [itemDetalle,   setItemDetalle]   = useState(null);
   const [confirmToggle, setConfirmToggle] = useState(false);
   const [itemToggle,    setItemToggle]    = useState(null);
-
   const onFiltroChange   = (key, val) => setFiltros((prev) => ({ ...prev, [key]: val }));
   const onLimpiarFiltros = () => setFiltros(FILTROS_INICIALES);
-
   const rawData = { sedes, modulos, ubicaciones };
-
   const itemsFiltrados = useMemo(() => {
     const lista = rawData[activeTab] ?? [];
     return lista.filter((item) => {
       const txt = filtros.search.toLowerCase().trim();
-
-      // Búsqueda por texto (campos disponibles según tab)
       const matchSearch = !txt || (() => {
         const campos = [item.nombre, item.descripcion, item.direccion,
                         item.empresa_nombre, item.distrito_nombre,
                         item.provincia_nombre, item.departamento_nombre];
         return campos.some((c) => c?.toLowerCase().includes(txt));
       })();
-
-      // Filtro estado
       const matchEstado = filtros.is_active === '' ||
         String(item.is_active) === filtros.is_active;
-
-      // Filtro empresa (solo sedes tienen empresa_nombre)
       const matchEmpresa = !filtros.empresa_id || activeTab !== 'sedes' ||
         String(item.empresa_id) === String(filtros.empresa_id);
 
@@ -74,7 +65,6 @@ export default function LocacionesPage() {
   const handleEditar       = (item) => { setItemEditar(item); setModalForm(true); };
   const handleVerDetalle   = (item) => { setItemDetalle(item); setModalDetalle(true); };
   const handleToggleEstado = (item) => { setItemToggle(item); setConfirmToggle(true); };
-
   const handleConfirmToggle = async () => {
     setConfirmToggle(false);
     if (!itemToggle) return;
@@ -95,7 +85,6 @@ export default function LocacionesPage() {
   return (
     <div className="page-wrapper">
 
-  
       <div className="page-header">
         <div className="page-header-top">
           <div>

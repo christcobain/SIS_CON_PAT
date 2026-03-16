@@ -10,7 +10,7 @@ function StatCard({ icon, iconBg, iconColor, label, value, loading }) {
       </div>
       <div>
         <p className="text-[10px] font-black uppercase tracking-widest"
-           style={{ color: 'var(--color-text-muted)' }}>
+           >
           {label}
         </p>
         {loading

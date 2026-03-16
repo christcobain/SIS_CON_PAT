@@ -1,81 +1,76 @@
 import { useState, useEffect, useCallback } from 'react';
 import transferenciasService from '../services/transferencias.service';
 
-export function useTransferencias(filtrosIniciales = {}) {
+export function useTransferencias(activeTab, params) {
   const [transferencias, setTransferencias] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [actualizando, setActualizando] = useState(false);
-  const [filtros, setFiltros] = useState(filtrosIniciales);
-  const { misTransferencias, ...filtrosRest } = filtros;
+
+
   const fetchTransferencias = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      const { misTransferencias, usuarioId } = params;
       let data;
-      if (misTransferencias) {
-        data = await transferenciasService.misTransferencias(filtrosRest);
+      if (misTransferencias=== true) {
+        data = await transferenciasService.misTransferencias(usuarioId, { 
+          tipo: activeTab 
+        });
       } else {
-        data = await transferenciasService.listar(filtrosRest);
-      }
+        data = await transferenciasService.listar({ 
+          tipo: activeTab 
+        });
+      }      
       setTransferencias(Array.isArray(data) ? data : data?.results ?? []);
     } catch (e) {
+      console.error("Error en useTransferencias:", e);
       setError(e?.response?.data?.error || 'Error al cargar transferencias');
     } finally {
       setLoading(false);
     }
-  }, [filtrosRest,misTransferencias]);
+  }, [activeTab, params.misTransferencias, params.usuarioId]); 
+
 
   useEffect(() => {
     fetchTransferencias();
   }, [fetchTransferencias]);
 
-  // ── Helper para operaciones de escritura ──────────────────────────────────
   const ejecutarYRefrescar = async (fn, ...args) => {
     setActualizando(true);
-    setError(null);
     try {
-      const result = await fn(...args);
+      await fn(...args);
       await fetchTransferencias();
-      return result;
+      return { success: true };
     } catch (e) {
-      const msg = e?.response?.data?.error || 'Error en la operación';
-      setError(msg);
-      throw e;
+      return { success: false, error: e?.response?.data?.error || 'Error en la operación' };
     } finally {
       setActualizando(false);
     }
   };
-  const aplicarFiltros = (nuevosFiltros) => {
-      setFiltros(prev => ({ ...prev, ...nuevosFiltros }));
-    };
-    const descargarPDF= async (id) => {
-      try {
-        const blob = await transferenciasService.descargarPDF(id);
-        const url = window.URL.createObjectURL(new Blob([blob]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `transferencia_${id}.pdf`);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-      } catch (e) {
-        setError('No se pudo descargar el documento de transferencia',e);
-      }
-    };
-  // ── Métodos del Hook ──────────────────────────────────────────────────────
+
+  const descargarPDF = async (id) => {
+    try {
+      const blob = await transferenciasService.descargarPDF(id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `transferencia-${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      console.error("Error descargando PDF", e);
+    }
+  };
+
   return {
     transferencias,
     loading,
     error,
     actualizando,
-    filtros,
-    aplicarFiltros,
-
     refetch: fetchTransferencias,    
-    obtener: (id) => transferenciasService.obtener(id),
-    misTransferencias: (params) => transferenciasService.misTransferencias(params),
     descargarPDF,
     crearTraslado: (data) => ejecutarYRefrescar(transferenciasService.crearTraslado, data),
     crearAsignacion: (data) => ejecutarYRefrescar(transferenciasService.crearAsignacion, data),
@@ -85,8 +80,7 @@ export function useTransferencias(filtrosIniciales = {}) {
     aprobarEntradaSeguridad: (id, data) => ejecutarYRefrescar(transferenciasService.aprobarEntradaSeguridad, id, data),
     retornoSalida: (id, data) => ejecutarYRefrescar(transferenciasService.retornoSalida, id, data),
     retornoEntrada: (id, data) =>  ejecutarYRefrescar(transferenciasService.retornoEntrada, id, data),
-    cancelar: (id, data) =>  ejecutarYRefrescar(transferenciasService.cancelar, id, data),
-    reenviar: (id, data) =>  ejecutarYRefrescar(transferenciasService.reenviar, id, data),
-    subirFirmado: (id, archivo) => ejecutarYRefrescar(transferenciasService.subirFirmado, id, archivo),
+    reenviarTransferencia: (id, data) =>  ejecutarYRefrescar(transferenciasService.reenviar, id, data),
+    cancelar: (id) => ejecutarYRefrescar(transferenciasService.cancelar, id),
   };
 }
