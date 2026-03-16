@@ -573,12 +573,12 @@ bienes_baja_detalle
 ### 8.1 Traslado entre sedes (TRASLADO_SEDE)
 
 ```
-COORDSISTEMA/SYSADMIN registra traslado
+analistaSistema/COORDSISTEMA/SYSADMIN registra traslado
   └── estado = PENDIENTE_APROBACION
       ├── Notificación → ASISTSISTEMA de sede origen  (alerta de seguridad)
       └── Notificación → ADMINSEDE de sede origen     (alerta de seguridad)
 
-ADMINSEDE sede origen aprueba salida lógica
+ADMINSEDE/coorSistema sede origen aprueba salida lógica
   └── aprobado_por_adminsede_id = ADMINSEDE.id
 
 SEGURSEDE sede origen aprueba salida física

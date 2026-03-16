@@ -20,26 +20,22 @@ const TABS = [
 
 const FILTROS_INICIALES = { search: '', role: '', is_active: '' };
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function UsuariosPage() {
   const toast = useToast();
 
-  // ── Hook principal ────────────────────────────────────────────────────────
   const {
     usuarios,
-    loading:     loadingUsuarios,
-    error:       errorUsuarios,
+    loading: loadingUsuarios,
+    error: errorUsuarios,
     actualizando,
-    refetch:     refetchUsuarios,
+    refetch: refetchUsuarios,
     activar,
     desactivar,
-    // Dependencias via el mismo hook
     listarDependencias,
     activarDependencia,
     desactivarDependencia,
   } = useUsuarios();
 
-  // ── Estado local de dependencias ──────────────────────────────────────────
   const [dependencias,     setDependencias]     = useState([]);
   const [loadingDeps,      setLoadingDeps]      = useState(false);
   const [errorDeps,        setErrorDeps]        = useState(null);
@@ -60,7 +56,6 @@ export default function UsuariosPage() {
 
   useEffect(() => { fetchDependencias(); }, []);
 
-  // ── UI state ──────────────────────────────────────────────────────────────
   const [activeTab,     setActiveTab]     = useState('usuarios');
   const [filtros,       setFiltros]       = useState(FILTROS_INICIALES);
   const [modalUsuario,      setModalUsuario]      = useState(false);
@@ -75,7 +70,6 @@ export default function UsuariosPage() {
   const onFiltroChange   = (key, val) => setFiltros((prev) => ({ ...prev, [key]: val }));
   const onLimpiarFiltros = () => setFiltros(FILTROS_INICIALES);
 
-  // ── Filtrado cliente-side ─────────────────────────────────────────────────
   const itemsFiltrados = useMemo(() => {
     const lista = activeTab === 'usuarios' ? usuarios : dependencias;
     const txt   = filtros.search.toLowerCase().trim();
@@ -99,7 +93,6 @@ export default function UsuariosPage() {
   const errorActivo   = activeTab === 'usuarios' ? errorUsuarios   : errorDeps;
   const refetchActivo = activeTab === 'usuarios' ? refetchUsuarios  : fetchDependencias;
 
-  // ── Handlers — separados por tab para no confundir items ─────────────────
   const handleNuevo = () => {
     if (activeTab === 'usuarios') {
       setItemEditarUsuario(null);
@@ -138,17 +131,16 @@ export default function UsuariosPage() {
       } else {
         setActualizandoDeps(true);
         try {
-          res = is_active
-            ? await desactivarDependencia(id)
-            : await activarDependencia(id);
+          res = is_active ? await desactivarDependencia(id) : await activarDependencia(id);
           await fetchDependencias();
         } finally {
           setActualizandoDeps(false);
         }
       }
       toast.success(res?.message ?? `"${nombreItem}" ${is_active ? 'desactivado' : 'activado'}.`);
+      if(activeTab === 'usuarios') refetchUsuarios();
     } catch (e) {
-      toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Error al cambiar el estado.');
+      toast.error(e?.response?.data?.error || 'Error al cambiar el estado.');
     } finally {
       setItemToggle(null);
     }
@@ -156,66 +148,80 @@ export default function UsuariosPage() {
 
   const btnLabel = activeTab === 'usuarios'
     ? { icon: 'person_add', text: 'Nuevo Usuario' }
-    : { icon: 'add',        text: 'Nueva Dependencia' };
-
-  const countTab = { usuarios: usuarios.length, dependencias: dependencias.length };
+    : { icon: 'domain_add', text: 'Nueva Dependencia' };
 
   return (
-    <div className="page-wrapper">
-
-      {/* ── Cabecera ───────────────────────────────────────────────────────── */}
-      <div className="page-header">
-        <div className="page-header-top">
-          <div>
-            <h1 className="page-title">Gestión de Usuarios</h1>
-            <p className="page-subtitle">
-              Administre usuarios institucionales, roles de acceso y dependencias del Poder Judicial.
-            </p>
-          </div>
+    <div className="gap-1 p-4 max-w-[1600px] animate-in fade-in duration-500 h-auto pb-20">
+      
+      {/* ── CABECERA Y TABS ────────────────────────────────────────── */}
+      <div className="card p-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-1">
           <div className="flex items-center gap-2">
-            <button onClick={refetchActivo} title="Recargar datos" className="btn-icon" disabled={loadingActivo}>
-              <Icon name="refresh" className={`text-[18px] ${loadingActivo ? 'animate-spin' : ''}`} />
+            <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <Icon name="badge" className="text-[24px]" />
+            </div>
+            <div>
+              <h1 className="page-title">Gestión de Usuarios</h1>
+              <p className="page-subtitle">Administre usuarios, accesos y dependencias del Poder Judicial.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={refetchActivo} 
+              disabled={loadingActivo}
+              className="btn-icon bg-surface border border-border"
+              title="Sincronizar"
+            >
+              <Icon name="sync" className={`text-[18px] ${loadingActivo ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
-            <button
-              onClick={handleNuevo}
-              disabled={actualizando || actualizandoDeps}
-              className="btn-primary">
+            
+            <button 
+              onClick={handleNuevo} 
+              disabled={actualizando || actualizandoDeps} 
+              className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
+            >
               <Icon name={btnLabel.icon} className="text-[18px]" />
-              {btnLabel.text}
+              <span className="font-black uppercase tracking-widest text-[10px]">{btnLabel.text}</span>
             </button>
           </div>
         </div>
 
-        <div className="tab-bar">
-          {TABS.map(({ id, label, icon }) => {
-            const count  = countTab[id] ?? 0;
-            const active = activeTab === id;
-            return (
-              <button key={id}
-                onClick={() => { setActiveTab(id); onLimpiarFiltros(); }}
-                className={active ? 'tab-btn-active' : 'tab-btn-inactive'}>
-                <Icon name={icon} className="text-[17px]" />
-                {label}
-                <span className={active ? 'tab-count-active' : 'tab-count-inactive'}>{count}</span>
-              </button>
-            );
-          })}
+        <div className="flex gap-6 mt-4 border-t border-border pt-3">
+          {TABS.map(({ id, label, icon }) => (
+            <button
+              key={id}
+              onClick={() => { setActiveTab(id); onLimpiarFiltros(); }}
+              className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all ${
+                activeTab === id 
+                ? 'text-primary border-b-2 border-primary' 
+                : 'text-faint hover:text-main'
+              }`}
+            >
+              <Icon name={icon} className="text-[16px]" />
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── Contenido ─────────────────────────────────────────────────────── */}
-      <div className="page-content">
+      <div className="page-content custom-scrollbar">
+        {/* KPI Stats */}
         <UsuariosStats
           usuarios={usuarios}
           dependencias={dependencias}
           loading={loadingUsuarios || loadingDeps}
         />
+
+        {/* Filtros */}
         <UsuariosFiltros
           filtros={filtros}
           onFiltroChange={onFiltroChange}
           onLimpiar={onLimpiarFiltros}
           activeTab={activeTab}
         />
+
+        {/* Tabla / Grid */}
         <UsuariosTabla
           activeTab={activeTab}
           items={itemsFiltrados}
@@ -229,8 +235,6 @@ export default function UsuariosPage() {
       </div>
 
       {/* ── Modales ────────────────────────────────────────────────────────── */}
-
-      {/* Modal crear/editar USUARIO */}
       <ModalUsuario
         open={modalUsuario}
         onClose={() => { setModalUsuario(false); setItemEditarUsuario(null); }}
@@ -241,7 +245,7 @@ export default function UsuariosPage() {
           refetchUsuarios();
         }}
       />
-      {/* Modal crear/editar DEPENDENCIA — separado para no mezclar items */}
+
       <ModalDependencia
         open={modalDependencia}
         onClose={() => { setModalDependencia(false); setItemEditarDep(null); }}
@@ -252,28 +256,24 @@ export default function UsuariosPage() {
           fetchDependencias();
         }}
       />
-      {/* Modal detalle USUARIO */}
+
       <ModalDetalleUsuario
         open={modalDetalle}
         onClose={() => setModalDetalle(false)}
         item={itemDetalle}
         onEditar={handleEditar}
       />
-      {/* ConfirmDialog toggle activar/desactivar */}
+
       <ConfirmDialog
         open={confirmToggle}
-        title={
-          itemToggle?.is_active
-            ? `Desactivar ${activeTab === 'usuarios' ? 'usuario' : 'dependencia'}`
-            : `Activar ${activeTab === 'usuarios' ? 'usuario' : 'dependencia'}`
-        }
+        title={itemToggle?.is_active ? 'Desactivar Registro' : 'Activar Registro'}
         message={(() => {
           const nombre = activeTab === 'usuarios'
             ? `${itemToggle?.first_name ?? ''} ${itemToggle?.last_name ?? ''}`.trim()
             : (itemToggle?.nombre ?? '');
           return itemToggle?.is_active
-            ? `¿Desactivar "${nombre}"? ${activeTab === 'usuarios' ? 'Perderá acceso al sistema.' : 'Dejará de estar disponible.'}`
-            : `¿Activar "${nombre}"? ${activeTab === 'usuarios' ? 'Recuperará el acceso al sistema.' : 'Estará disponible nuevamente.'}`;
+            ? `¿Desactivar "${nombre}"? ${activeTab === 'usuarios' ? 'Perderá acceso al sistema inmediatamente.' : 'Dejará de estar disponible para asignación.'}`
+            : `¿Activar "${nombre}"? ${activeTab === 'usuarios' ? 'Recuperará el acceso al sistema con sus permisos previos.' : 'Estará disponible nuevamente.'}`;
         })()}
         confirmLabel={itemToggle?.is_active ? 'Sí, desactivar' : 'Sí, activar'}
         variant={itemToggle?.is_active ? 'danger' : 'primary'}

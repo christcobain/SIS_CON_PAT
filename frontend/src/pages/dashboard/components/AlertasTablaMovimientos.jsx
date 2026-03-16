@@ -1,177 +1,131 @@
+import { useNavigate } from 'react-router-dom';
+
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
-const ESTADO_CFG = {
-  PENDIENTE_APROBACION:  { label: 'Pend. Aprobación', cls: 'badge-pendiente' },
-  EN_PROCESO:            { label: 'En Proceso',        cls: 'badge-atendido'  },
-  EN_ESPERA_CONFORMIDAD: { label: 'Esp. Conformidad',  cls: 'badge-inactivo'  },
-  EN_RETORNO:            { label: 'En Retorno',        cls: 'badge-devuelto'  },
-  DEVUELTO:              { label: 'Devuelto',          cls: 'badge-devuelto'  },
-  ATENDIDO:              { label: 'Atendido',          cls: 'badge-activo'    },
-  CANCELADO:             { label: 'Cancelado',         cls: 'badge-cancelado' },
-};
+export default function AlertasTablaMovimientos({ role, loading }) {
+  const navigate = useNavigate();
 
-const TIPO_CFG = {
-  SALIDA:             { label: 'Salida Temporal',    icon: 'logout',         iconBg: 'bg-orange-100',  iconText: 'text-orange-600'  },
-  ENTRADA:            { label: 'Entrada de Activos', icon: 'login',          iconBg: 'bg-emerald-100', iconText: 'text-emerald-600' },
-  TRASLADO_SEDE:      { label: 'Traslado de Sede',   icon: 'swap_horiz',     iconBg: 'bg-blue-100',    iconText: 'text-blue-600'    },
-  ASIGNACION_INTERNA: { label: 'Asignación Interna', icon: 'assignment_ind', iconBg: 'bg-primary/10',  iconText: 'text-primary'     },
-};
-
-function EstadoBadge({ estado }) {
-  const c = ESTADO_CFG[estado] ?? { label: estado, cls: 'badge-inactivo' };
-  return <span className={`badge ${c.cls}`}>{c.label}</span>;
-}
-
-function PrioridadBadge({ nivel }) {
-  const styles = {
-    ALTA:  { background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' },
-    MEDIA: { background: 'var(--color-border-light)', color: 'var(--color-text-body)', border: '1px solid var(--color-border)' },
-    BAJA:  { background: 'var(--color-surface-alt)', color: 'var(--color-text-muted)', border: '1px solid var(--color-border-light)' },
-  };
-  return (
-    <span
-      className="text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-wide"
-      style={styles[nivel] ?? styles.BAJA}
-    >
-      {nivel}
-    </span>
-  );
-}
-
-function SkeletonRow() {
-  return (
-    <tr>
-      {[70, 50, 50, 60, 30, 40].map((w, i) => (
-        <td key={i} className="px-5 py-4">
-          <div className="skeleton h-4 rounded" style={{ width: `${w}%` }} />
-        </td>
-      ))}
-    </tr>
-  );
-}
-
-// ── Fila de movimiento ────────────────────────────────────────────────────────
-// Patrón idéntico a FilaUsuario / FilaSede: acciones siempre visibles,
-// columna de nombre con ícono + subtexto, hover con color contextual.
-function FilaMovimiento({ item, onVer }) {
-  const tipo = TIPO_CFG[item.tipo] ?? TIPO_CFG.TRASLADO_SEDE;
-
-  return (
-    <tr>
-      {/* Tipo */}
-      <td className="px-5 py-3.5">
-        <div className="flex items-center gap-3">
-          <div className={`size-9 rounded-xl flex items-center justify-center shrink-0 ${tipo.iconBg}`}>
-            <Icon name={tipo.icon} className={`text-[18px] ${tipo.iconText}`} />
+  // Función para renderizar botones según tu flujo lógico
+  const renderActions = (item) => {
+    const { estado } = item;
+    const btnClass = "px-3 py-1.5 rounded-lg font-black text-[9px] uppercase tracking-tighter transition-all flex items-center gap-1.5 border";
+    
+    // 1. PENDIENTE_APROBACION
+    if (estado === 'PENDIENTE_APROBACION') {
+      if (role === 'ADMINSEDE' || role === 'COORDSISTEMA') {
+        return (
+          <div className="flex gap-2">
+            <button className={`${btnClass} bg-green-500 border-green-600 text-white hover:bg-green-600`}>
+              <Icon name="check" className="text-sm" /> Aprobar
+            </button>
+            <button className={`${btnClass} bg-white text-slate-600 border-slate-200 hover:bg-slate-50`}>
+              <Icon name="reply" className="text-sm" /> Devolver
+            </button>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-black leading-tight truncate"
-               style={{ color: 'var(--color-text-primary)' }}>
-              {tipo.label}
-            </p>
-            <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              ID #{item.id}
-            </p>
+        );
+      }
+      if (role === 'SEGURSEDE_SALIDA') {
+        return (
+          <div className="flex gap-2">
+            <button className={`${btnClass} bg-primary border-red-700 text-white hover:bg-red-800`}>
+              <Icon name="local_shipping" className="text-sm" /> Aprobar Salida
+            </button>
+            <button className={`${btnClass} bg-white text-red-600 border-red-200 hover:bg-red-50`}>
+               Rechazar
+            </button>
           </div>
-        </div>
-      </td>
+        );
+      }
+      if (role === 'ASISTSISTEMA') {
+        return <button onClick={() => navigate(`/movimiento/${item.id}`)} className={`${btnClass} bg-slate-100 text-slate-500 border-transparent hover:bg-slate-200`}>Ver Detalle</button>;
+      }
+    }
 
-      {/* Origen → Destino */}
-      <td className="px-5 py-3.5">
-        <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-          {item.origen}
-        </p>
-        <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-          <Icon name="arrow_forward" className="text-[11px]" />
-          {item.destino}
-        </p>
-      </td>
-
-      {/* Solicitante */}
-      <td className="px-5 py-3.5">
-        <div className="flex items-center gap-2">
-          <div className="size-7 rounded-full flex items-center justify-center shrink-0"
-               style={{ background: 'rgba(127,29,29,0.1)' }}>
-            <Icon name="person" className="text-[14px] text-primary" />
-          </div>
-          <span className="text-sm truncate" style={{ color: 'var(--color-text-body)' }}>
-            {item.solicitante}
-          </span>
-        </div>
-      </td>
-
-      {/* Fecha + Estado */}
-      <td className="px-5 py-3.5">
-        <p className="text-sm" style={{ color: 'var(--color-text-body)' }}>{item.fecha}</p>
-        <div className="mt-1"><EstadoBadge estado={item.estado} /></div>
-      </td>
-
-      {/* Prioridad */}
-      <td className="px-5 py-3.5">
-        <PrioridadBadge nivel={item.prioridad} />
-      </td>
-
-      {/* Acción — siempre visible, mismo patrón btn-secondary */}
-      <td className="px-5 py-3.5 text-right">
-        <button
-          onClick={() => onVer(item)}
-          className="btn-secondary text-xs px-3 py-1.5"
-        >
-          Ver Detalle
+    // 2. EN_ESPERA_CONFORMIDAD
+    if (estado === 'EN_ESPERA_CONFORMIDAD' && role === 'USUARIO_DESTINO') {
+      return (
+        <button className={`${btnClass} bg-blue-600 border-blue-700 text-white hover:bg-blue-700`}>
+          <Icon name="front_hand" className="text-sm" /> Confirmar Recepción
         </button>
-      </td>
-    </tr>
-  );
-}
+      );
+    }
 
-// ── Componente principal ──────────────────────────────────────────────────────
-const COLS = ['Tipo', 'Origen / Destino', 'Solicitante', 'Fecha / Estado', 'Prioridad', ''];
+    // 3. EN_RETORNO
+    if (estado === 'EN_RETORNO' && role === 'SEGURSEDE') {
+      return (
+        <button className={`${btnClass} bg-primary border-red-700 text-white hover:bg-red-800`}>
+          <Icon name="assignment_return" className="text-sm" /> Aprobar Retorno
+        </button>
+      );
+    }
 
-export default function AlertasTablaMovimientos({ items = [], loading = false, onVer }) {
+    // 4. DEVUELTO
+    if (estado === 'DEVUELTO' && role === 'REGISTRADOR') {
+      return (
+        <div className="flex gap-2">
+          <button className={`${btnClass} bg-amber-500 border-amber-600 text-white hover:bg-amber-600`}>Reenviar</button>
+          <button className={`${btnClass} bg-white text-slate-400 border-slate-200 hover:bg-slate-50`}>Cancelar</button>
+        </div>
+      );
+    }
+
+    // 5. ATENDIDO / CANCELADO (Por defecto)
+    return (
+      <div className="flex gap-2">
+        <button className={`${btnClass} bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200`}>Detalle</button>
+        {estado === 'ATENDIDO' && (
+          <button className={`${btnClass} bg-white text-primary border-primary/20 hover:bg-red-50`}>
+            <Icon name="picture_as_pdf" className="text-sm" /> PDF
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="table-wrapper">
-      <div className="table-container">
-        <table className="table">
-          <thead>
-            <tr>
-              {COLS.map((h) => (
-                <th key={h} className="px-5 py-3.5">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)
-            ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={COLS.length} className="px-5 py-16 text-center">
-                  <Icon
-                    name="inbox"
-                    className="text-[44px] block mb-3"
-                    style={{ color: 'var(--color-border)' }}
-                  />
-                  <p className="text-sm font-semibold" style={{ color: 'var(--color-text-muted)' }}>
-                    Sin registros para este filtro
-                  </p>
-                </td>
-              </tr>
-            ) : (
-              items.map((item) => (
-                <FilaMovimiento key={item.id} item={item} onVer={onVer} />
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="table-footer">
-        <p className="table-count">
-          <strong style={{ color: 'var(--color-text-primary)' }}>{items.length}</strong>
-          {' '}registro{items.length !== 1 ? 's' : ''}
-        </p>
-      </div>
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="bg-slate-50/50 dark:bg-white/2 border-b border-slate-100 dark:border-white/5 text-[10px] uppercase font-black text-slate-400 tracking-widest">
+            <th className="px-6 py-4">Tipo / Origen</th>
+            <th className="px-6 py-4">Solicitante</th>
+            <th className="px-6 py-4">Estado</th>
+            <th className="px-6 py-4 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+          {/* Ejemplo de fila */}
+          <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors group">
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                  <Icon name="logout" className="text-xl" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase">Salida Temporal</p>
+                  <p className="text-[10px] text-slate-400 font-bold tracking-tight">Desde: Sede Central</p>
+                </div>
+              </div>
+            </td>
+            <td className="px-6 py-4">
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300">Juan Perez</p>
+              <p className="text-[10px] text-slate-400 font-medium tracking-tighter uppercase">HACE 10 MINUTOS</p>
+            </td>
+            <td className="px-6 py-4">
+               <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-tighter border border-amber-200">
+                  Pendiente Aprobación
+               </span>
+            </td>
+            <td className="px-6 py-4">
+              <div className="flex justify-end">
+                {renderActions({ estado: 'PENDIENTE_APROBACION', id: 1 })}
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -1,18 +1,18 @@
-import { useState }       from 'react';
-import { useBienes }      from '../../../hooks/useBienes';
-import { useLocaciones }  from '../../../hooks/useLocaciones';
-import { useCatalogos }   from '../../../hooks/useCatalogos';
-import { useToast }       from '../../../hooks/useToast';
-import BienesStats        from './../bienes/components/BienesStats';
-import BienesFiltros      from './../bienes/components/BienesFiltros';
-import BienesTabla        from './../bienes/components/BienesTabla';
-import ModalBienForm      from './../bienes/modals/ModalBienForm';
-import ModalDetalleBien   from './../bienes/modals/ModalDetalleBien';
+import { useState, useEffect } from 'react';
+import { useBienes }       from '../../../hooks/useBienes';
+import { useLocaciones }   from '../../../hooks/useLocaciones';
+import { useCatalogos }    from '../../../hooks/useCatalogos';
+import { useToast }        from '../../../hooks/useToast';
+
+import BienesStats         from './../bienes/components/BienesStats';
+import BienesFiltros       from './../bienes/components/BienesFiltros';
+import BienesTabla         from './../bienes/components/BienesTabla';
+import ModalBienForm       from './../bienes/modals/ModalBienForm';
+import ModalDetalleBien    from './../bienes/modals/ModalDetalleBien';
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
-
 
 const FILTROS_INICIALES = {
   search:                   '',
@@ -21,12 +21,7 @@ const FILTROS_INICIALES = {
   estado_funcionamiento_id: '',
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function BienesPage() {
-  const toast = useToast();
-
-  // ── Hooks ─────────────────────────────────────────────────────────────────
-
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
 
   const {
@@ -37,20 +32,19 @@ export default function BienesPage() {
     refetch,
     aplicarFiltros,
   } = useBienes(filtros);
+
   const { fetchCatalogos, tiposBien = [], estadosFuncionamiento = [] } = useCatalogos();
   const { sedes = [] } = useLocaciones();
 
-  useState(() => {
+  useEffect(() => {
     fetchCatalogos(['tiposBien', 'estadosFuncionamiento']);
-  });
+  }, []);
 
-  // ── Estado de UI ──────────────────────────────────────────────────────────
   const [modalForm,    setModalForm]    = useState(false);
   const [modalDetalle, setModalDetalle] = useState(false);
   const [itemEditar,   setItemEditar]   = useState(null);
   const [itemDetalle,  setItemDetalle]  = useState(null);
 
-  // ── Handlers de filtros ───────────────────────────────────────────────────
   const onFiltroChange = (key, val) => {
     const nuevosFiltros = { ...filtros, [key]: val };
     setFiltros(nuevosFiltros);
@@ -62,8 +56,7 @@ export default function BienesPage() {
     aplicarFiltros(FILTROS_INICIALES);
   };
 
-  // ── Handlers de tabla ─────────────────────────────────────────────────────
-  const handleNuevo      = ()     => { setItemEditar(null); setModalForm(true); };
+  const handleNuevo      = () => { setItemEditar(null); setModalForm(true); };
   const handleEditar     = (item) => { setItemEditar(item); setModalForm(true); };
   const handleVerDetalle = (item) => { setItemDetalle(item); setModalDetalle(true); };
 
@@ -74,57 +67,64 @@ export default function BienesPage() {
   };
 
   return (
-    <div className="page-wrapper">
-
-      {/* ── Cabecera ─────────────────────────────────────────────────────── */}
-      <div className="page-header">
-        <div className="page-header-top">
-          <div>
-            <h1 className="page-title">Inventario de Bienes</h1>
-            <p className="page-subtitle">
-              Gestión del inventario patrimonial de bienes muebles institucionales.
-            </p>
+    <div className="gap-1 p-4 max-w-[1600px] animate-in fade-in duration-500 h-auto pb-20">
+      <div className="card p-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <Icon name="inventory_2" className="text-[24px]" />
+            </div>
+            <div>
+              <h1 className="page-title">Inventario de Bienes</h1>
+              <p className="page-subtitle">Gestión del patrimonio mobiliario institucional.</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2 ">
             <button
               onClick={refetch}
-              title="Recargar datos"
-              className="btn-icon"
-              disabled={loading}>
-              <Icon name="refresh" className={`text-[18px] ${loading ? 'animate-spin' : ''}`} />
+              disabled={loading}
+              className="btn-icon bg-surface border border-border"
+              title="Sincronizar"
+            >
+              <Icon name="sync" className={`text-[18px] ${loading ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
+            
             <button
               onClick={handleNuevo}
               disabled={actualizando}
-              className="btn-primary">
-              <Icon name="add" className="text-[18px]" />
-              Registrar Bien
+              className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
+            >
+              <Icon name="add_circle" className="text-[18px]" />
+              <span className="font-black uppercase tracking-widest text-[10px]">Nuevo Registro</span>
             </button>
           </div>
         </div>
-        {/* Tab único — la estructura permite agregar más tabs (Bajas, etc.) */}
-        <div className="tab-bar">
-          <button className="tab-btn-active">
-            <Icon name="inventory_2" className="text-[17px]" />
+
+        <div className="flex gap-6 mt-4 border-t border-border pt-3">
+          <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary border-b-2 border-primary pb-2">
+            <Icon name="grid_view" className="text-[16px]" />
             Inventario
-            <span className="tab-count-active">
-              {loading ? '…' : bienes.length}
-            </span>
           </button>
         </div>
       </div>
 
-      {/* ── Contenido ─────────────────────────────────────────────────────── */}
+      {/* ── Stats ────────────────────────────────────────────────────────── */}
       <div className="page-content">
-        <BienesStats bienes={bienes} loading={loading} />
-        <BienesFiltros
-          filtros={filtros}
-          onFiltroChange={onFiltroChange}
-          onLimpiar={onLimpiarFiltros}
-          sedes={sedes}
-          tiposBien={tiposBien}
-          estadosFuncionamiento={estadosFuncionamiento}
-        />
+      <BienesStats bienes={bienes} loading={loading} />
+
+      {/* ── Filtros ──────────────────────────────────────────────────────── */}
+      <BienesFiltros
+        filtros={filtros}
+        onFiltroChange={onFiltroChange}
+        onLimpiar={onLimpiarFiltros}
+        sedes={sedes}
+        tiposBien={tiposBien}
+        estadosFuncionamiento={estadosFuncionamiento}
+      />
+
+      {/* ── Tabla (Crecerá hacia abajo naturalmente) ────────────────────── */}
+     
         <BienesTabla
           items={bienes}
           loading={loading}
@@ -133,8 +133,9 @@ export default function BienesPage() {
           onVerDetalle={handleVerDetalle}
           onEditar={handleEditar}
         />
-      </div>
-      {/* ── Modales ────────────────────────────────────────────────────────── */}
+      
+
+      {/* Modales */}
       <ModalBienForm
         open={modalForm}
         onClose={() => { setModalForm(false); setItemEditar(null); }}
@@ -147,7 +148,8 @@ export default function BienesPage() {
         item={itemDetalle}
         onEditar={handleEditar}
       />
-
+      </div>
     </div>
+    
   );
 }

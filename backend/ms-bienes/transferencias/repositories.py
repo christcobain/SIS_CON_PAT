@@ -8,6 +8,7 @@ class TransferenciaRepository:
     def get_by_id(pk: int):
         return (
             Transferencia.objects
+            .select_related('motivo', 'motivo_cancelacion')
             .prefetch_related('detalles__bien', 'aprobaciones')
             .filter(pk=pk)
             .first()
@@ -31,7 +32,10 @@ class TransferenciaRepository:
             params = filters.dict()
         else:
             params = dict(filters)
-        qs = Transferencia.objects.prefetch_related('detalles__bien', 'aprobaciones').all()
+        qs = Transferencia.objects.select_related(
+            'motivo', 
+            'motivo_cancelacion'
+        ).prefetch_related('detalles__bien', 'aprobaciones').all()
         search_value = params.pop('search', None)        
         if search_value:
             qs = qs.filter(

@@ -2,19 +2,17 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 
-// ── Menú completo ─────────────────────────────────────────────────────────────
 const MENU = [
   {
     id: 'administrativa',
     grupo: 'Gestión Administrativa',
     icon: 'manage_accounts',
     items: [
-      { label: 'Usuarios',              icon: 'group',                to: '/admin/usuarios',    perm: 'ms-usuarios:users:add_user' },
-      // { label: 'Reseteo de Claves',     icon: 'lock_reset',           to: '/admin/reseteo',     perm: 'ms-usuarios:authentication:add_passwordhistory' },
-      { label: 'Historial de Sesiones', icon: 'history',              to: '/admin/sesiones',    perm: 'ms-usuarios:authentication:view_loginattempt' },
-      { label: 'Políticas de Password', icon: 'policy',               to: '/admin/politicas',   perm: 'ms-usuarios:authentication:view_passwordpolicy' },
-      { label: 'Locaciones',            icon: 'account_balance',      to: '/admin/locaciones',  perm: 'ms-usuarios:locations:view_sede' },
-      { label: 'Roles y Permisos',      icon: 'admin_panel_settings', to: '/admin/roles',       perm: 'ms-usuarios:roles:view_role' },
+      { label: 'Usuarios', icon: 'group', to: '/admin/usuarios', perm: 'ms-usuarios:users:add_user' },
+      { label: 'Historial de Sesiones', icon: 'history', to: '/admin/sesiones', perm: 'ms-usuarios:authentication:view_loginattempt' },
+      { label: 'Políticas de Password', icon: 'policy', to: '/admin/politicas', perm: 'ms-usuarios:authentication:view_passwordpolicy' },
+      { label: 'Locaciones', icon: 'account_balance', to: '/admin/locaciones', perm: 'ms-usuarios:locations:view_sede' },
+      { label: 'Roles y Permisos', icon: 'admin_panel_settings', to: '/admin/roles', perm: 'ms-usuarios:roles:view_role' },
     ],
   },
   {
@@ -22,12 +20,11 @@ const MENU = [
     grupo: 'Gestión de Bienes',
     icon: 'inventory_2',
     items: [
-      { label: 'Catálogos',             icon: 'category',             to: '/catalogos',         perm: 'ms-bienes:catalogos:add_catcategoriabien' },
-      { label: 'Inventario de Activos', icon: 'warehouse',            to: '/bienes',            perm: 'ms-bienes:bienes:view_bien' },
-      { label: 'Mantenimiento',         icon: 'engineering',          to: '/mantenimientos',    perm: 'ms-bienes:mantenimientos:view_mantenimiento' },
-      { label: 'Transferencias',        icon: 'swap_horiz',           to: '/transferencias',    perm: 'ms-bienes:transferencias:view_transferencia' },
-      { label: 'Asignaciones',          icon: 'assignment_ind',       to: '/asignaciones',      perm: 'ms-bienes:transferencias:view_transferencia' },
-      { label: 'Bajas de Activos',      icon: 'delete_sweep',         to: '/bajas',             perm: 'ms-bienes:bienes:delete_bien' },
+      { label: 'Catálogos', icon: 'category', to: '/catalogos', perm: 'ms-bienes:catalogos:add_catcategoriabien' },
+      { label: 'Inventario', icon: 'warehouse', to: '/bienes', perm: 'ms-bienes:bienes:view_bien' },
+      { label: 'Mantenimiento', icon: 'engineering', to: '/mantenimientos', perm: 'ms-bienes:mantenimientos:view_mantenimiento' },
+      { label: 'Transferencias', icon: 'swap_horiz', to: '/transferencias', perm: 'ms-bienes:transferencias:view_transferencia' },
+      { label: 'Bajas de Activos', icon: 'delete_sweep', to: '/bajas', perm: 'ms-bienes:bienes:delete_bien' },
     ],
   },
   {
@@ -35,42 +32,22 @@ const MENU = [
     grupo: 'Reportes',
     icon: 'bar_chart',
     items: [
-      { label: 'Reportes Generales', icon: 'description', to: '/reportes',          perm: null },
-      { label: 'Datos de Procesos',  icon: 'analytics',   to: '/reportes/procesos', perm: null },
+      { label: 'Reportes Generales', icon: 'description', to: '/reportes', perm: null },
+      { label: 'Datos de Procesos', icon: 'analytics', to: '/reportes/procesos', perm: null },
     ],
   },
 ];
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function getActiveGroup(pathname) {
-  for (const section of MENU) {
-    if (section.items.some((i) => pathname.startsWith(i.to))) return section.id;
-  }
-  return null;
-}
-
-function isDarkActive() {
-  return document.documentElement.classList.contains('dark');
-}
-
-function applyTheme(dark) {
-  document.documentElement.classList.toggle('dark', dark);
-  localStorage.setItem('sisconpat_theme', dark ? 'dark' : 'light');
-}
-
-// ── Sub-componentes ───────────────────────────────────────────────────────────
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
-// ─────────────────────────────────────────────────────────────────────────────
-export default function Sidebar({ collapsed, onToggle }) {
-  const role            = useAuthStore((s) => s.role);
+export default function Sidebar({ collapsed }) {
+  const role = useAuthStore((s) => s.role);
   const permissionsFlat = useAuthStore((s) => s.permissionsFlat);
-  const location        = useLocation();
-
-  const [openGroup, setOpenGroup] = useState(() => getActiveGroup(location.pathname));
-  const [dark,      setDark]      = useState(() => isDarkActive());
+  const location = useLocation();
+  const [openGroup, setOpenGroup] = useState(null);
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
 
   const canView = (perm) => {
     if (!perm) return true;
@@ -79,217 +56,133 @@ export default function Sidebar({ collapsed, onToggle }) {
   };
 
   const toggleGroup = (id) => {
-    if (collapsed) return;          
+    if (collapsed) return;
     setOpenGroup((prev) => (prev === id ? null : id));
   };
 
   const toggleDark = () => {
     const next = !dark;
     setDark(next);
-    applyTheme(next);
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('sisconpat_theme', next ? 'dark' : 'light');
   };
 
-  const isOpen = (id) => !collapsed && openGroup === id;
   return (
     <aside
-      className="flex flex-col shrink-0 select-none overflow-hidden"
+      className="flex flex-col shrink-0 select-none transition-all duration-300 ease-in-out border-r border-white/5"
       style={{
-        width: collapsed ? '60px' : '240px',
-        transition: 'width 0.25s ease',
-        background: '#1a1f2e',
-        borderRight: '1px solid rgba(255,255,255,0.05)',
-        boxShadow: '2px 0 12px 0 rgba(0,0,0,0.2)',
+        width: collapsed ? '70px' : '260px',
+        background: '#0f172a',
       }}
     >
-      {/* ── Logo ──────────────────────────────────────────────────────────── */}
-      <div
-        className="flex items-center gap-3 px-3 shrink-0"
-        style={{
-          height: '78px',          
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-        }}
-      >
-        {/* Marca — siempre visible */}
-<div
-  className="flex items-center justify-center shrink-0 overflow-hidden transition-all duration-300"
-  style={{
-    width: '36px', 
-    height: '36px',
-    background: 'rgba(255, 255, 255, 0.03)', 
-    borderRadius: '8px',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    padding: '4px'
-  }}
->
-  <img 
-    src="/src/assets/images/ICONO.png" 
-    alt="SISCONPAT Logo"
-    className="w-full h-full object-contain"
-    style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.3))' }}
-  />
-</div>
-
-{/* Texto — se oculta al colapsar */}
-{!collapsed && (
-  <div className="min-w-0 overflow-hidden ml-1">
-    <p className="font-black leading-none tracking-tight truncate"
-       style={{ color: '#f1f5f9', fontSize: '13.5px', letterSpacing: '0.2px' }}>
-      SISCONPAT
-    </p>
-    <p className="font-bold uppercase tracking-widest truncate mt-1"
-       style={{ color: '#64748b', fontSize: '8.5px', letterSpacing: '1.2px' }}>
-      Control Patrimonial
-    </p>
-  </div>
-)}
+      <div className="h-20 flex items-center px-4 border-b border-white/5 bg-slate-900/50 backdrop-blur-md">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="size-10 shrink-0 bg-gradient-to-br from-primary to-blue-600 rounded-xl p-2 shadow-lg shadow-primary/20 flex items-center justify-center">
+            <img src="/src/assets/images/ICONO.png" alt="Logo" className="w-full h-full object-contain brightness-0 invert" />
+          </div>
+          {!collapsed && (
+            <div className="flex flex-col leading-tight animate-in fade-in slide-in-from-left-2 duration-300">
+              <span className="text-white font-black text-sm tracking-tight">SISCONPAT</span>
+              <span className="text-slate-500 font-bold text-[9px] uppercase tracking-[0.15em]">Sist. Patrimonial</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ── Navegación ────────────────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 flex flex-col gap-0.5">
-
-        {/* Dashboard */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 custom-scrollbar overflow-x-hidden">
+        
         <NavLink
           to="/dashboard"
-          end
-          title={collapsed ? 'Dashboard' : undefined}
-          className={({ isActive }) =>
-            `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12.5px] font-semibold
-             transition-all duration-150 relative
-             ${isActive
-               ? 'text-[#fca5a5]'
-               : 'text-[#64748b] hover:text-[#cbd5e1]'}`
-          }
-          style={({ isActive }) => ({
-            background: isActive ? 'rgba(127,29,29,0.22)' : undefined,
-          })}
+          className={({ isActive }) => `
+            group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+            ${isActive ? 'bg-primary/10 text-primary' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'}
+          `}
         >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span
-                  className="absolute left-0 rounded-r"
-                  style={{ top: '5px', bottom: '5px', width: '3px', background: '#ef4444' }}
-                />
-              )}
-              <Icon name="dashboard" className="text-[18px] shrink-0" />
-              {!collapsed && <span className="truncate">Dashboard</span>}
-            </>
-          )}
+          <Icon name="grid_view" className="text-xl" />
+          {!collapsed && <span className="text-[13px] font-bold">Resumen General</span>}
         </NavLink>
 
-        {/* Alertas */}
         <NavLink
           to="/alertas"
-          title={collapsed ? 'Alertas' : undefined}
-          className={({ isActive }) =>
-            `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12.5px] font-semibold
-             transition-all duration-150 relative
-             ${isActive
-               ? 'text-[#fca5a5]'
-               : 'text-[#64748b] hover:text-[#cbd5e1]'}`
-          }
-          style={({ isActive }) => ({
-            background: isActive ? 'rgba(127,29,29,0.22)' : undefined,
-          })}
+          className={({ isActive }) => `
+            group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+            ${isActive ? 'bg-red-500/10 text-red-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'}
+          `}
         >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span
-                  className="absolute left-0 rounded-r"
-                  style={{ top: '5px', bottom: '5px', width: '3px', background: '#ef4444' }}
-                />
-              )}
-              <Icon name="notifications_active" className="text-[18px] shrink-0" />
-              {!collapsed && <span className="truncate">Alertas</span>}
-            </>
-          )}
+          <div className="relative">
+            <Icon name="notifications" className="text-xl" />
+            <span className="absolute -top-1 -right-1 size-2 bg-red-500 rounded-full border-2 border-slate-900" />
+          </div>
+          {!collapsed && <span className="text-[13px] font-bold">Notificaciones</span>}
         </NavLink>
 
-        {/* Separador módulos */}
-        {!collapsed && (
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '6px 0 2px' }}>
-            <p className="px-2 pt-2 font-black uppercase tracking-widest"
-               style={{ color: '#334155', fontSize: '9px', letterSpacing: '1.5px' }}>
-              Módulos
-            </p>
-          </div>
-        )}
-        {collapsed && <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '6px 0' }} />}
+        <div className="pt-6 pb-2 px-3">
+          {!collapsed ? (
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">Módulos de Sistema</p>
+          ) : (
+            <div className="h-px bg-white/5 w-full" />
+          )}
+        </div>
 
-        {/* Grupos del menú */}
         {MENU.map(({ id, grupo, icon, items }) => {
-          const visibles  = items.filter((i) => canView(i.perm));
+          const visibles = items.filter((i) => canView(i.perm));
           if (!visibles.length) return null;
 
-          const groupOpen = isOpen(id);
-          const hasActive = visibles.some((i) => location.pathname.startsWith(i.to));
+          const isGroupOpen = openGroup === id && !collapsed;
+          const isGroupActive = visibles.some(i => location.pathname.startsWith(i.to));
 
           return (
-            <div key={id}>
-              {/* Botón grupo */}
+            <div key={id} className="group/item">
               <button
                 onClick={() => toggleGroup(id)}
-                title={collapsed ? grupo : undefined}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg
-                           text-[12.5px] font-semibold transition-all duration-150"
-                style={{
-                  color: groupOpen || hasActive ? '#e2e8f0' : '#64748b',
-                  background: groupOpen || hasActive
-                    ? 'rgba(255,255,255,0.06)'
-                    : undefined,
-                }}
-                onMouseEnter={(e) => {
-                  if (!groupOpen && !hasActive)
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!groupOpen && !hasActive)
-                    e.currentTarget.style.background = '';
-                }}
+                className={`
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300
+                  ${isGroupOpen || isGroupActive ? 'text-slate-100 bg-white/5' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'}
+                `}
               >
-                <Icon name={icon} className="text-[18px] shrink-0" />
+                <Icon 
+                  name={icon} 
+                  className={`text-xl transition-all duration-300 ${isGroupActive ? 'text-primary scale-110' : 'group-hover/item:text-slate-200'}`} 
+                />
                 {!collapsed && (
                   <>
-                    <span className="flex-1 text-left truncate">{grupo}</span>
-                    <Icon
-                      name="expand_more"
-                      className="text-[17px] shrink-0 transition-transform duration-200"
-                      style={{ transform: groupOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    <span className="flex-1 text-left text-[13px] font-bold tracking-wide">{grupo}</span>
+                    <Icon 
+                      name="expand_more" 
+                      className={`text-lg transition-transform duration-500 ease-in-out ${isGroupOpen ? 'rotate-180 text-primary' : 'opacity-40'}`} 
                     />
                   </>
                 )}
               </button>
 
-              {/* Sub-items — animación max-height */}
               <div
+                className="overflow-hidden transition-all duration-500 ease-in-out"
                 style={{
-                  maxHeight: groupOpen ? `${visibles.length * 40}px` : '0px',
-                  transition: 'max-height 0.25s ease-in-out',
-                  overflow: 'hidden',
+                  maxHeight: isGroupOpen ? `${visibles.length * 45}px` : '0px',
+                  opacity: isGroupOpen ? 1 : 0,
+                  transform: isGroupOpen ? 'translateY(0)' : 'translateY(-10px)'
                 }}
               >
-                <div
-                  className="ml-3 pl-3 pb-1 flex flex-col gap-0.5"
-                  style={{ borderLeft: '1px solid rgba(255,255,255,0.08)', marginTop: '2px' }}
-                >
+                <div className="ml-5 mt-1 pl-4 border-l border-white/10 flex flex-col gap-1 py-1">
                   {visibles.map((item) => (
                     <NavLink
                       key={item.to}
                       to={item.to}
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12px]
-                         transition-colors duration-150
-                         ${isActive
-                           ? 'text-[#fca5a5] font-bold'
-                           : 'text-[#475569] hover:text-[#94a3b8]'}`
-                      }
-                      style={({ isActive }) => ({
-                        background: isActive ? 'rgba(127,29,29,0.18)' : undefined,
-                      })}
+                      className={({ isActive }) => `
+                        relative flex items-center gap-3 px-3 py-2 rounded-lg text-[12.5px] transition-all duration-200
+                        ${isActive 
+                          ? 'text-primary font-black bg-primary/5' 
+                          : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}
+                      `}
                     >
-                      <Icon name={item.icon} className="text-[16px] shrink-0" />
-                      <span className="truncate">{item.label}</span>
+                      {({ isActive }) => (
+                        <>
+                          {isActive && (
+                            <span className="absolute left-[-17px] w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                          )}
+                          <span className="truncate">{item.label}</span>
+                        </>
+                      )}
                     </NavLink>
                   ))}
                 </div>
@@ -299,50 +192,19 @@ export default function Sidebar({ collapsed, onToggle }) {
         })}
       </nav>
 
-      {/* ── Footer: toggle dark mode ───────────────────────────────────────── */}
-      <div
-        className="shrink-0 px-2 py-3"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-      >
+      <div className="p-4 border-t border-white/5 bg-slate-900/30">
         <button
           onClick={toggleDark}
-          title={collapsed ? (dark ? 'Modo Claro' : 'Modo Oscuro') : undefined}
-          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg
-                     text-[12px] font-semibold transition-all duration-150"
-          style={{ color: '#475569' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-            e.currentTarget.style.color = '#94a3b8';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = '';
-            e.currentTarget.style.color = '#475569';
-          }}
+          className="group w-full flex items-center gap-3 px-3 py-3 rounded-2xl bg-slate-800/50 hover:bg-slate-800 transition-all border border-white/5"
         >
-          <Icon name={dark ? 'light_mode' : 'dark_mode'} className="text-[18px] shrink-0" />
+          <div className={`size-8 rounded-xl flex items-center justify-center transition-all ${dark ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-400'}`}>
+            <Icon name={dark ? 'light_mode' : 'dark_mode'} className="text-lg" />
+          </div>
           {!collapsed && (
-            <>
-              <span className="flex-1 text-left truncate">
-                {dark ? 'Modo Claro' : 'Modo Oscuro'}
-              </span>
-              {/* Mini toggle pill */}
-              <div
-                className="relative rounded-full shrink-0 transition-colors duration-300"
-                style={{
-                  width: '32px', height: '17px',
-                  background: dark ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)',
-                }}
-              >
-                <span
-                  className="absolute top-0.5 rounded-full bg-white shadow-sm
-                             transition-all duration-300"
-                  style={{
-                    width: '13px', height: '13px',
-                    left: dark ? '17px' : '2px',
-                  }}
-                />
-              </div>
-            </>
+            <div className="flex flex-col items-start leading-none">
+              <span className="text-[11px] font-black text-slate-200">{dark ? 'MODO CLARO' : 'MODO OSCURO'}</span>
+              <span className="text-[9px] text-slate-500 font-bold mt-1 uppercase tracking-tighter">Cambiar Interfaz</span>
+            </div>
           )}
         </button>
       </div>

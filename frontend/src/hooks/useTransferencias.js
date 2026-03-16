@@ -32,11 +32,9 @@ export function useTransferencias(activeTab, params) {
     }
   }, [activeTab, params.misTransferencias, params.usuarioId]); 
 
-
   useEffect(() => {
     fetchTransferencias();
   }, [fetchTransferencias]);
-
   const ejecutarYRefrescar = async (fn, ...args) => {
     setActualizando(true);
     try {

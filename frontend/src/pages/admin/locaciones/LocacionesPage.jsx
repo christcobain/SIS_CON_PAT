@@ -39,9 +39,13 @@ export default function LocacionesPage() {
   const [itemDetalle,   setItemDetalle]   = useState(null);
   const [confirmToggle, setConfirmToggle] = useState(false);
   const [itemToggle,    setItemToggle]    = useState(null);
-  const onFiltroChange   = (key, val) => setFiltros((prev) => ({ ...prev, [key]: val }));
+
+  const onFiltroChange = (key, val) => setFiltros((prev) => ({ ...prev, [key]: val }));
+  
   const onLimpiarFiltros = () => setFiltros(FILTROS_INICIALES);
+
   const rawData = { sedes, modulos, ubicaciones };
+
   const itemsFiltrados = useMemo(() => {
     const lista = rawData[activeTab] ?? [];
     return lista.filter((item) => {
@@ -52,29 +56,30 @@ export default function LocacionesPage() {
                         item.provincia_nombre, item.departamento_nombre];
         return campos.some((c) => c?.toLowerCase().includes(txt));
       })();
-      const matchEstado = filtros.is_active === '' ||
-        String(item.is_active) === filtros.is_active;
-      const matchEmpresa = !filtros.empresa_id || activeTab !== 'sedes' ||
-        String(item.empresa_id) === String(filtros.empresa_id);
+      const matchEstado = filtros.is_active === '' || String(item.is_active) === filtros.is_active;
+      const matchEmpresa = !filtros.empresa_id || activeTab !== 'sedes' || String(item.empresa_id) === String(filtros.empresa_id);
 
       return matchSearch && matchEstado && matchEmpresa;
     });
   }, [activeTab, sedes, modulos, ubicaciones, filtros]);
 
-  const handleNuevo        = ()     => { setItemEditar(null); setModalForm(true); };
-  const handleEditar       = (item) => { setItemEditar(item); setModalForm(true); };
-  const handleVerDetalle   = (item) => { setItemDetalle(item); setModalDetalle(true); };
-  const handleToggleEstado = (item) => { setItemToggle(item); setConfirmToggle(true); };
+  const handleNuevo         = ()     => { setItemEditar(null); setModalForm(true); };
+  const handleEditar        = (item) => { setItemEditar(item); setModalForm(true); };
+  const handleVerDetalle    = (item) => { setItemDetalle(item); setModalDetalle(true); };
+  const handleToggleEstado  = (item) => { setItemToggle(item); setConfirmToggle(true); };
+
   const handleConfirmToggle = async () => {
     setConfirmToggle(false);
     if (!itemToggle) return;
     const { id, is_active } = itemToggle;
     try {
       let res;
-      if      (activeTab === 'sedes')   res = is_active ? await desactivarSede(id)      : await activarSede(id);
-      else if (activeTab === 'modulos') res = is_active ? await desactivarModulo(id)    : await activarModulo(id);
+      if      (activeTab === 'sedes')   res = is_active ? await desactivarSede(id)    : await activarSede(id);
+      else if (activeTab === 'modulos') res = is_active ? await desactivarModulo(id)  : await activarModulo(id);
       else                              res = is_active ? await desactivarUbicacion(id) : await activarUbicacion(id);
+      
       toast.success(res?.message ?? `Registro ${is_active ? 'desactivado' : 'activado'}.`);
+      refetch(); // Sincronizar tras cambio
     } catch (e) {
       toast.error(e?.response?.data?.detail || 'Error al cambiar el estado.');
     } finally {
@@ -82,55 +87,75 @@ export default function LocacionesPage() {
     }
   };
 
-  return (
-    <div className="page-wrapper">
+  const handleGuardado = () => {
+    setModalForm(false);
+    setItemEditar(null);
+    refetch();
+  };
 
-      <div className="page-header">
-        <div className="page-header-top">
-          <div>
-            <h1 className="page-title">Gestión de Locaciones</h1>
-            <p className="page-subtitle">
-              Administre las sedes institucionales, módulos y ubicaciones físicas del Poder Judicial.
-            </p>
+  return (
+    <div className="gap-1 p-4 max-w-[1600px] animate-in fade-in duration-500 h-auto pb-20">
+      
+      {/* ── CABECERA Y TABS (Diseño Final) ────────────────────────── */}
+      <div className="card p-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <Icon name="location_away" className="text-[24px]" />
+            </div>
+            <div>
+              <h1 className="page-title">Gestión de Locaciones</h1>
+              <p className="page-subtitle">Administre las sedes, módulos y ubicaciones físicas institucionales.</p>
+            </div>
           </div>
+
           <div className="flex items-center gap-2">
-            <button onClick={refetch} title="Recargar datos" className="btn-icon">
-              <Icon name="refresh" className="text-[18px]" />
+            <button 
+              onClick={refetch} 
+              disabled={loading}
+              className="btn-icon bg-surface border border-border"
+              title="Sincronizar"
+            >
+              <Icon name="sync" className={`text-[18px] ${loading ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
-            <button onClick={handleNuevo} disabled={actualizando} className="btn-primary">
-              <Icon name="add" className="text-[18px]" />
-              Nuevo Registro
+            
+            <button 
+              onClick={handleNuevo} 
+              disabled={actualizando} 
+              className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
+            >
+              <Icon name="add_circle" className="text-[18px]" />
+              <span className="font-black uppercase tracking-widest text-[10px]">Nuevo Registro</span>
             </button>
           </div>
         </div>
 
-        <div className="tab-bar">
-          {TABS.map(({ id, label, icon }) => {
-            const count  = (rawData[id] ?? []).length;
-            const active = activeTab === id;
-            return (
-              <button
-                key={id}
-                onClick={() => { setActiveTab(id); onLimpiarFiltros(); }}
-                className={active ? 'tab-btn-active' : 'tab-btn-inactive'}
-              >
-                <Icon name={icon} className="text-[18px]" />
-                {label}
-                <span className={active ? 'tab-count-active' : 'tab-count-inactive'}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+        <div className="flex gap-6 mt-4 border-t border-border pt-3">
+          {TABS.map(({ id, label, icon }) => (
+            <button
+              key={id}
+              onClick={() => { setActiveTab(id); onLimpiarFiltros(); }}
+              className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all ${
+                activeTab === id 
+                ? 'text-primary border-b-2 border-primary' 
+                : 'text-faint hover:text-main'
+              }`}
+            >
+              <Icon name={icon} className="text-[16px]" />
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── Contenido scrollable ───────────────────────────────────────────── */}
       <div className="page-content">
+        {/* ── Stats ────────────────────────────────────────────────────────── */}
         <LocacionesStats
           sedes={sedes} modulos={modulos} ubicaciones={ubicaciones}
           empresas={empresas} loading={loading}
         />
+
+        {/* ── Filtros ──────────────────────────────────────────────────────── */}
         <LocacionesFiltros
           filtros={filtros}
           onFiltroChange={onFiltroChange}
@@ -138,6 +163,8 @@ export default function LocacionesPage() {
           activeTab={activeTab}
           onLimpiar={onLimpiarFiltros}
         />
+
+        {/* ── Tabla ────────────────────────────────────────────────────────── */}
         <LocacionesTabla
           activeTab={activeTab}
           items={itemsFiltrados}
@@ -162,7 +189,7 @@ export default function LocacionesPage() {
         crearModulo={crearModulo}       actualizarModulo={actualizarModulo}
         crearUbicacion={crearUbicacion} actualizarUbicacion={actualizarUbicacion}
         actualizando={actualizando}
-        onGuardado={() => { setModalForm(false); setItemEditar(null); }}
+        onGuardado={handleGuardado}
       />
 
       <ModalDetalleLocacion

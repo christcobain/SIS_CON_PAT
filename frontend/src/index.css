@@ -134,13 +134,18 @@
   .form-hint     { @apply text-[11px] mt-1; color: var(--color-text-muted); }
 
   /* ── TABLA ────────────────────────────────────────────────────────────────── */
-  .table-wrapper   { @apply card overflow-hidden; }
+  /* .table-wrapper   { @apply card overflow-hidden; } */
+  .table-wrapper {
+    background-color: var(--color-surface); /* En lugar de @apply bg-surface */
+    border-color: var(--color-border);
+    @apply border shadow-sm transition-colors duration-300;
+  }
   .table-container { @apply overflow-x-auto; }
   .table           { @apply w-full text-left; }
 
   .table thead tr {
     border-bottom: 1px solid var(--color-border);
-    background-color: var(--color-surface-alt) ;
+    background-color: var(--color-border) ;
     
   }
   .table th {
@@ -148,22 +153,25 @@
     color: var(--color-text-muted);
   }
   .table tbody tr {
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid var(--color-border);
     @apply transition-colors;
   }
-  .table tbody tr:hover { background-color: var(--color-surface-alt); }
+  .table tbody tr:hover { background-color: var(--color-border); }
   .table td {
     @apply px-6 py-4 text-sm;
     color: var(--color-text-body);
   }
   .table-footer {
     @apply flex items-center justify-between px-6 py-3.5;
-    border-top: 1px solid var(--color-border-light);
+    border-top: 1px solid var(--color-border);
     background-color: var(--color-surface-alt);
   }
   .table-count { @apply text-xs font-medium; color: var(--color-text-muted); }
 
   /* ── BADGES ───────────────────────────────────────────────────────────────── */
+  .badge-base {
+    @apply px-2 py-0.5 rounded-full text-[10px] font-black border uppercase tracking-tighter;
+  }
   .badge {
     @apply inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full;
   }
@@ -187,7 +195,7 @@
   .page-header-top { @apply flex flex-wrap justify-between items-end gap-4 pt-6 pb-4; }
   .page-title      { @apply text-2xl font-black tracking-tight; color: var(--color-text-primary); }
   .page-subtitle   { @apply text-sm mt-0.5; color: var(--color-text-muted); }
-  .page-content    { @apply flex-1 overflow-y-auto p-6 space-y-5; }
+  .page-content    { @apply flex-auto overflow-y-auto p-6 space-y-5; }
 
   /* ── TABS ─────────────────────────────────────────────────────────────────── */
   .tab-bar { @apply flex gap-8; }
@@ -199,7 +207,18 @@
   .tab-count          { @apply text-[10px] font-bold px-1.5 py-0.5 rounded-md; }
   .tab-count-active   { @apply tab-count bg-primary/10 text-primary; }
   .tab-count-inactive { @apply tab-count; background-color: var(--color-border-light); color: var(--color-text-muted); }
+/* Textos de utilidad para consistencia */
+  .text-faint {
+    @apply text-slate-400 dark:text-slate-500;
+  }
+  
+  .text-muted {
+    @apply text-slate-500 dark:text-slate-400;
+  }
 
+  .text-body {
+    @apply text-slate-700 dark:text-slate-300;
+  }
   /* ── PAGINACIÓN ───────────────────────────────────────────────────────────── */
   .pagination { @apply flex items-center gap-1; }
   .page-btn {

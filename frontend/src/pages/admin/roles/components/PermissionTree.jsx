@@ -10,7 +10,6 @@ const MS_ICON = {
 
 const APPS_OCULTAS = ['token_blacklist', 'contenttypes', 'auth', 'sessions'];
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function PermissionTree({
   tree = [],
   selectedIds = [],
@@ -23,21 +22,9 @@ export default function PermissionTree({
 }) {
   if (loading) {
     return (
-      <div
-        className="h-full flex flex-col items-center justify-center"
-        style={{
-          background: 'var(--color-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '12px',
-        }}
-      >
-        <div
-          className="w-8 h-8 rounded-full animate-spin mb-4 border-4"
-          style={{ borderColor: 'var(--color-border-light)', borderTopColor: 'var(--color-primary)' }}
-        />
-        <p className="text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>
-          Cargando permisos...
-        </p>
+      <div className="h-full flex flex-col items-center justify-center bg-surface border border-border rounded-2xl">
+        <div className="w-10 h-10 rounded-full animate-spin mb-4 border-4 border-border/30 border-t-primary" />
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted">Sincronizando Árbol...</p>
       </div>
     );
   }
@@ -52,51 +39,44 @@ export default function PermissionTree({
   const totalSeleccionados = selectedIds.length;
 
   return (
-    <div
-      className="flex flex-col h-full overflow-hidden"
-      style={{
-        background: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
-        borderRadius: '12px',
-      }}
-    >
+    <div className="flex flex-col h-full overflow-hidden bg-surface border border-border rounded-2xl shadow-sm">
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div
-        className="px-5 py-4 flex items-center justify-between gap-4 shrink-0"
-        style={{
-          background: 'var(--color-surface-alt)',
-          borderBottom: '1px solid var(--color-border)',
-        }}
-      >
+      <div className="px-6 py-4 flex items-center justify-between gap-4 shrink-0 bg-surface-alt/50 border-b border-border">
         <div>
-          <h3 className="text-sm font-black" style={{ color: 'var(--color-text-primary)' }}>
-            Permisos —{' '}
-            <span style={{ color: 'var(--color-primary)' }}>{rolNombre}</span>
-          </h3>
-          <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-black text-main">Gestión de Permisos</h3>
+            <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[11px] font-bold border border-primary/20">
+              {rolNombre}
+            </span>
+          </div>
+          <p className={`text-[11px] mt-1 font-bold ${esSysadmin ? 'text-amber-600' : 'text-muted'}`}>
+            <Icon name={esSysadmin ? 'shield' : 'rule'} className="text-[14px] align-middle mr-1" />
             {esSysadmin
-              ? 'SYSADMIN tiene acceso total. Los cambios no se aplican.'
-              : `${totalSeleccionados} permiso${totalSeleccionados !== 1 ? 's' : ''} seleccionado${totalSeleccionados !== 1 ? 's' : ''}`}
+              ? 'Nivel de Sistema: Acceso total restringido para edición.'
+              : `${totalSeleccionados} privilegios otorgados a este rol.`}
           </p>
         </div>
 
         {!esSysadmin && (
-          <button onClick={onSave} disabled={actualizando} className="btn-primary">
-            <Icon name="save" className="text-[17px]" />
-            {actualizando ? 'Guardando...' : 'Guardar Cambios'}
+          <button 
+            onClick={onSave} 
+            disabled={actualizando} 
+            className="btn-primary flex items-center gap-2 px-5 py-2.5 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+          >
+            <Icon name={actualizando ? 'sync' : 'cloud_upload'} className={`text-[18px] ${actualizando ? 'animate-spin' : ''}`} />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              {actualizando ? 'Procesando...' : 'Aplicar Cambios'}
+            </span>
           </button>
         )}
       </div>
 
       {/* ── Árbol scrollable ─────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-7">
+      <div className="flex-1 overflow-y-auto p-6 space-y-10 custom-scrollbar">
         {treeFiltrado.length === 0 ? (
-          <div
-            className="flex flex-col items-center justify-center py-16"
-            style={{ color: 'var(--color-text-faint)' }}
-          >
-            <Icon name="lock_open" className="text-5xl mb-3" />
-            <p className="text-sm font-medium">Sin permisos en el sistema.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-faint opacity-30">
+            <Icon name="lock_open" className="text-6xl mb-4" />
+            <p className="text-sm font-bold uppercase tracking-tighter">No hay esquemas de permisos</p>
           </div>
         ) : (
           treeFiltrado.map((ms) => (
@@ -123,29 +103,26 @@ function MsSection({ ms, selectedIds, onToggle, disabled }) {
   );
 
   return (
-    <div>
-      {/* Cabecera MS */}
-      <div
-        className="flex items-center gap-2.5 pb-2.5 mb-4"
-        style={{ borderBottom: '1px solid var(--color-border-light)' }}
-      >
-        <Icon name={MS_ICON[ms.ms_name] ?? 'dns'} className="text-[20px] text-primary" />
-        <h4
-          className="font-black uppercase tracking-wider text-[10px] flex-1"
-          style={{ color: 'var(--color-text-body)' }}
-        >
-          {ms.ms_name.replace('ms-', '')}
-        </h4>
-        <span
-          className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-          style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}
-        >
-          {asignadosMs}/{totalMs}
-        </span>
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center gap-3 mb-6 group">
+        <div className="size-9 rounded-xl bg-primary/5 flex items-center justify-center text-primary border border-primary/10 group-hover:bg-primary group-hover:text-white transition-all">
+          <Icon name={MS_ICON[ms.ms_name] ?? 'dns'} className="text-[20px]" />
+        </div>
+        <div className="flex flex-col flex-1">
+          <h4 className="font-black uppercase tracking-[0.2em] text-[11px] text-main leading-none">
+            {ms.ms_name.replace('ms-', '')}
+          </h4>
+          <span className="text-[10px] text-muted font-bold mt-1 uppercase">Infraestructura del Microservicio</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-alt border border-border shadow-sm">
+          <div className="size-1.5 rounded-full bg-primary animate-pulse" />
+          <span className="text-[10px] font-black text-main uppercase">
+            {asignadosMs} / {totalMs} <span className="text-faint ml-1">Permisos</span>
+          </span>
+        </div>
       </div>
 
-      {/* Grid de apps */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {ms.apps.map((app) => (
           <AppCard
             key={app.app_label}
@@ -162,92 +139,86 @@ function MsSection({ ms, selectedIds, onToggle, disabled }) {
 
 // ── Card de app ───────────────────────────────────────────────────────────────
 function AppCard({ app, selectedIds, onToggle, disabled }) {
-  const perms        = app.permissions ?? [];
-  const asignados    = perms.filter((p) => selectedIds.includes(p.id)).length;
+  const perms = app.permissions ?? [];
+  const asignados = perms.filter((p) => selectedIds.includes(p.id)).length;
   const todosActivos = asignados === perms.length && perms.length > 0;
 
-  const toggleAll = () => {
+  const toggleAll = (e) => {
+    e.preventDefault();
     if (disabled) return;
     perms.forEach((p) => {
       const tiene = selectedIds.includes(p.id);
-      if (todosActivos && tiene)    onToggle(p.id);
-      if (!todosActivos && !tiene)  onToggle(p.id);
+      if (todosActivos && tiene) onToggle(p.id);
+      if (!todosActivos && !tiene) onToggle(p.id);
     });
   };
 
   return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: 'var(--color-surface-alt)',
-        border: '1px solid var(--color-border-light)',
-      }}
-    >
+    <div className="group rounded-2xl overflow-hidden bg-surface-alt/30 border border-border/60 hover:border-primary/30 transition-all hover:shadow-md">
       {/* Header app */}
-      <div
-        className="flex items-center justify-between px-3.5 py-2.5"
-        style={{ borderBottom: '1px solid var(--color-border-light)' }}
-      >
-        <p
-          className="text-[10px] font-black uppercase tracking-wider truncate flex-1 mr-2"
-          style={{ color: 'var(--color-text-muted)' }}
-        >
-          {app.app_label}
-        </p>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] font-bold" style={{ color: 'var(--color-text-faint)' }}>
-            {asignados}/{perms.length}
-          </span>
-          {!disabled && (
-            <button
-              onClick={toggleAll}
-              className="text-[10px] font-black transition-opacity"
-              style={{ color: 'var(--color-primary)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.7')}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-            >
-              {todosActivos ? 'Quitar' : 'Todos'}
-            </button>
-          )}
+      <div className="flex items-center justify-between px-4 py-3 bg-surface-alt/50 border-b border-border/40 group-hover:bg-primary/5 transition-colors">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted truncate leading-none">
+            {app.app_label}
+          </p>
+          <span className="text-[9px] font-bold text-faint uppercase">{asignados} de {perms.length}</span>
         </div>
+        
+        {!disabled && (
+          <button
+            onClick={toggleAll}
+            className={`text-[9px] font-black px-2 py-1 rounded-md transition-all uppercase tracking-tighter
+              ${todosActivos 
+                ? 'bg-red-50 text-red-600 border border-red-100' 
+                : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white'
+              }`}
+          >
+            {todosActivos ? 'Remover' : 'Marcar Todos'}
+          </button>
+        )}
       </div>
 
       {/* Lista de permisos */}
-      <div className="p-2 space-y-0.5">
+      <div className="p-2 space-y-1 bg-surface/40">
         {perms.map((perm) => {
-          const checked = selectedIds.includes(perm.id);
+          const isChecked = selectedIds.includes(perm.id);
           return (
             <label
               key={perm.id}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors
-                          ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-              style={{
-                background: checked ? 'var(--color-surface)' : 'transparent',
-                border:     checked ? '1px solid var(--color-border)' : '1px solid transparent',
-              }}
+              className={`
+                relative flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all duration-200
+                ${disabled ? 'cursor-not-allowed' : 'cursor-pointer active:scale-[0.98]'}
+                ${isChecked 
+                  ? 'bg-white border-primary/20 shadow-sm' 
+                  : 'bg-transparent border-transparent grayscale opacity-70 hover:grayscale-0 hover:opacity-100 hover:bg-white/50 hover:border-border'
+                }
+              `}
             >
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => !disabled && onToggle(perm.id)}
-                disabled={disabled}
-                className="w-3.5 h-3.5 rounded shrink-0"
-                style={{ accentColor: 'var(--color-primary)' }}
-              />
+              <div className="relative flex items-center justify-center shrink-0">
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => !disabled && onToggle(perm.id)}
+                  disabled={disabled}
+                  className="peer appearance-none size-4 rounded border-2 border-border checked:bg-primary checked:border-primary transition-all shrink-0"
+                />
+                <Icon name="check" className="absolute text-[12px] text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" />
+              </div>
+
               <div className="min-w-0">
-                <p
-                  className="text-[11px] font-bold leading-none truncate"
-                  style={{ color: 'var(--color-text-body)' }}
-                >
+                <p className={`text-[11px] font-black leading-tight truncate transition-colors ${isChecked ? 'text-primary' : 'text-main'}`}>
                   {perm.codename}
                 </p>
-                <p
-                  className="text-[10px] leading-tight mt-0.5 truncate"
-                  style={{ color: 'var(--color-text-muted)' }}
-                >
+                <p className="text-[9.5px] font-medium text-muted truncate mt-0.5 opacity-80 uppercase tracking-tighter">
                   {perm.name}
                 </p>
               </div>
+
+              {isChecked && (
+                <div className="absolute right-3">
+                  <div className="size-1 rounded-full bg-primary animate-ping" />
+                </div>
+              )}
             </label>
           );
         })}

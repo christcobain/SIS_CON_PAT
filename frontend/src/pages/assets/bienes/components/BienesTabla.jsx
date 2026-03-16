@@ -5,123 +5,87 @@ const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
+const getIconByTipo = (tipo) => {
+  const t = tipo?.toLowerCase() || '';
+  if (t.includes('laptop'))    return 'laptop_mac';
+  if (t.includes('cpu') || t.includes('computadora')) return 'computer';
+  if (t.includes('monitor') || t.includes('pantalla')) return 'monitor';
+  if (t.includes('impresora')) return 'print';
+  if (t.includes('teclado'))   return 'keyboard';
+  if (t.includes('mouse'))     return 'mouse';
+  if (t.includes('celular') || t.includes('telefono')) return 'smartphone';
+  if (t.includes('proyector')) return 'videocam';
+  return 'inventory_2'; 
+};
+
 const COLS = [
-  { label: 'Bien / Código',       width: 'w-[28%]' },
-  { label: 'Tipo / Categoría',    width: 'w-[18%]' },
-  { label: 'Marca / Modelo',      width: 'w-[16%]' },
-  { label: 'Estado',              width: 'w-[10%]' },
-  { label: 'Funcionamiento',      width: 'w-[14%]' },
-  { label: 'Acciones',            width: '',  right: true },
+  { label: 'Categoría / Tipo',  width: 'w-[20%]' },
+  { label: 'Marca / Modelo',    width: 'w-[18%]' },
+  { label: 'Serie / Cód. Pat',  width: 'w-[22%]' },
+  { label: 'Estado del Bien',   width: 'w-[14%]' },
+  { label: 'Funcionamiento',    width: 'w-[14%]' },
+  { label: 'Acciones',          width: '',  right: true },
 ];
 
-// Badge de estado del bien (Bueno, Regular, Malo…)
-const ESTADO_BIEN_CLS = (nombre) => ({
-  'BUENO':          'badge-activo',
-  'REGULAR':        'badge-pendiente',
-  'MALO':           'badge-cancelado',
-  'DADO DE BAJA':   'badge-cancelado',
-}[nombre?.toUpperCase()] ?? 'badge-inactivo');
+const getEstadoBienStyle = (estado) => {
+  const e = estado?.toUpperCase() || '';
+  if (e === 'ACTIVO')      return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+  if (e.includes('TRASLADO')) return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+  if (e.includes('BAJA'))    return 'bg-red-500/10 text-red-600 border-red-500/20';
+  if (e === 'ASIGNADO')    return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+  return 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+};
 
-function SkeletonRow() {
-  return (
-    <tr>
-      {[55, 35, 35, 20, 25, 15].map((w, i) => (
-        <td key={i} className="px-5 py-4">
-          <div className="skeleton h-4 rounded" style={{ width: `${w}%` }} />
-        </td>
-      ))}
-    </tr>
-  );
-}
+const getFuncionaStyle = (nombre) => {
+  const n = nombre?.toUpperCase() || '';
+  if (n === 'OPERATIVO') return 'bg-blue-600 text-white shadow-sm';
+  if (n === 'MALO')      return 'bg-red-500 text-white';
+  return 'bg-slate-400 text-white';
+};
 
 function FilaBien({ item, onVerDetalle, onEditar }) {
+  const iconName = getIconByTipo(item.tipo_bien_nombre);
+  
   return (
-    <tr>
-      {/* Bien / Código patrimonial */}
-      <td className="px-5 py-3.5">
+    <tr className="hover:bg-surface-alt/70 transition-colors border-b border-border group">
+      <td className="px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="size-9 rounded-xl flex items-center justify-center shrink-0"
-               style={{ background: 'var(--color-border-light)' }}>
-            <Icon name="inventory_2" className="text-[17px] text-primary" />
+          <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Icon name={iconName} className="text-[20px] text-primary" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-black leading-tight truncate"
-               style={{ color: 'var(--color-text-primary)' }}>
-              {item.codigo_patrimonial
-                ? <span className="font-mono">{item.codigo_patrimonial}</span>
-                : <span style={{ color: 'var(--color-text-faint)' }}>Sin código</span>
-              }
-            </p>
-            {item.numero_serie && (
-              <p className="text-[10px] font-mono mt-0.5"
-                 style={{ color: 'var(--color-text-muted)' }}>
-                S/N: {item.numero_serie}
-              </p>
-            )}
-            <p className="text-[9px] font-mono mt-0.5"
-               style={{ color: 'var(--color-text-faint)' }}>
-              ID #{item.id}
-            </p>
+            <p className="text-xs font-bold text-main truncate">{item.tipo_bien_nombre || '—'}</p>
+            <p className="text-[10px] text-muted truncate mt-0.5 uppercase tracking-tight">{item.categoria_bien_nombre || 'General'}</p>
           </div>
         </div>
       </td>
-
-      {/* Tipo / Categoría */}
-      <td className="px-5 py-3.5">
-        <p className="text-xs font-semibold truncate"
-           style={{ color: 'var(--color-text-primary)' }}>
-          {item.tipo_bien_nombre || '—'}
-        </p>
-        {item.categoria_bien_nombre && (
-          <p className="text-[10px] truncate mt-0.5"
-             style={{ color: 'var(--color-text-muted)' }}>
-            {item.categoria_bien_nombre}
-          </p>
-        )}
+      <td className="px-6 py-4">
+        <p className="text-xs font-semibold text-main truncate">{item.marca_nombre || '—'}</p>
+        <p className="text-[10px] text-muted truncate mt-0.5">{item.modelo || 'S/M'}</p>
       </td>
-
-      {/* Marca / Modelo */}
-      <td className="px-5 py-3.5">
-        <p className="text-xs font-semibold truncate"
-           style={{ color: 'var(--color-text-body)' }}>
-          {item.marca_nombre || '—'}
-        </p>
-        {item.modelo && (
-          <p className="text-[10px] truncate mt-0.5"
-             style={{ color: 'var(--color-text-muted)' }}>
-            {item.modelo}
-          </p>
-        )}
+      <td className="px-6 py-4">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] text-muted font-medium">S/N: {item.numero_serie || 'No reg.'}</span>
+          <span className="text-xs font-black text-primary font-mono tracking-tight">{item.codigo_patrimonial || 'SIN CÓDIGO'}</span>
+        </div>
       </td>
-
-      {/* Estado del bien */}
-      <td className="px-5 py-3.5">
-        <span className={`badge ${ESTADO_BIEN_CLS(item.estado_bien_nombre)}`}>
+      <td className="px-6 py-4">
+        <span className={`px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider ${getEstadoBienStyle(item.estado_bien_nombre)}`}>
           {item.estado_bien_nombre || '—'}
         </span>
       </td>
-
-      {/* Estado de funcionamiento */}
-      <td className="px-5 py-3.5">
-        <span className="badge badge-inactivo text-[9px]">
+      <td className="px-6 py-4">
+        <span className={`px-2.5 py-1 rounded-lg font-bold text-[9px] uppercase tracking-widest ${getFuncionaStyle(item.estado_funcionamiento_nombre)}`}>
           {item.estado_funcionamiento_nombre || '—'}
         </span>
       </td>
-
-      {/* Acciones — siempre visibles, hover contextual */}
-      <td className="px-5 py-3.5">
-        <div className="flex justify-end items-center gap-1">
-          <button
-            onClick={() => onVerDetalle(item)}
-            title="Ver detalle"
-            className="btn-icon p-1.5">
-            <Icon name="visibility" className="text-[18px]" />
+      <td className="px-6 py-4 text-right">
+        <div className="flex justify-end items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+          <button onClick={() => onVerDetalle(item)} className="size-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors">
+            <Icon name="visibility" className="text-[19px]" />
           </button>
-          <button
-            onClick={() => onEditar(item)}
-            title="Editar"
-            className="btn-icon p-1.5">
-            <Icon name="edit" className="text-[18px]" />
+          <button onClick={() => onEditar(item)} className="size-8 flex items-center justify-center rounded-lg hover:bg-amber-500/10 text-amber-600 transition-colors">
+            <Icon name="edit" className="text-[19px]" />
           </button>
         </div>
       </td>
@@ -129,67 +93,44 @@ function FilaBien({ item, onVerDetalle, onEditar }) {
   );
 }
 
-export default function BienesTabla({
-  items = [], loading, error, refetch,
-  onVerDetalle, onEditar,
-}) {
+export default function BienesTabla({ items = [], loading, error, refetch, onVerDetalle, onEditar }) {
   return (
-    <div className="table-wrapper">
-      <div className="table-container">
+    <div className="table-wrapper shadow-sm border rounded-2xl overflow-hidden">
+          <div className="table-container">
+
         <table className="table">
           <thead>
-            <tr>
+            <tr >
               {COLS.map((col) => (
-                <th key={col.label}
-                    className={`px-5 py-3.5 ${col.width ?? ''} ${col.right ? 'text-right' : ''}`}>
+                <th key={col.label} className={`px-6 py-4 text-[10px] uppercase font-black tracking-widest text-faint ${col.width ?? ''} ${col.right ? 'text-right' : ''}`}>
                   {col.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody >
             {loading ? (
-              Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
-            ) : error ? (
-              <tr>
-                <td colSpan={COLS.length} className="py-6">
-                  <ErrorState message={error} onRetry={refetch} />
-                </td>
-              </tr>
-            ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={COLS.length} className="py-6">
-                  <EmptyState
-                    icon="inventory_2"
-                    title="Sin bienes registrados"
-                    description="No se encontraron bienes con los filtros actuales. Intenta ajustar los criterios de búsqueda."
-                  />
-                </td>
-              </tr>
-            ) : (
-              items.map((item) => (
-                <FilaBien
-                  key={item.id}
-                  item={item}
-                  onVerDetalle={onVerDetalle}
-                  onEditar={onEditar}
-                />
+              Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className=" border-border">
+                  {Array.from({ length: 6 }).map((_, j) => (
+                    <td key={j} className="px-6 py-4"><div className="skeleton h-4 w-full rounded" /></td>
+                  ))}
+                </tr>
               ))
+            ) : error ? (
+              <tr><td colSpan={COLS.length} className="py-12"><ErrorState message={error} onRetry={refetch} /></td></tr>
+            ) : items.length === 0 ? (
+              <tr><td colSpan={COLS.length} className="py-12"><EmptyState icon="inventory_2" title="Sin registros" /></td></tr>
+            ) : (
+              items.map((item) => <FilaBien key={item.id} item={item} onVerDetalle={onVerDetalle} onEditar={onEditar} />)
             )}
           </tbody>
         </table>
       </div>
 
-      <div className="table-footer">
-        <p className="table-count">
-          {loading ? (
-            <span className="skeleton h-3 w-40 inline-block rounded" />
-          ) : (
-            <>
-              <strong style={{ color: 'var(--color-text-primary)' }}>{items.length}</strong>
-              {' '}bien{items.length !== 1 ? 'es' : ''}
-            </>
-          )}
+      <div className="table-footer px-6 py-4 bg-surface-alt/50 border-t border-border flex justify-between items-center mt-2">
+        <p className="text-xs text-faint">
+          Total: <b className="text-main font-black">{items.length}</b> bienes registrados
         </p>
       </div>
     </div>

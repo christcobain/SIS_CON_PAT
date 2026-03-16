@@ -27,7 +27,7 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
     modulo_destino_nombre = serializers.CharField(read_only=True)
     ubicacion_destino_nombre = serializers.CharField(read_only=True)     
     motivo_nombre     = serializers.CharField(source='motivo.nombre',read_only=True)
-    cancelacion_nombre = serializers.CharField(source='motivo_cancelacion.nombre', read_only=True)
+    cancelacion_nombre = serializers.SerializerMethodField()
     ultima_aprobacion = serializers.SerializerMethodField()
     tiene_pdf_firmado = serializers.SerializerMethodField()
     bienes=TransferenciaDetalleSerializer(source='detalles',many=True,read_only=True)
@@ -79,6 +79,10 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
         }
     def get_tiene_pdf_firmado(self, obj):
         return bool(obj.pdf_firmado_path)
+    def get_cancelacion_nombre(self, obj):
+        if obj.motivo_cancelacion:
+            return obj.motivo_cancelacion.nombre
+        return None
 
 class TransferenciaDetailSerializer(serializers.ModelSerializer):
     sede_origen_nombre = serializers.CharField(read_only=True)

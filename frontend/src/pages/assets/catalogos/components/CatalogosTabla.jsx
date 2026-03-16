@@ -5,19 +5,82 @@ const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
-function SkeletonRow() {
+const COLS = [
+  { label: 'Nombre / Registro', width: 'w-[35%]' },
+  { label: 'Descripción',       width: 'w-[40%]' },
+  { label: 'Estado',            width: 'w-[15%]' },
+  { label: 'Acciones',          width: '',  right: true },
+];
+
+// Estilos para el estado (Activo / Inactivo)
+const getStatusStyle = (isActive) => {
+  return isActive 
+    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
+    : 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+};
+
+function FilaCatalogo({ item, meta, onEditar, onToggleEstado }) {
   return (
-    <tr>
-      {[60, 80, 40, 30].map((w, i) => (
-        <td key={i} className="px-5 py-4">
-          <div className="skeleton h-4 rounded" style={{ width: `${w}%` }} />
-        </td>
-      ))}
+    <tr className="hover:bg-surface-alt/50 transition-colors border-b border-border-light/50">
+      
+      {/* 1. Nombre e ID */}
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Icon name={meta?.icon || 'label'} className="text-[20px] text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-main truncate">
+              {item.nombre}
+            </p>
+            <p className="text-[10px] font-mono text-muted mt-0.5 tracking-tight">
+              ID: #{String(item.id).padStart(4, '0')}
+            </p>
+          </div>
+        </div>
+      </td>
+
+      {/* 2. Descripción */}
+      <td className="px-6 py-4">
+        <p className="text-xs text-muted leading-relaxed line-clamp-2 max-w-md">
+          {item.descripcion || <span className="opacity-30 italic text-[10px]">Sin descripción registrada</span>}
+        </p>
+      </td>
+
+      {/* 3. Estado (Estilo Píldora) */}
+      <td className="px-6 py-4">
+        <span className={`px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider ${getStatusStyle(item.is_active)}`}>
+          {item.is_active ? 'Activo' : 'Inactivo'}
+        </span>
+      </td>
+
+      {/* 4. Acciones (Siempre visibles) */}
+      <td className="px-6 py-4 text-right">
+        <div className="flex justify-end items-center gap-1.5">
+          <button
+            onClick={() => onEditar(item)}
+            className="size-8 flex items-center justify-center rounded-lg hover:bg-amber-100 text-amber-600 transition-colors"
+            title="Editar registro"
+          >
+            <Icon name="edit" className="text-[19px]" />
+          </button>
+          
+          <button
+            onClick={() => onToggleEstado(item)}
+            className={`size-9 flex items-center justify-center rounded-xl transition-all border border-border-light ${
+              item.is_active 
+                ? 'bg-surface-variant hover:bg-red-50 text-muted hover:text-red-600' 
+                : 'bg-surface-variant hover:bg-emerald-50 text-muted hover:text-emerald-600'
+            }`}
+            title={item.is_active ? 'Desactivar' : 'Activar'}
+          >
+            <Icon name={item.is_active ? 'toggle_on' : 'toggle_off'} className="text-[22px]" />
+          </button>
+        </div>
+      </td>
     </tr>
   );
 }
-
-const COLS = ['Nombre', 'Descripción', 'Estado', 'Acciones'];
 
 export default function CatalogosTabla({
   items = [], loading, error, refetch,
@@ -25,117 +88,61 @@ export default function CatalogosTabla({
   onEditar, onToggleEstado,
 }) {
   return (
-    <div className="table-wrapper">
+    <div className="table-wrapper shadow-sm border border-border-light rounded-2xl overflow-hidden">
       <div className="table-container">
         <table className="table">
           <thead>
-            <tr>
-              {COLS.map((h, i) => (
-                <th key={h} className={`px-5 py-3.5 ${i === COLS.length - 1 ? 'text-right' : ''}`}>
-                  {h}
+            <tr >
+              {COLS.map((col) => (
+                <th 
+                  key={col.label}
+                  className={`px-6 py-4 text-[10px] uppercase font-black tracking-widest text-faint ${col.width ?? ''} ${col.right ? 'text-right' : ''}`}
+                >
+                  {col.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody >
             {loading ? (
-              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-b border-border-light/50">
+                   <td className="px-6 py-4"><div className="skeleton h-10 w-10 rounded-xl" /></td>
+                   <td className="px-6 py-4"><div className="skeleton h-4 w-full rounded" /></td>
+                   <td className="px-6 py-4"><div className="skeleton h-4 w-20 rounded-full" /></td>
+                   <td className="px-6 py-4"><div className="skeleton h-9 w-20 ml-auto rounded-xl" /></td>
+                </tr>
+              ))
             ) : error ? (
-              <tr>
-                <td colSpan={COLS.length} className="py-6">
-                  <ErrorState message={error} onRetry={refetch} />
-                </td>
-              </tr>
+              <tr><td colSpan={COLS.length} className="py-12"><ErrorState message={error} onRetry={refetch} /></td></tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={COLS.length} className="py-6">
-                  <EmptyState
-                    icon={catalogoMeta?.icon ?? 'category'}
-                    title={`Sin registros en ${catalogoMeta?.label ?? 'este catálogo'}`}
-                    description="No hay elementos registrados. Crea el primero con el botón superior."
+                <td colSpan={COLS.length} className="py-12">
+                  <EmptyState 
+                    icon={catalogoMeta?.icon ?? 'category'} 
+                    title={`Sin registros`} 
+                    description={`No hay elementos en el catálogo de ${catalogoMeta?.label?.toLowerCase() || 'este catálogo'}.`} 
                   />
                 </td>
               </tr>
             ) : (
               items.map((item) => (
-                <tr key={item.id}>
-                  {/* Nombre + ID */}
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="size-8 rounded-lg flex items-center justify-center shrink-0"
-                           style={{ background: 'var(--color-border-light)' }}>
-                        <Icon name={catalogoMeta?.icon ?? 'label'}
-                              className="text-[15px] text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-black truncate"
-                           style={{ color: 'var(--color-text-primary)' }}>
-                          {item.nombre}
-                        </p>
-                        <p className="text-[10px] font-mono"
-                           style={{ color: 'var(--color-text-muted)' }}>
-                          ID #{item.id}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Descripción */}
-                  <td className="px-5 py-3.5">
-                    <p className="text-xs max-w-[340px] truncate"
-                       style={{ color: 'var(--color-text-muted)' }}>
-                      {item.descripcion || <span style={{ color: 'var(--color-text-faint)' }}>—</span>}
-                    </p>
-                  </td>
-
-                  {/* Estado badge */}
-                  <td className="px-5 py-3.5">
-                    <span className={item.is_active ? 'badge-activo' : 'badge-inactivo'}>
-                      <span className={`size-1.5 rounded-full ${item.is_active ? 'bg-green-500' : 'bg-slate-400'}`} />
-                      {item.is_active ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-
-                  {/* Acciones — siempre visibles, hover con color contextual */}
-                  <td className="px-5 py-3.5">
-                    <div className="flex justify-end items-center gap-1">
-                      <button onClick={() => onEditar(item)}
-                        title="Editar" className="btn-icon p-1.5">
-                        <Icon name="edit" className="text-[18px]" />
-                      </button>
-                      <button
-                        onClick={() => onToggleEstado(item)}
-                        title={item.is_active ? 'Desactivar' : 'Activar'}
-                        className="p-1.5 rounded-lg transition-colors"
-                        style={{ color: 'var(--color-text-muted)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color      = item.is_active ? '#ef4444' : '#22c55e';
-                          e.currentTarget.style.background = item.is_active ? '#fef2f2' : '#f0fdf4';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color      = 'var(--color-text-muted)';
-                          e.currentTarget.style.background = '';
-                        }}>
-                        <Icon name={item.is_active ? 'toggle_off' : 'toggle_on'} className="text-[18px]" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <FilaCatalogo
+                  key={item.id}
+                  item={item}
+                  meta={catalogoMeta}
+                  onEditar={onEditar}
+                  onToggleEstado={onToggleEstado}
+                />
               ))
             )}
           </tbody>
         </table>
       </div>
 
-      <div className="table-footer">
-        <p className="table-count">
-          {loading
-            ? <span className="skeleton h-3 w-40 inline-block rounded" />
-            : <>
-                <strong style={{ color: 'var(--color-text-primary)' }}>{items.length}</strong>
-                {' '}registro{items.length !== 1 ? 's' : ''}
-              </>
-          }
+      <div className="table-footer px-6 py-4 bg-surface-variant/20 border-t border-border-light flex justify-between items-center">
+        <p className="text-xs text-faint">
+          Total: <b className="text-main">{items.length}</b> elementos en {catalogoMeta?.label || 'Catálogo'}
         </p>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import EmptyState from '../../../../components/feedback/EmptyState';
 import ErrorState  from '../../../../components/feedback/ErrorState';
 
@@ -5,303 +6,208 @@ const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
-const TAB_META = {
-  sedes: {
-    cols: [
-      { label: 'Nombre / ID',        width: 'w-[30%]' },
-      { label: 'Dirección',          width: 'w-[18%]' },
-      { label: 'Distrito / Región',  width: 'w-[22%]' },
-      { label: 'Estado',             width: 'w-[10%]' },
-      { label: 'Acciones',           width: '',  right: true },
-    ],
-  },
-  modulos: {
-    cols: [
-      { label: 'Nombre del Módulo',  width: 'w-[50%]' },
-      { label: 'Fecha de Registro',  width: 'w-[25%]' },
-      { label: 'Estado',             width: 'w-[15%]' },
-      { label: 'Acciones',           width: '',  right: true },
-    ],
-  },
-  ubicaciones: {
-    cols: [
-      { label: 'Nombre',             width: 'w-[28%]' },
-      { label: 'Descripción',        width: 'w-[42%]' },
-      { label: 'Estado',             width: 'w-[12%]' },
-      { label: 'Acciones',           width: '',  right: true },
-    ],
-  },
-};
-
-function SkeletonRow({ cols }) {
-  return (
-    <tr>
-      {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} className="px-5 py-4">
-          <div className="skeleton h-4 rounded" style={{ width: i === 0 ? '70%' : '50%' }} />
-        </td>
-      ))}
-    </tr>
-  );
-}
-
-function TextMuted({ children }) {
-  return <span style={{ color: 'var(--color-text-muted)' }}>{children}</span>;
-}
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-PE', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
-}
-
-// ── Badge estado unificado ────────────────────────────────────────────────────
-function EstadoBadge({ active }) {
-  return (
-    <span className={active ? 'badge-activo' : 'badge-inactivo'}>
-      <span className={`size-1.5 rounded-full ${active ? 'bg-green-500' : 'bg-slate-400'}`} />
-      {active ? 'Activo' : 'Inactivo'}
-    </span>
-  );
-}
-
-// ── Acciones: SIEMPRE visibles, hover con color contextual ───────────────────
-
-function AccionesCell({ item, onVerDetalle, onEditar, onToggleEstado }) {
-  return (
-    <div className="flex justify-end items-center gap-1">
-      <button
-        onClick={() => onVerDetalle(item)}
-        title="Ver detalle"
-        className="btn-icon p-1.5"
-      >
-        <Icon name="visibility" className="text-[18px]" />
-      </button>
-      <button
-        onClick={() => onEditar(item)}
-        title="Editar"
-        className="btn-icon p-1.5"
-      >
-        <Icon name="edit" className="text-[18px]" />
-      </button>
-      <button
-        onClick={() => onToggleEstado(item)}
-        title={item.is_active ? 'Desactivar' : 'Activar'}
-        className="p-1.5 rounded-lg transition-colors"
-        style={{ color: 'var(--color-text-muted)' }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.color      = item.is_active ? '#ef4444' : '#22c55e';
-          e.currentTarget.style.background = item.is_active ? '#fef2f2' : '#f0fdf4';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.color      = 'var(--color-text-muted)';
-          e.currentTarget.style.background = '';
-        }}
-      >
-        <Icon name={item.is_active ? 'toggle_off' : 'toggle_on'} className="text-[18px]" />
-      </button>
-    </div>
-  );
-}
-
-// ── Filas por tipo ────────────────────────────────────────────────────────────
-function FilaSede({ item, onVerDetalle, onEditar, onToggleEstado }) {
-  return (
-    <tr>
-      <td className="px-5 py-3.5">
-        <div className="flex items-center gap-3">
-          <div className="size-9 rounded-xl flex items-center justify-center shrink-0"
-               style={{ background: 'var(--color-border-light)' }}>
-            <Icon name="location_city" className="text-[18px] text-primary" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-black leading-tight truncate"
-               style={{ color: 'var(--color-text-primary)' }}>
-              {item.nombre}
-            </p>
-            <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              ID #{item.id}
-            </p>
-          </div>
-        </div>
-      </td>
-      <td className="px-5 py-3.5">
-        <p className="text-xs truncate max-w-[160px]" style={{ color: 'var(--color-text-muted)' }}>
-          {item.direccion || <TextMuted>—</TextMuted>}
-        </p>
-      </td>
-      <td className="px-5 py-3.5">
-        <div className="min-w-0">
-          {item.distrito_nombre && (
-            <p className="text-xs font-semibold truncate" style={{ color: 'var(--color-text-body)' }}>
-              {item.distrito_nombre}
-            </p>
-          )}
-          {(item.provincia_nombre || item.departamento_nombre) && (
-            <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              {[item.provincia_nombre, item.departamento_nombre].filter(Boolean).join(', ')}
-            </p>
-          )}
-          {!item.distrito_nombre && !item.provincia_nombre && <TextMuted>—</TextMuted>}
-        </div>
-      </td>
-      <td className="px-5 py-3.5"><EstadoBadge active={item.is_active} /></td>
-      <td className="px-5 py-3.5">
-        <AccionesCell item={item} onVerDetalle={onVerDetalle} onEditar={onEditar} onToggleEstado={onToggleEstado} />
-      </td>
-    </tr>
-  );
-}
-
-function FilaModulo({ item, onVerDetalle, onEditar, onToggleEstado }) {
-  return (
-    <tr>
-      <td className="px-5 py-3.5">
-        <div className="flex items-center gap-3">
-          <div className="size-9 rounded-xl flex items-center justify-center shrink-0"
-               style={{ background: 'var(--color-border-light)' }}>
-            <Icon name="widgets" className="text-[18px] text-primary" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-black leading-tight truncate"
-               style={{ color: 'var(--color-text-primary)' }}>
-              {item.nombre}
-            </p>
-            <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              ID #{item.id}
-            </p>
-          </div>
-        </div>
-      </td>
-      <td className="px-5 py-3.5">
-        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-          {formatDate(item.created_at)}
-        </p>
-      </td>
-      <td className="px-5 py-3.5"><EstadoBadge active={item.is_active} /></td>
-      <td className="px-5 py-3.5">
-        <AccionesCell item={item} onVerDetalle={onVerDetalle} onEditar={onEditar} onToggleEstado={onToggleEstado} />
-      </td>
-    </tr>
-  );
-}
-
-function FilaUbicacion({ item, onVerDetalle, onEditar, onToggleEstado }) {
-  const desc = item.descripcion ?? '';
-  return (
-    <tr>
-      <td className="px-5 py-3.5">
-        <div className="flex items-center gap-3">
-          <div className="size-9 rounded-xl flex items-center justify-center shrink-0"
-               style={{ background: 'var(--color-border-light)' }}>
-            <Icon name="room" className="text-[18px] text-primary" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-black leading-tight truncate"
-               style={{ color: 'var(--color-text-primary)' }}>
-              {item.nombre}
-            </p>
-            <p className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              ID #{item.id}
-            </p>
-          </div>
-        </div>
-      </td>
-      <td className="px-5 py-3.5">
-        <p className="text-xs max-w-[300px]" style={{ color: 'var(--color-text-muted)' }}>
-          {desc
-            ? <>{desc.slice(0, 60)}{desc.length > 60 ? '…' : ''}</>
-            : <TextMuted>Sin descripción</TextMuted>
-          }
-        </p>
-      </td>
-      <td className="px-5 py-3.5"><EstadoBadge active={item.is_active} /></td>
-      <td className="px-5 py-3.5">
-        <AccionesCell item={item} onVerDetalle={onVerDetalle} onEditar={onEditar} onToggleEstado={onToggleEstado} />
-      </td>
-    </tr>
-  );
-}
-
-// ── Componente principal ──────────────────────────────────────────────────────
 export default function LocacionesTabla({
-  activeTab, items = [], loading, error, refetch,
-  totalItems = 0, onVerDetalle, onEditar, onToggleEstado,
+  activeTab, 
+  items = [], 
+  loading, 
+  error, 
+  refetch,
+  totalItems = 0, 
+  onVerDetalle, 
+  onEditar, 
+  onToggleEstado,
 }) {
-  const meta    = TAB_META[activeTab] ?? TAB_META.sedes;
-  const numCols = meta.cols.length;
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const pagActual = Math.min(page, totalPages);
+  // const slice = items.slice((pagActual - 1) * pageSize, pagActual * pageSize);
+  const COLUMNAS = {
+    sedes: [
+      { label: 'Sede / Identificador', align: 'text-left' },
+      { label: 'Dirección Local',     align: 'text-left' },
+      { label: 'Ubicación',           align: 'text-left' },
+      { label: 'Estado',              align: 'text-left' },
+      { label: 'Acciones',            align: 'text-right' },
+    ],
+    modulos: [
+      { label: 'Nombre del Módulo',   align: 'text-left' },
+      { label: 'Fecha Registro',      align: 'text-left' },
+      { label: 'Estado',              align: 'text-left' },
+      { label: 'Acciones',            align: 'text-right' },
+    ],
+    ubicaciones: [
+      { label: 'Nombre / Zona',       align: 'text-left' },
+      { label: 'Descripción',         align: 'text-left' },
+      { label: 'Estado',              align: 'text-left' },
+      { label: 'Acciones',            align: 'text-right' },
+    ],
+  }[activeTab] || [];
+  const getEstadoStyle = (activo) => {
+  return activo 
+    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
+    : 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+};
+  if (loading && items.length === 0)
+    return <EmptyState icon="hourglass_top" title="Cargando locaciones..." />;
 
-  const renderFila = (item) => {
-    const props = { key: item.id, item, onVerDetalle, onEditar, onToggleEstado };
-    if (activeTab === 'sedes')       return <FilaSede      {...props} />;
-    if (activeTab === 'modulos')     return <FilaModulo    {...props} />;
-    if (activeTab === 'ubicaciones') return <FilaUbicacion {...props} />;
-    return null;
-  };
+  if (error)
+    return <ErrorState message={error} onRetry={refetch} />;
+
+  if (items.length === 0)
+    return <EmptyState icon="search_off" title="No se encontraron registros" />;
 
   return (
-    <div className="table-wrapper">
-      <div className="table-container">
-        <table className="table">
+    <div className="table-wrapper animate-fade-in">
+      <div className="table-container ">
+        <table className="table w-full">
           <thead>
-            <tr>
-              {meta.cols.map((col) => (
-                <th
-                  key={col.label}
-                  className={`px-5 py-3.5 ${col.width ?? ''} ${col.right ? 'text-right' : ''}`}
-                >
+            <tr className="bg-surface-alt/50 border-b border-border-light">
+              {COLUMNAS.map((col, idx) => (
+                <th key={idx} className={`px-4 py-3 ${col.align} text-[11px] font-black uppercase text-faint`}>
                   {col.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} cols={numCols} />)
-            ) : error ? (
-              <tr>
-                <td colSpan={numCols} className="py-6">
-                  <ErrorState message={error} onRetry={refetch} />
+
+          <tbody >
+            {items.map(item => (
+              <tr key={item.id} className="hover:bg-surface-alt/40 transition-colors group">
+                
+                {/* IDENTIFICADOR PRINCIPAL (Basado en el tipo) */}
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+          <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Icon name={activeTab === 'sedes' ? 'apartment' : activeTab === 'modulos' ? 'widgets' : 'fmd_good'} className="text-[18px] text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-black text-body uppercase truncate leading-tight">
+                        {item.nombre}
+                      </div>
+                      <div className="text-[10px] font-mono font-bold text-muted uppercase tracking-tight">
+                        ID: {item.id}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+
+                {/* COLUMNAS DINÁMICAS SEGÚN TAB */}
+                {activeTab === 'sedes' && (
+                  <>
+                    <td className="px-4 py-3 text-xs text-body italic line-clamp-1 max-w-[200px]">
+                      {item.direccion || '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-[10px] font-bold text-main uppercase">
+                        {item.distrito_nombre || 'No definido'}
+                      </div>
+                      <div className="text-[9px] text-faint uppercase">
+                        {[item.provincia_nombre, item.departamento_nombre].filter(Boolean).join(' • ')}
+                      </div>
+                    </td>
+                  </>
+                )}
+
+                {activeTab === 'modulos' && (
+                  <td className="px-4 py-3 text-xs font-bold text-muted uppercase">
+                    {new Date(item.created_at).toLocaleDateString()}
+                  </td>
+                )}
+
+                {activeTab === 'ubicaciones' && (
+                  <td className="px-4 py-3 text-xs text-body italic">
+                    {item.descripcion || 'Sin descripción'}
+                  </td>
+                )}
+
+                {/* ESTADO SISTEMA (Mismo Badge de Transferencias/Bienes) */}
+                <td className="px-4 py-3">
+                  <span className={`px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${getEstadoStyle(item.is_active)}`}>
+                    {item.is_active ? 'Activo' : 'Inactivo'}
+                  </span>
+                </td>
+
+                {/* ACCIONES (Patrón Idéntico) */}
+                <td className="px-4 py-3 text-right">
+                  <div className="flex justify-end gap-1">
+                    <button 
+                      onClick={() => onVerDetalle(item)} 
+                        className="size-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors"
+                      title="Ver detalles"
+                    >
+                      <Icon name="visibility" className="text-[20px]" />
+                    </button>
+
+                    <button 
+                      onClick={() => onEditar(item)} 
+                      className="size-8 flex items-center justify-center rounded-lg hover:bg-amber-100 text-amber-600 transition-colors"
+                      title="Editar registro"
+                    >
+                      <Icon name="edit" className="text-[19px]" />
+                    </button>
+
+                    <button 
+                      onClick={() => onToggleEstado(item)} 
+                      className={`size-8 flex items-center justify-center rounded-lg transition-colors ${
+                        item.is_active 
+                          ? 'hover:bg-red-100 text-red-500' 
+                          : 'hover:bg-green-100 text-green-600'
+                      }`}
+                      title={item.is_active ? 'Desactivar' : 'Activar'}
+                    >
+                      <Icon name={item.is_active ? 'block' : 'check_circle'} className="text-[20px]" />
+                    </button>
+                  </div>
                 </td>
               </tr>
-            ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={numCols} className="py-6">
-                  <EmptyState
-                    icon="search_off"
-                    title="No se encontraron registros"
-                    description="Ajusta los filtros o registra un nuevo elemento."
-                  />
-                </td>
-              </tr>
-            ) : items.map(renderFila)}
+            ))}
           </tbody>
         </table>
       </div>
 
-      <div className="table-footer">
-        <p className="table-count">
-          {loading ? (
-            <span className="skeleton h-3 w-40 inline-block rounded" />
-          ) : (
-            <>
-              Mostrando{' '}
-              <strong style={{ color: 'var(--color-text-primary)' }}>{items.length}</strong>
-              {' '}de{' '}
-              <strong style={{ color: 'var(--color-text-primary)' }}>{totalItems}</strong>
-              {' '}registros
-            </>
-          )}
+      {/* FOOTER (Mismo patrón de paginación) */}
+      <div className="table-footer px-6 py-4 bg-surface-alt/50 border-t border-border flex flex-wrap items-center justify-between gap-4">
+        <p className="text-[11px] text-faint font-medium uppercase tracking-tight">
+          Mostrando <span className="text-main font-black">{items.length}</span> de <span className="text-main font-black">{totalItems}</span> registros
         </p>
-        <div className="pagination">
-          <button disabled className="page-btn">
-            <Icon name="chevron_left" className="text-[18px]" />
-          </button>
-          <button className="page-btn-active">1</button>
-          <button disabled className="page-btn">
+        <div className="flex items-center gap-1.5">
+          <button  
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={pagActual === 1}
+            className="size-8 flex items-center justify-center rounded-lg border border-border text-muted hover:bg-surface-alt disabled:opacity-30 transition-colors"
+          >
+            <Icon name="chevron_left" className="text-[18px]" /></button>
+
+          {/* <button className="page-btn-active">1</button> */}
+
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - pagActual) <= 1)
+              .map((pg, i, arr) => (
+                <div key={pg} className="flex items-center gap-1">
+                  {i > 0 && arr[i-1] !== pg - 1 && <span className="text-muted text-xs mx-0.5">...</span>}
+                  <button
+                    onClick={() => setPage(pg)}
+                    className={`min-size-8 px-2.5 flex items-center justify-center rounded-lg font-black text-xs transition-all
+                      ${pagActual === pg 
+                        ? 'bg-primary text-white shadow-md shadow-primary/20 border border-primary' 
+                        : 'bg-surface border border-border text-body hover:border-muted'}`}
+                  >
+                    {pg}
+                  </button>
+                </div>
+              ))}
+          </div>
+
+
+          <button  
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={pagActual === totalPages}
+            className="size-8 flex items-center justify-center rounded-lg border border-border bg-surface text-muted hover:bg-surface-alt disabled:opacity-30 transition-colors"
+          >
             <Icon name="chevron_right" className="text-[18px]" />
-          </button>
+            </button>
         </div>
       </div>
     </div>

@@ -230,14 +230,12 @@ class TransferenciaService:
                 ultima.rol_aprobador_nombre = "Usuario no identificado"
         return tr
     @staticmethod
-    @staticmethod
     def listar(filters, token):
         qs = TransferenciaRepository.listar(filters)
         for tr in qs:
             TransferenciaService._enriquecer_transferencia(tr, token)
             _ = list(tr.detalles.all())
         return qs
-    @staticmethod
     @staticmethod
     def obtener(pk, token):
         tr = TransferenciaRepository.get_by_id(pk)
@@ -246,7 +244,6 @@ class TransferenciaService:
         TransferenciaService._enriquecer_transferencia(tr, token)
         _ = list(tr.detalles.all())
         return tr
-    @staticmethod
     @staticmethod
     def mis_transferencias(usuario_id: int, role: str, sede_id: int, filters: Dict[str, Any], token):
         qs = TransferenciaRepository.get_mis_transferencias(usuario_id, role, sede_id)        

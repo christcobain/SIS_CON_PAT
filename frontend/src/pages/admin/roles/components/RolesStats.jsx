@@ -1,52 +1,92 @@
+import React from 'react';
+
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
-function StatCard({ icon, iconBg, iconColor, label, value, loading }) {
+// ── Componente de KPI Estándar (Patrón Profesional Unificado) ────────────────
+function KpiCard({ icon, colorClass, label, value, loading }) {
+  const colorMap = {
+    primary: "text-primary bg-primary/10 border-primary/20",
+    emerald: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+    slate:   "text-slate-500 bg-slate-500/10 border-slate-500/20",
+    amber:   "text-amber-500 bg-amber-500/10 border-amber-500/20",
+  };
+
+  const selectedColor = colorMap[colorClass] || colorMap.primary;
+
   return (
-    <div className="kpi-card">
-      <div className={`size-11 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
-        <Icon name={icon} className={`text-[22px] ${iconColor}`} />
+    <div className="card group hover:border-primary/30 transition-all duration-300 hover:shadow-md hover:shadow-primary/5 cursor-default overflow-hidden relative">
+      {/* Reflejo de luz sutil en hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+      
+      <div className="p-4 flex items-center gap-4 relative z-10">
+        {/* Contenedor del Icono con elevación */}
+        <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 border transition-transform group-hover:scale-110 duration-500 ${selectedColor}`}>
+          <Icon name={icon} className="text-[24px]" />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.15em] text-muted mb-1 truncate">
+            {label}
+          </p>
+          
+          <div className="flex items-baseline">
+            {loading ? (
+              <div className="skeleton h-8 w-16 mb-1 rounded-md" />
+            ) : (
+              <h3 className="text-2xl font-black text-main tracking-tight leading-none">
+                {value ?? 0}
+              </h3>
+            )}
+          </div>
+        </div>
       </div>
-      <div>
-        {loading
-          ? <div className="skeleton h-6 w-10 mb-1" />
-          : <p className="text-2xl font-black leading-tight" style={{ color: 'var(--color-text-primary)' }}>
-              {value ?? 0}
-            </p>
-        }
-        <p className="text-[10px] font-bold uppercase tracking-wider"
-           >
-          {label}
-        </p>
-      </div>
+
+      {/* Acento visual inferior animado */}
+      <div className="absolute bottom-0 left-0 h-[2px] bg-primary/20 w-0 group-hover:w-full transition-all duration-700" />
     </div>
   );
 }
 
 export default function RolesStats({ roles = [], loading = false }) {
-  const total    = roles.length;
-  const activos  = roles.filter((r) => r.is_active).length;
-  const inactivos= total - activos;
-  const conPerms = roles.filter((r) => (r.total_permissions ?? 0) > 0).length;
+  const total     = roles.length;
+  const activos   = roles.filter((r) => r.is_active).length;
+  const inactivos = total - activos;
+  const conPerms  = roles.filter((r) => (r.total_permissions ?? 0) > 0).length;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-      <StatCard
-        icon="admin_panel_settings" iconBg="bg-primary/10" iconColor="text-primary"
-        label="Total Roles" value={total} loading={loading}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <KpiCard
+        icon="admin_panel_settings"
+        colorClass="primary"
+        label="Roles Definidos"
+        value={total}
+        loading={loading}
       />
-      <StatCard
-        icon="verified_user" iconBg="bg-emerald-100" iconColor="text-emerald-600"
-        label="Roles Activos" value={activos} loading={loading}
+      
+      <KpiCard
+        icon="verified_user"
+        colorClass="emerald"
+        label="Roles en Uso"
+        value={activos}
+        loading={loading}
       />
-      <StatCard
-        icon="shield_lock" iconBg="bg-slate-100" iconColor="text-slate-200"
-        label="Inactivos" value={inactivos} loading={loading}
+
+      <KpiCard
+        icon="lock_open"
+        colorClass="slate"
+        label="Roles Inactivos"
+        value={inactivos}
+        loading={loading}
       />
-      <StatCard
-        icon="key" iconBg="bg-amber-100" iconColor="text-amber-600"
-        label="Con Permisos" value={conPerms} loading={loading}
+
+      <KpiCard
+        icon="policy"
+        colorClass="amber"
+        label="Con Permisos Asignados"
+        value={conPerms}
+        loading={loading}
       />
     </div>
   );
