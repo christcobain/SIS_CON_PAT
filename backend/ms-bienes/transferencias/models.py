@@ -17,8 +17,7 @@ class Transferencia(models.Model):
     ]
     numero_orden = models.CharField(max_length=20, unique=True)
     tipo         = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    descripcion  = models.TextField(null=True, blank=True)
-    
+        
     usuario_origen_id = models.IntegerField()
     sede_origen_id    = models.IntegerField()
     modulo_origen_id  = models.IntegerField(null=True, blank=True)
@@ -31,38 +30,44 @@ class Transferencia(models.Model):
     ubicacion_destino_id  = models.IntegerField(null=True, blank=True)
     piso_destino          = models.SmallIntegerField(null=True, blank=True)
     
-    motivo             = models.ForeignKey(CatMotivoTransferencia, on_delete=models.SET_NULL,null=True, blank=True, related_name='transferencias',)
+    motivo_transferencia = models.ForeignKey(CatMotivoTransferencia, on_delete=models.SET_NULL,null=True, blank=True, related_name='transferencias',)
+    descripcion  = models.TextField(null=True, blank=True)
     
-    estado              = models.CharField(max_length=25, choices=ESTADO_CHOICES, default='PENDIENTE_APROBACION')
+    estado_transferencia  = models.CharField(max_length=25, choices=ESTADO_CHOICES, default='PENDIENTE_APROBACION')
     fecha_registro      = models.DateTimeField(auto_now_add=True)
-    fecha_cancelacion   = models.DateTimeField(null=True, blank=True)
-    motivo_cancelacion = models.ForeignKey(CatMotivoCancelacion, on_delete=models.SET_NULL,null=True, blank=True, related_name='transferencias_canceladas')
-    detalle_cancelacion = models.TextField(null=True, blank=True)
-    
-    motivo_devolucion   = models.TextField(null=True, blank=True)
+        
     aprobado_por_adminsede_id  = models.IntegerField(null=True, blank=True)
     fecha_aprobacion_adminsede = models.DateTimeField(null=True, blank=True)
     aprobado_segur_salida_id      = models.IntegerField(null=True, blank=True)
     fecha_aprobacion_segur_salida = models.DateTimeField(null=True, blank=True)
+    
     aprobado_segur_entrada_id      = models.IntegerField(null=True, blank=True)
     fecha_aprobacion_segur_entrada = models.DateTimeField(null=True, blank=True)
     observacion_segursede          = models.TextField(null=True, blank=True)
-    confirmado_por_usuario_destino_id = models.IntegerField(null=True, blank=True)
+    confirmado_por_usuario_destino_id = models.IntegerField(null=True, blank=True)    
     fecha_confirmacion_destino        = models.DateTimeField(null=True, blank=True)
+    
     aprobado_retorno_salida_id       = models.IntegerField(null=True, blank=True)
     fecha_aprobacion_retorno_salida  = models.DateTimeField(null=True, blank=True)
     aprobado_retorno_entrada_id      = models.IntegerField(null=True, blank=True)
     fecha_aprobacion_retorno_entrada = models.DateTimeField(null=True, blank=True)
+    
     pdf_path         = models.CharField(max_length=500, null=True, blank=True) 
     pdf_firmado_path = models.CharField(max_length=500, null=True, blank=True) 
     fecha_pdf        = models.DateTimeField(null=True, blank=True)
+    
+    motivo_devolucion=models.TextField(null=True, blank=True)
+    
+    fecha_cancelacion   = models.DateTimeField(null=True, blank=True)
+    motivo_cancelacion = models.ForeignKey(CatMotivoCancelacion, on_delete=models.SET_NULL,null=True, blank=True, related_name='transferencias_canceladas')
+    detalle_cancelacion = models.TextField(null=True, blank=True)
     class Meta:
         db_table            = 'bienes_transferencia'
         ordering            = ['-fecha_registro']
         verbose_name        = 'Transferencia'
         verbose_name_plural = 'Transferencias'
         indexes = [
-            models.Index(fields=['estado']),
+            models.Index(fields=['estado_transferencia']),
             models.Index(fields=['tipo']),
             models.Index(fields=['sede_origen_id']),
             models.Index(fields=['sede_destino_id']),
@@ -70,7 +75,7 @@ class Transferencia(models.Model):
             models.Index(fields=['usuario_destino_id']),
         ]
     def __str__(self):
-        return f'{self.numero_orden} | {self.tipo} | {self.estado}'
+        return f'{self.numero_orden} | {self.tipo} | {self.estado_transferencia}'
 
 class TransferenciaDetalle(models.Model):    
     transferencia = models.ForeignKey(Transferencia, on_delete=models.CASCADE, related_name='detalles')

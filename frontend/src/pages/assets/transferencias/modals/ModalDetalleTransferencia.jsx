@@ -1,317 +1,415 @@
-import { useState } from 'react';
-import Modal from '../../../../components/modal/Modal';
+import { useState, useRef } from 'react';
+import Modal       from '../../../../components/modal/Modal';
 import ModalHeader from '../../../../components/modal/ModalHeader';
-import ModalBody from '../../../../components/modal/ModalBody';
+import ModalBody   from '../../../../components/modal/ModalBody';
 import ModalFooter from '../../../../components/modal/ModalFooter';
+import { useAuthStore } from '../../../../store/authStore';
+import { useToast }     from '../../../../hooks/useToast';
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
+const fmtT = iso => !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
-const InfoField = ({ label, value, icon, variant = 'default' }) => (
-  <div className={`flex gap-3 p-3 rounded-xl border transition-all `}>
-    <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
-      variant === 'primary' ? 'bg-primary text-white' : 'bg-faint/10 text-faint'
-    }`}>
-      <Icon name={icon} className="text-[18px]" />
-    </div>
-    <div className="min-w-0">
-      <p className="text-[9px] text-faint font-black uppercase tracking-tighter mb-0.5">{label}</p>
-      <p className="text-[11px] font-bold text-main truncate leading-tight">{value || '---'}</p>
-    </div>
-  </div>
-);
+const ESTADO_BADGE = {
+  PENDIENTE_APROBACION:  { label: 'Pendiente aprobación',  cls: 'badge-pendiente'  },
+  ATENDIDO:              { label: 'Atendido',              cls: 'badge-atendido'   },
+  DEVUELTO:              { label: 'Devuelto',              cls: 'badge-devuelto'   },
+  CANCELADO:             { label: 'Cancelado',             cls: 'badge-cancelado'  },
+  EN_ESPERA_CONFORMIDAD: { label: 'Espera conformidad',    cls: 'badge-en-proceso' },
+};
 
-export default function ModalDetalleTransferencia({ open, onClose, item, actualizando, acciones }) {
+const ACCION_CFG = {
+  APROBADO:         { icon: 'check_circle', color: '#16a34a' },
+  RECHAZADO:        { icon: 'cancel',       color: '#dc2626' },
+  DEVUELTO:         { icon: 'reply',        color: '#b45309' },
+  CANCELADO:        { icon: 'block',        color: '#64748b' },
+  APROBADO_SALIDA:  { icon: 'output',       color: '#7c3aed' },
+  APROBADO_ENTRADA: { icon: 'input',        color: '#1d4ed8' },
+};
+
+const ROL_LABEL = {
+  REGISTRADOR:    'Registrador',
+  COORDSISTEMA:   'Coord. Sistema',
+  ADMINSEDE:      'Admin Sede',
+  SEGUR_SALIDA:   'Segur. Salida',
+  SEGUR_ENTRADA:  'Segur. Entrada',
+};
+
+const TABS = [
+  { id: 'ruta',      label: 'Ruta y Logística',   icon: 'alt_route'    },
+  { id: 'bienes',    label: 'Bienes Transferidos', icon: 'inventory_2'  },
+  { id: 'seguimiento', label: 'Seguimiento',       icon: 'analytics'    },
+];
+
+function Campo({ label, value, icon }) {
+  if (!value) return null;
+  return (
+    <div className="flex gap-3 p-3 rounded-xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+      <div className="size-8 rounded-lg flex items-center justify-center shrink-0"
+        style={{ background: 'var(--color-border-light)' }}>
+        <Icon name={icon} className="text-[16px]" style={{ color: 'var(--color-text-faint)' }} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>{label}</p>
+        <p className="text-[11px] font-bold mt-0.5 leading-tight" style={{ color: 'var(--color-text-primary)' }}>{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function TabRuta({ item }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5"
+          style={{ color: 'var(--color-text-muted)' }}>
+          <Icon name="upload" className="text-[14px]" style={{ color: 'var(--color-primary)' }} />
+          Origen
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <Campo label="Sede origen"     value={item.sede_origen_nombre}     icon="location_on" />
+          <Campo label="Módulo origen"   value={item.modulo_origen_nombre}   icon="grid_view"   />
+          <Campo label="Ubicación"       value={item.ubicacion_origen_nombre} icon="place"      />
+          <Campo label="Responsable"     value={item.usuario_origen_nombre}  icon="person"      />
+        </div>
+      </div>
+      <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '1rem' }}>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5"
+          style={{ color: 'var(--color-text-muted)' }}>
+          <Icon name="download" className="text-[14px]" style={{ color: '#16a34a' }} />
+          Destino
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <Campo label="Sede destino"    value={item.sede_destino_nombre}    icon="location_on" />
+          <Campo label="Módulo destino"  value={item.modulo_destino_nombre}  icon="grid_view"   />
+          <Campo label="Ubicación"       value={item.ubicacion_destino_nombre} icon="place"     />
+          <Campo label="Destinatario"    value={item.usuario_destino_nombre} icon="person_check"/>
+          {item.piso_destino && <Campo label="Piso"          value={`Piso ${item.piso_destino}`} icon="stairs" />}
+        </div>
+      </div>
+      {(item.motivo_nombre || item.descripcion) && (
+        <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '1rem' }}>
+          <p className="text-[9px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--color-text-muted)' }}>
+            Motivo y descripción
+          </p>
+          {item.motivo_nombre && (
+            <p className="text-xs font-bold mb-1" style={{ color: 'var(--color-primary)' }}>{item.motivo_nombre}</p>
+          )}
+          {item.descripcion && (
+            <p className="text-sm italic" style={{ color: 'var(--color-text-body)', lineHeight: 1.6 }}>{item.descripcion}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabBienes({ bienes = [] }) {
+  if (!bienes.length) return (
+    <div className="text-center py-10">
+      <Icon name="inventory_2" className="text-[40px]" style={{ color: 'var(--color-text-faint)' }} />
+      <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>Sin bienes registrados</p>
+    </div>
+  );
+  return (
+    <div className="table-wrapper rounded-xl overflow-hidden">
+      <table className="table w-full">
+        <thead>
+          <tr>
+            <th>Cód. Patrimonial</th>
+            <th>Descripción</th>
+            <th>Marca / Modelo</th>
+            <th>N° Serie</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bienes.map(b => (
+            <tr key={b.id} className="hover:bg-surface-alt/60">
+              <td className="font-mono text-xs font-black" style={{ color: 'var(--color-primary)' }}>
+                {b.codigo_patrimonial}
+              </td>
+              <td>
+                <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{b.tipo_bien_nombre}</p>
+              </td>
+              <td className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {b.marca_nombre} · {b.modelo}
+              </td>
+              <td className="font-mono text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {b.numero_serie || 'S/N'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TabSeguimiento({ item }) {
+  const aprobaciones = item.aprobaciones ?? [];
+  const isCancelado  = item.estado === 'CANCELADO';
+  const isDevuelto   = item.estado === 'DEVUELTO';
+
+  return (
+    <div className="space-y-4">
+      {(isCancelado || isDevuelto) && (
+        <div className="flex items-start gap-3 p-4 rounded-xl"
+          style={{ background: 'rgb(220 38 38 / 0.06)', border: '1px solid rgb(220 38 38 / 0.2)' }}>
+          <Icon name="gpp_bad" className="text-[20px] shrink-0 mt-0.5" style={{ color: '#dc2626' }} />
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#dc2626' }}>
+              {isCancelado ? 'Operación anulada' : 'Devolución de activos'}
+            </p>
+            <p className="text-sm mt-1 italic" style={{ color: 'var(--color-text-body)' }}>
+              {item.cancelacion_nombre || item.motivo_devolucion || 'Sin motivo registrado'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {aprobaciones.length === 0 ? (
+        <div className="text-center py-8">
+          <Icon name="pending_actions" className="text-[40px]" style={{ color: 'var(--color-text-faint)' }} />
+          <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>Sin historial de aprobaciones</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {aprobaciones.map((ap, i) => {
+            const cfg = ACCION_CFG[ap.accion] ?? { icon: 'info', color: 'var(--color-text-muted)' };
+            return (
+              <div key={ap.id ?? i} className="flex gap-3">
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="size-8 rounded-full flex items-center justify-center" style={{ background: `${cfg.color}18` }}>
+                    <Icon name={cfg.icon} className="text-[16px]" style={{ color: cfg.color }} />
+                  </div>
+                  {i < aprobaciones.length - 1 && (
+                    <div className="w-px flex-1 mt-1" style={{ background: 'var(--color-border)' }} />
+                  )}
+                </div>
+                <div className="pb-4 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-black uppercase" style={{ color: cfg.color }}>{ap.accion}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                      style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
+                      {ROL_LABEL[ap.rol_aprobador_nombre] ?? ap.rol_aprobador_nombre ?? ap.rol_aprobador}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--color-text-primary)' }}>
+                    {fmtT(ap.fecha)}
+                  </p>
+                  {ap.detalle && (
+                    <p className="text-[11px] mt-1 italic" style={{ color: 'var(--color-text-body)' }}>{ap.detalle}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ModalDetalleTransferencia({
+  open, onClose, item, actualizando, acciones, onAccionExitosa,
+}) {
   const [tab, setTab] = useState('ruta');
+  const role    = useAuthStore(s => s.role);
+  const toast   = useToast();
+  const fileRef = useRef();
 
   if (!item) return null;
 
   const {
-    numero_orden, estado, bienes = [], tipo, descripcion, motivo_nombre,
-    sede_origen_nombre, modulo_origen_nombre, ubicacion_origen_nombre, piso_origen, usuario_origen_nombre,
-    sede_destino_nombre, modulo_destino_nombre, ubicacion_destino_nombre, piso_destino, usuario_destino_nombre,
-    fecha_registro, cancelacion_nombre, motivo_devolucion, aprobaciones = [],
-    pdf_path, tiene_pdf_firmado, fecha_pdf
+    numero_orden, estado, bienes = [], tipo,
+    pdf_path, tiene_pdf_firmado, pdf_firmado_path,
   } = item;
 
-  const isCancelado = estado === 'CANCELADO' || !!cancelacion_nombre;
-  const isDevuelto = estado === 'DEVUELTO' || !!motivo_devolucion;
+  const esAsignacion = tipo === 'ASIGNACION_INTERNA';
+  const esTraslado   = tipo === 'TRASLADO_SEDE';
+  const badge        = ESTADO_BADGE[estado] ?? { label: estado, cls: '' };
 
-  const TABS = [
-    { id: 'ruta', label: 'Ruta y Logística', icon: 'alt_route' },
-    { id: 'bienes', label: 'Bienes Transferidos', icon: 'inventory_2' },
-    { id: 'seguimiento', label: 'Seguimiento', icon: 'analytics' },
-  ];
+  const puedeAprobarAdmin  = ['SYSADMIN', 'coordSistema', 'adminSede'].includes(role);
+  const puedeAprobarSegur  = role === 'segurSede';
+  const puedeDevolver      = puedeAprobarAdmin;
+
+  const handleDescarga = async () => {
+    try {
+      await acciones.descargarPDF?.(item.id);
+    } catch { toast.error('No se pudo descargar el PDF.'); }
+  };
+
+  const handleSubirFirmado = async e => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+    try {
+      await acciones.subirFirmado?.(item.id, archivo);
+      toast.success('Acta firmada subida exitosamente.');
+      onAccionExitosa?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Error al subir el acta firmada.');
+    }
+  };
+
+  const ejecutarAccion = async (fn, ...args) => {
+    try {
+      const res = await fn(...args);
+      if (res?.success === false) { toast.error(res.error); return; }
+      onAccionExitosa?.();
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Error en la operación.');
+    }
+  };
 
   return (
     <Modal open={open} onClose={onClose} size="xl">
-      <ModalHeader 
+      <ModalHeader
         icon="sync_alt"
-        title={`Detalle de Transferencia`}
-        subtitle={`Orden de movimiento de activos patrimoniales`}
+        title={`Transferencia ${numero_orden}`}
+        subtitle={`${esTraslado ? 'Traslado entre sedes' : 'Asignación interna'} — ${bienes.length} bien(es)`}
         onClose={onClose}
       />
 
       <ModalBody padding={false}>
-        {/* Nav de Tabs Estilo Premium */}
-        <div className="flex gap-8 px-8 ">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 py-4 text-[11px] font-black uppercase tracking-widest transition-all border-b-2 
-                ${tab === t.id ? 'border-primary text-primary' : 'border-transparent text-faint hover:text-muted'}`}
-            >
-              <Icon name={t.icon} className="text-[18px]" />
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-12 h-[550px]">
-          {/* COLUMNA PRINCIPAL (9) */}
-          <div className="col-span-9 overflow-y-auto p-8  border-r  custom-scrollbar">
-            
-            {tab === 'ruta' && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {/* Visualización de Ruta Origen -> Destino */}
-                <div className="relative grid grid-cols-2 gap-12">
-                  {/* Conector Visual */}
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 hidden md:flex items-center justify-center size-10 rounded-full bg-white border border-border-light shadow-sm text-primary">
-                    <Icon name="arrow_forward" className="text-xl animate-pulse" />
-                  </div>
-
-                  {/* Origen */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="size-2 rounded-full bg-primary" />
-                      <h4 >Punto de Origen</h4>
-                    </div>
-                    <InfoField label="Sede Remitente" value={sede_origen_nombre} icon="location_on" />
-                    <InfoField label="Módulo / Ubicación" value={`${modulo_origen_nombre} - ${ubicacion_origen_nombre}`} icon="layers" />
-                    <div className="grid grid-cols-2 gap-3">
-                      <InfoField label="Nivel / Piso" value={`Piso ${piso_origen}`} icon="stairs" />
-                      <InfoField label="Responsable" value={usuario_origen_nombre} icon="person" />
-                    </div>
-                  </div>
-
-                  {/* Destino */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="size-2 rounded-full bg-blue-500" />
-                      <h4 >Punto de Destino</h4>
-                    </div>
-                    <InfoField label="Sede Receptora" value={sede_destino_nombre} icon="distance" />
-                    <InfoField label="Módulo / Ubicación" value={`${modulo_destino_nombre} - ${ubicacion_destino_nombre}`} icon="meeting_room" />
-                    <div className="grid grid-cols-2 gap-3">
-                      <InfoField label="Nivel / Piso" value={`Piso ${piso_destino}`} icon="stairs" />
-                      <InfoField label="Responsable" value={usuario_destino_nombre} icon="person_check" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Justificación */}
-                <div className="bg-surface p-5 rounded-2xl border border-border-light relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:rotate-12 transition-transform">
-                    <Icon name="format_quote" className="text-4xl text-primary" />
-                  </div>
-                  <p className="text-[10px] text-faint font-black uppercase mb-3 tracking-widest flex items-center gap-2">
-                    <Icon name="subject" className="text-sm" />
-                    Motivo y Justificación
-                  </p>
-                  <p className="text-xs font-bold text-primary mb-1">{motivo_nombre}</p>
-                  <p className="text-sm italic text-body leading-relaxed  bg-white/50 p-3 rounded-lg border border-dashed border-border-light">
-                    "{descripcion || 'Sin descripción detallada.'}"
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {tab === 'bienes' && (
-              <div className="animate-in fade-in duration-300">
-                <div className="flex items-center justify-between mb-4 px-1">
-                   <h3 className="text-xs font-black uppercase tracking-widest text-faint">Listado de Activos ({bienes.length})</h3>
-                   <span className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-md font-black uppercase">Inventariados</span>
-                </div>
-                <div className="table-premium overflow-hidden border border-border-light rounded-2xl shadow-sm">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead className="bg-surface-alt border-b border-border-light">
-                      <tr>
-                        <th className="p-4 font-black uppercase tracking-tighter text-faint">Cód. Patrimonial</th>
-                        <th className="p-4 font-black uppercase tracking-tighter text-faint">Descripción del Bien</th>
-                        <th className="p-4 font-black uppercase tracking-tighter text-faint text-right">Serie</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-light bg-white">
-                      {bienes.map(b => (
-                        <tr key={b.id} className="hover:bg-surface transition-colors">
-                          <td className="p-4 font-bold text-primary font-mono tracking-tight">{b.codigo_patrimonial}</td>
-                          <td className="p-4">
-                            <div className="flex flex-col">
-                              <span className="font-black text-main uppercase text-[11px]">{b.tipo_bien_nombre}</span>
-                              <span className="text-[10px] text-faint">{b.marca_nombre} • {b.modelo}</span>
-                            </div>
-                          </td>
-                          <td className="p-4 text-right text-faint font-mono font-bold">{b.numero_serie || 'S/N'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {tab === 'seguimiento' && (
-              <div className="animate-in fade-in duration-300 space-y-6">
-                {(isCancelado || isDevuelto) && (
-                  <div className="p-4 rounded-2xl bg-red-50 border border-red-100 flex gap-4 items-start shadow-sm shadow-red-100">
-                    <div className="size-10 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0">
-                       <Icon name="gpp_bad" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-red-700 uppercase tracking-widest">
-                        {isCancelado ? 'Operación Anulada' : 'Devolución de Activos'}
-                      </p>
-                      <p className="text-sm text-red-600 italic font-medium mt-1">
-                        "{isCancelado ? cancelacion_nombre : motivo_devolucion}"
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="relative pl-10 space-y-10 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-primary before:to-border-light">
-                  {/* Inicio */}
-                  <div className="relative">
-                    <div className="absolute -left-[35px] size-8 rounded-full bg-primary flex items-center justify-center border-4 border-white shadow-md text-white">
-                      <Icon name="history_edu" className="text-[16px]" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-main uppercase tracking-tighter">Registro de Orden</p>
-                      <p className="text-[10px] text-faint font-bold">{new Date(fecha_registro).toLocaleString()}</p>
-                    </div>
-                  </div>
-
-                  {aprobaciones.map((aprob) => (
-                    <div key={aprob.id} className="relative group">
-                      <div className="absolute -left-[35px] size-8 rounded-full bg-green-500 flex items-center justify-center border-4 border-white shadow-md text-white transition-transform group-hover:scale-110">
-                        <Icon name="verified" className="text-[16px]" />
-                      </div>
-                      <div className="bg-surface-alt/50 p-4 rounded-xl border border-border-light group-hover:bg-white transition-all">
-                        <div className="flex justify-between items-start">
-                          <p className="text-xs font-black text-main uppercase">
-                            {aprob.accion.replace(/_/g, ' ')}
-                          </p>
-                          <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-black uppercase">
-                            {aprob.rol_aprobador.split('_')[0]}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-muted font-medium mt-2 border-l-2 border-border-light pl-3 italic">
-                          "{aprob.detalle}"
-                        </p>
-                        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border-light">
-                          <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                            <Icon name="person" className="text-sm" />
-                          </div>
-                          <div className="flex flex-col">
-                             <span className="text-[10px] font-black text-main uppercase leading-none">{aprob.rol_aprobador_nombre}</span>
-                             <span className="text-[9px] text-faint font-bold mt-1">{new Date(aprob.fecha).toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* SIDEBAR DERECHO (3) */}
-          <div className="col-span-3 bg-surface-alt/30 p-6 flex flex-col">
-            <div className="text-center pb-6 border-b border-border-light">
-              <p className="text-[9px] text-faint font-black uppercase tracking-widest mb-2">Orden de Transferencia</p>
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-border-light rounded-full mb-3">
-                <span className="size-2 rounded-full bg-primary animate-pulse" />
-                <span className="text-[11px] font-black text-primary font-mono">{numero_orden}</span>
-              </div>
+        <div className="flex h-full">
+          <div className="flex-1 min-w-0 flex flex-col">
+            <div className="flex gap-6 px-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
+              {TABS.map(t => (
+                <button key={t.id} onClick={() => setTab(t.id)}
+                  className="flex items-center gap-2 py-4 text-[10px] font-black uppercase tracking-widest transition-all border-b-2"
+                  style={{ borderBottomColor: tab === t.id ? 'var(--color-primary)' : 'transparent', color: tab === t.id ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+                  <Icon name={t.icon} className="text-[16px]" />{t.label}
+                </button>
+              ))}
             </div>
 
-            <div className="flex-1 py-8 space-y-8">
-              {/* Documentación */}
-              <div>
-                <p className="text-[9px] text-faint font-black uppercase mb-4 tracking-widest">Documentación</p>
-                {tiene_pdf_firmado ? (
-                  <div className="p-4 rounded-2xl border border-green-200 bg-white flex items-center gap-3 shadow-sm">
-                    <div className="size-9 rounded-xl bg-green-500 text-white flex items-center justify-center">
-                      <Icon name="check_circle" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-black text-main uppercase">PDF Firmado</p>
-                      <p className="text-[9px] text-green-600 font-bold truncate italic">{fecha_pdf}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-2xl border border-dashed border-border-light bg-surface flex items-center gap-3 opacity-60">
-                    <div className="size-9 rounded-xl bg-faint text-white flex items-center justify-center">
-                      <Icon name="timer" />
-                    </div>
-                    <p className="text-[10px] font-black text-faint uppercase leading-tight">Pendiente de Firma Digital</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Status */}
-              <div className="space-y-4">
-                 <p className="text-[9px] text-faint font-black uppercase tracking-widest">Resumen de Operación</p>
-                 <div className="space-y-3">
-                    <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-border-light">
-                      <span className="text-[10px] text-faint font-black uppercase">Estado</span>
-                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                        estado === 'ATENDIDO' ? 'bg-green-100 text-green-700' : 'bg-primary/10 text-primary'
-                      }`}>
-                        {estado.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-border-light">
-                      <span className="text-[10px] text-faint font-black uppercase">Bienes</span>
-                      <span className="text-xs font-black text-main">{bienes.length} Items</span>
-                    </div>
-                 </div>
-              </div>
-            </div>
-
-            {/* Micro-brand o Logo */}
-            <div className="pt-6 border-t border-border-light text-center">
-               <p className="text-[8px] font-black text-faint uppercase tracking-[0.3em]">Sistema de Gestión de Activos</p>
+            <div className="flex-1 overflow-y-auto p-6" style={{ maxHeight: '60vh' }}>
+              {tab === 'ruta'       && <TabRuta       item={item} />}
+              {tab === 'bienes'     && <TabBienes     bienes={bienes} />}
+              {tab === 'seguimiento' && <TabSeguimiento item={item} />}
             </div>
           </div>
+
+          <aside className="w-56 shrink-0 p-4 space-y-4 overflow-y-auto"
+            style={{ borderLeft: '1px solid var(--color-border)' }}>
+
+            <div className="card p-3 text-center space-y-2">
+              <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>N° Orden</p>
+              <p className="font-black text-xs font-mono" style={{ color: 'var(--color-primary)' }}>{numero_orden}</p>
+              <span className={`${badge.cls} text-[9px] font-black uppercase tracking-widest`}
+                style={{ padding: '3px 8px', borderRadius: '9999px', display: 'inline-block' }}>
+                {badge.label}
+              </span>
+            </div>
+
+            <div className="card p-3 space-y-2">
+              <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Resumen</p>
+              {[
+                { label: 'Bienes',   value: bienes.length,              icon: 'inventory_2'  },
+                { label: 'Tipo',     value: esAsignacion ? 'Asignación' : 'Traslado', icon: 'sync_alt' },
+                { label: 'Registro', value: fmtT(item.fecha_registro),  icon: 'calendar_today' },
+              ].map(s => (
+                <div key={s.label} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Icon name={s.icon} className="text-[13px] shrink-0" style={{ color: 'var(--color-text-faint)' }} />
+                    <span className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{s.label}</span>
+                  </div>
+                  <span className="text-xs font-black shrink-0" style={{ color: 'var(--color-text-primary)' }}>{s.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
+
+              {(pdf_path || estado === 'ATENDIDO') && (
+                <button onClick={handleDescarga}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                  style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
+                  <Icon name="picture_as_pdf" className="text-[16px]" />Descargar PDF
+                </button>
+              )}
+
+              {esAsignacion && estado === 'ATENDIDO' && !tiene_pdf_firmado && !pdf_firmado_path && (
+                <>
+                  <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                    onChange={handleSubirFirmado} />
+                  <button onClick={() => fileRef.current?.click()}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                    style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
+                    <Icon name="upload_file" className="text-[16px]" />Subir acta firmada
+                  </button>
+                  <p className="text-[10px] leading-relaxed" style={{ color: 'var(--color-text-faint)' }}>
+                    Sube el scan del acta firmada físicamente por el destinatario.
+                  </p>
+                </>
+              )}
+
+              {(tiene_pdf_firmado || pdf_firmado_path) && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl"
+                  style={{ background: 'rgb(22 163 74 / 0.08)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
+                  <Icon name="task_alt" className="text-[16px]" style={{ color: '#16a34a' }} />
+                  <div>
+                    <p className="text-[10px] font-black" style={{ color: '#16a34a' }}>Acta firmada</p>
+                    <p className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>Documento subido</p>
+                  </div>
+                </div>
+              )}
+
+              {esTraslado && estado === 'ATENDIDO' && !pdf_firmado_path && (
+                <div className="flex items-start gap-2 p-2.5 rounded-xl"
+                  style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+                  <Icon name="info" className="text-[14px] mt-0.5 shrink-0" style={{ color: 'var(--color-text-faint)' }} />
+                  <p className="text-[9px] leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
+                    PDF oficial generado automáticamente al completar el flujo de aprobaciones.
+                  </p>
+                </div>
+              )}
+            </div>
+          </aside>
         </div>
       </ModalBody>
 
-      <ModalFooter align="between">
-        <div className="flex gap-4 items-center">
-          <button onClick={onClose} className="btn-secondary px-6 font-black text-[11px] uppercase tracking-widest border border-border-light">
-            Cerrar Ventana
-          </button>
-          {pdf_path && (
-            <button className="flex items-center gap-2 text-[11px] font-black text-primary hover:bg-primary/5 px-3 py-2 rounded-lg transition-colors uppercase tracking-tighter">
-              <Icon name="picture_as_pdf" /> 
-              Ver Orden PDF
-            </button>
-          )}
-        </div>
+      <ModalFooter align="space">
+        <button onClick={onClose} className="btn-secondary">Cerrar</button>
 
-        <div className="flex gap-2">
-          {estado === 'PENDIENTE_APROBACION' && (
-            <button 
-              className="btn-primary flex items-center gap-2 px-8 py-3 shadow-xl shadow-primary/25"
-              onClick={() => acciones.aprobarAdminSede(item.id)}
-              disabled={actualizando}
-            >
-              <Icon name="verified" className={actualizando ? 'animate-spin' : ''} />
-              <span className="font-black uppercase tracking-widest text-xs">Aprobar Transferencia</span>
-            </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {estado === 'PENDIENTE_APROBACION' && puedeAprobarAdmin && (
+            <>
+              <button
+                onClick={() => ejecutarAccion(acciones.devolverAprobacion, item.id, 'Devuelto desde panel')}
+                disabled={actualizando}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer"
+                style={{ background: 'rgb(180 83 9 / 0.1)', color: '#b45309', border: '1px solid rgb(180 83 9 / 0.25)' }}>
+                <Icon name="reply" className="text-[16px]" />Devolver
+              </button>
+              <button
+                onClick={() => ejecutarAccion(acciones.aprobarAdminSede, item.id)}
+                disabled={actualizando}
+                className="btn-primary flex items-center gap-2">
+                {actualizando ? <span className="btn-loading-spin" /> : <Icon name="verified" className="text-[16px]" />}
+                {esAsignacion ? 'Aprobar asignación' : 'Aprobar traslado'}
+              </button>
+            </>
+          )}
+
+          {esTraslado && estado === 'PENDIENTE_APROBACION' && puedeAprobarSegur && (
+            <>
+              <button
+                onClick={() => ejecutarAccion(acciones.aprobarSalidaSeguridad, item.id)}
+                disabled={actualizando}
+                className="btn-primary flex items-center gap-2">
+                <Icon name="output" className="text-[16px]" />Aprobar salida
+              </button>
+              <button
+                onClick={() => ejecutarAccion(acciones.aprobarEntradaSeguridad, item.id)}
+                disabled={actualizando}
+                className="btn-primary flex items-center gap-2">
+                <Icon name="input" className="text-[16px]" />Aprobar entrada
+              </button>
+            </>
           )}
         </div>
       </ModalFooter>

@@ -11,7 +11,6 @@ class CatalogoBase(models.Model):
     def __str__(self):
         return self.nombre
 class CatCategoriaBien(CatalogoBase):
-    """Informático, Mueble, Inmueble, Vehicular, etc."""
     class Meta(CatalogoBase.Meta):
         db_table            = 'bienes_cat_categoria_bien'
         verbose_name        = 'Categoría de Bien'
@@ -41,12 +40,16 @@ class CatEstadoFuncionamiento(CatalogoBase):
         db_table       = 'bienes_cat_estado_funcionamiento'
         verbose_name   = 'Estado de Funcionamiento'
         verbose_name_plural = 'Estados de Funcionamiento'
+class CatMotivoMantenimiento(CatalogoBase):
+    class Meta(CatalogoBase.Meta):
+        db_table       = 'bienes_cat_motivo_mantenimiento'
+        verbose_name   = 'Motivo de mantenimiento'
+        verbose_name_plural = 'Motivos de mantenimiento'
 class CatMotivoBaja(CatalogoBase):
     class Meta(CatalogoBase.Meta):
         db_table       = 'bienes_cat_motivo_baja'
         verbose_name   = 'Motivo de Baja'
         verbose_name_plural = 'Motivos de Baja'
-
 class CatMotivoTransferencia(CatalogoBase):
     class Meta(CatalogoBase.Meta):
         db_table       = 'bienes_cat_motivo_transferencia'

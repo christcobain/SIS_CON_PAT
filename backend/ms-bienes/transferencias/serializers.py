@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import Transferencia, TransferenciaDetalle, TransferenciaAprobacion
-from bienes.services import MsUsuariosClient
 
 class AprobacionSerializer(serializers.ModelSerializer):
     rol_aprobador_nombre= serializers.CharField(read_only=True)  
@@ -22,20 +21,34 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
     sede_origen_nombre = serializers.CharField(read_only=True)
     modulo_origen_nombre = serializers.CharField(read_only=True)
     ubicacion_origen_nombre = serializers.CharField(read_only=True)
+    
     usuario_destino_nombre = serializers.CharField(read_only=True)
     sede_destino_nombre = serializers.CharField(read_only=True)    
     modulo_destino_nombre = serializers.CharField(read_only=True)
-    ubicacion_destino_nombre = serializers.CharField(read_only=True)     
-    motivo_nombre     = serializers.CharField(source='motivo.nombre',read_only=True)
+    ubicacion_destino_nombre = serializers.CharField(read_only=True)   
+    
+    confirmado_por_usuario_destino_id=serializers.IntegerField(read_only=True)
+    fecha_confirmacion_destino=serializers.DateTimeField(read_only=True)
+      
+    motivo_transferencia_nombre     = serializers.CharField(source='motivo_transferencia.nombre',read_only=True)
     cancelacion_nombre = serializers.SerializerMethodField()
     ultima_aprobacion = serializers.SerializerMethodField()
     tiene_pdf_firmado = serializers.SerializerMethodField()
+    aprobado_por_adminsede_nombre=serializers.CharField(read_only=True)
+    aprobado_segur_salida_nombre=serializers.CharField(read_only=True)
+    aprobado_segur_entrada_nombre=serializers.CharField(read_only=True)
+    confirmado_por_usuario_destino_nombre=serializers.CharField(read_only=True)
+    aprobado_retorno_salida_nombre=serializers.CharField(read_only=True)
+    aprobado_retorno_entrada_nombre=serializers.CharField(read_only=True)
+    
     bienes=TransferenciaDetalleSerializer(source='detalles',many=True,read_only=True)
     aprobaciones=AprobacionSerializer(many=True,read_only=True)
     class Meta:
         model  = Transferencia
         fields = [
-            'id', 'numero_orden', 'tipo', 'estado',
+            'id', 'numero_orden', 
+            'tipo', 
+            'estado_transferencia',
             'usuario_origen_id', 
             "usuario_origen_nombre",
             'sede_origen_id', 
@@ -56,13 +69,47 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
             "ubicacion_destino_nombre",    
             'piso_destino',
             
-            'descripcion',         
-            'motivo_nombre', 
+            'motivo_transferencia_nombre',            
+            'descripcion',  
+            
+            'estado_transferencia',
+            'fecha_registro',   
+            
+            'aprobado_por_adminsede_id',
+            'aprobado_por_adminsede_nombre',
+            'fecha_aprobacion_adminsede',
+            'aprobado_segur_salida_id',
+            'aprobado_segur_salida_nombre',
+            'fecha_aprobacion_segur_salida',
+            
+            'aprobado_segur_entrada_id',
+            'aprobado_segur_entrada_nombre',
+            'fecha_aprobacion_segur_entrada',
+            'observacion_segursede',
+            'confirmado_por_usuario_destino_id',
+            'confirmado_por_usuario_destino_nombre',
+            'fecha_confirmacion_destino',
+            
+            'aprobado_retorno_salida_id',
+            'aprobado_retorno_salida_nombre',
+            'fecha_aprobacion_retorno_salida',
+            'aprobado_retorno_entrada_id',
+            'aprobado_retorno_entrada_nombre',
+            'fecha_aprobacion_retorno_entrada',                     
+
+            'pdf_path', 
+            'tiene_pdf_firmado', 
+            'fecha_pdf',
+            
             'motivo_devolucion', 
+            
+            'fecha_cancelacion',
+            'motivo_cancelacion',
             'cancelacion_nombre',
-            'fecha_registro', 'ultima_aprobacion',
-            'pdf_path', 'tiene_pdf_firmado', 'fecha_pdf',
+            'detalle_cancelacion',
+            
             'bienes',
+            'ultima_aprobacion',
             'aprobaciones'
         ]
     def get_ultima_aprobacion(self, obj):

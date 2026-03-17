@@ -291,10 +291,11 @@ export default function RolesPage() {
         <div className="flex gap-4 h-[calc(100vh-320px)] min-h-[500px]">
           
           {/* Sidebar de Roles */}
-          <aside className="w-80 shrink-0 flex flex-col bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+          <aside className="w-80 shrink-0 flex flex-col  rounded-2xl overflow-hidden shadow-sm" 
+          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
             <div className="px-4 py-3 bg-surface-alt/50 border-b border-border flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-widest text-muted">Roles Registrados</span>
-              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">{roles.length}</span>
+              <span className="text-[10px] font-bold bg-primary/10 dark:bg-slate-700 text-primary dark:text-red-400 px-2 py-0.5 rounded-full">{roles.length}</span>
             </div>
 
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -314,7 +315,8 @@ export default function RolesPage() {
           </aside>
 
           {/* Área Principal de Trabajo */}
-          <main className="flex-1 min-w-0 bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+          <main className="flex-1 min-w-0 bg-surface border border-border rounded-2xl overflow-hidden shadow-sm" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+
             {!rolSeleccionado && !loadingDetalle ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-10">
                 <div className="size-20 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-border">

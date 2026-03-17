@@ -3,10 +3,9 @@ import transferenciasService from '../services/transferencias.service';
 
 export function useTransferencias(activeTab, params) {
   const [transferencias, setTransferencias] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [actualizando, setActualizando] = useState(false);
-
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState(null);
+  const [actualizando,   setActualizando]   = useState(false);
 
   const fetchTransferencias = useCallback(async () => {
     setLoading(true);
@@ -14,27 +13,23 @@ export function useTransferencias(activeTab, params) {
     try {
       const { misTransferencias, usuarioId } = params;
       let data;
-      if (misTransferencias=== true) {
-        data = await transferenciasService.misTransferencias(usuarioId, { 
-          tipo: activeTab 
-        });
+      if (misTransferencias === true) {
+        data = await transferenciasService.misTransferencias(usuarioId, { tipo: activeTab });
       } else {
-        data = await transferenciasService.listar({ 
-          tipo: activeTab 
-        });
-      }      
+        data = await transferenciasService.listar({ tipo: activeTab });
+      }
       setTransferencias(Array.isArray(data) ? data : data?.results ?? []);
     } catch (e) {
-      console.error("Error en useTransferencias:", e);
       setError(e?.response?.data?.error || 'Error al cargar transferencias');
     } finally {
       setLoading(false);
     }
-  }, [activeTab, params.misTransferencias, params.usuarioId]); 
+  }, [activeTab, params.misTransferencias, params.usuarioId]);
 
   useEffect(() => {
     fetchTransferencias();
   }, [fetchTransferencias]);
+
   const ejecutarYRefrescar = async (fn, ...args) => {
     setActualizando(true);
     try {
@@ -51,15 +46,15 @@ export function useTransferencias(activeTab, params) {
   const descargarPDF = async (id) => {
     try {
       const blob = await transferenciasService.descargarPDF(id);
-      const url = window.URL.createObjectURL(blob);
+      const url  = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
+      link.href  = url;
       link.setAttribute('download', `transferencia-${id}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
     } catch (e) {
-      console.error("Error descargando PDF", e);
+      console.error('Error descargando PDF', e);
     }
   };
 
@@ -68,17 +63,18 @@ export function useTransferencias(activeTab, params) {
     loading,
     error,
     actualizando,
-    refetch: fetchTransferencias,    
+    refetch: fetchTransferencias,
     descargarPDF,
-    crearTraslado: (data) => ejecutarYRefrescar(transferenciasService.crearTraslado, data),
-    crearAsignacion: (data) => ejecutarYRefrescar(transferenciasService.crearAsignacion, data),
-    aprobarAdminSede: (id) => ejecutarYRefrescar(transferenciasService.aprobarAdminSede, id),
-    devolverAprobacion: (id, motivo) => ejecutarYRefrescar(transferenciasService.devolverAprobacion, id, motivo),
-    aprobarSalidaSeguridad: (id, data) => ejecutarYRefrescar(transferenciasService.aprobarSalidaSeguridad, id, data),
-    aprobarEntradaSeguridad: (id, data) => ejecutarYRefrescar(transferenciasService.aprobarEntradaSeguridad, id, data),
-    retornoSalida: (id, data) => ejecutarYRefrescar(transferenciasService.retornoSalida, id, data),
-    retornoEntrada: (id, data) =>  ejecutarYRefrescar(transferenciasService.retornoEntrada, id, data),
-    reenviarTransferencia: (id, data) =>  ejecutarYRefrescar(transferenciasService.reenviar, id, data),
-    cancelar: (id) => ejecutarYRefrescar(transferenciasService.cancelar, id),
+    crearTraslado:          (data)         => ejecutarYRefrescar(transferenciasService.crearTraslado, data),
+    crearAsignacion:        (data)         => ejecutarYRefrescar(transferenciasService.crearAsignacion, data),
+    aprobarAdminSede:       (id)           => ejecutarYRefrescar(transferenciasService.aprobarAdminSede, id),
+    devolverAprobacion:     (id, motivo)   => ejecutarYRefrescar(transferenciasService.devolverAprobacion, id, motivo),
+    aprobarSalidaSeguridad: (id, data)     => ejecutarYRefrescar(transferenciasService.aprobarSalidaSeguridad, id, data),
+    aprobarEntradaSeguridad:(id, data)     => ejecutarYRefrescar(transferenciasService.aprobarEntradaSeguridad, id, data),
+    retornoSalida:          (id, data)     => ejecutarYRefrescar(transferenciasService.retornoSalida, id, data),
+    retornoEntrada:         (id, data)     => ejecutarYRefrescar(transferenciasService.retornoEntrada, id, data),
+    reenviarTransferencia:  (id, data)     => ejecutarYRefrescar(transferenciasService.reenviar, id, data),
+    cancelar:               (id, data)     => ejecutarYRefrescar(transferenciasService.cancelar, id, data),
+    subirFirmado:           (id, archivo)  => ejecutarYRefrescar(transferenciasService.subirFirmado, id, archivo),
   };
 }

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import (CatCategoriaBien,  CatTipoBien,CatTipoTarjetaVideo, CatMarca, CatRegimenTenencia, CatEstadoBien,
-    CatEstadoFuncionamiento, CatMotivoBaja, CatMotivoTransferencia,
+    CatEstadoFuncionamiento, CatMotivoBaja, CatMotivoTransferencia,CatMotivoMantenimiento,
     CatMotivoCancelacion, CatTipoComputadora, CatTipoDisco,
     CatArquitecturaBits, CatTipoMonitor, CatTipoEscaner,
     CatInterfazConexion, CatTipoImpresion, CatTamanoCarro,
@@ -49,10 +49,12 @@ class CatEstadoFuncionamientoSerializer(CatalogoBaseSerializer):
 class CatMotivoBajaSerializer(CatalogoBaseSerializer):
     class Meta(CatalogoBaseSerializer.Meta):
         model = CatMotivoBaja
-
 class CatMotivoTransferenciaSerializer(CatalogoBaseSerializer):
     class Meta(CatalogoBaseSerializer.Meta):
         model = CatMotivoTransferencia
+class CatMotivoMantenimientoSerializer(CatalogoBaseSerializer):
+    class Meta(CatalogoBaseSerializer.Meta):
+        model = CatMotivoMantenimiento
 
 class CatMotivoCancelacionSerializer(CatalogoBaseSerializer):
     class Meta(CatalogoBaseSerializer.Meta):

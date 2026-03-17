@@ -9,6 +9,7 @@ from .repositories import (MantenimientoRepository,MantenimientoDetalleRepositor
     MantenimientoImagenRepository)
 from bienes.repositories import BienRepository
 from catalogos.models import CatEstadoFuncionamiento
+from bienes.services import MsUsuariosClient
 
 class MantenimientoService:
     @staticmethod
@@ -73,22 +74,50 @@ class MantenimientoService:
             'data': mantenimiento,
         }
     @staticmethod
-    def listar(filters: Dict[str, Any]) -> Dict[str, Any]:
-        return {'success': True, 'data': MantenimientoRepository.filter(filters)}
+    def get_user_name(user_id,token):
+            if not user_id:
+                return None
+            try:
+                usuario = MsUsuariosClient.validar_usuario(user_id, token)
+                if usuario and isinstance(usuario, dict):
+                    return f"{usuario.get('first_name', '')} {usuario.get('last_name', '')}".strip()
+                return "Usuario no encontrado"
+            except Exception:
+                return "Error en consulta"
     @staticmethod
-    def mis_mantenimientos(
-        usuario_id: int,
-        role: str,
-        sede_id: int,
-        filters: Dict[str, Any],
-    ) -> Dict[str, Any]:
+    def _enriquecer_transferencia(tr, token):        
+        sede_origen = MsUsuariosClient.validar_sede(tr.sede_id, token)
+        tr.sede_nombre = sede_origen.get('nombre') if sede_origen else None        
+        if tr.modulo_id:
+            modulo = MsUsuariosClient.validar_modulo(tr.modulo_id, token)
+            tr.modulo_nombre = modulo.get('nombre') if modulo else None
+        else:
+            tr.modulo_nombre = None      
+        tr.usuario_propietario_nombre = MantenimientoService.get_user_name(tr.usuario_propietario_id,token)           
+        tr.aprobado_por_adminsede_nombre = MantenimientoService.get_user_name(tr.aprobado_por_adminsede_id, token)
+        tr.confirmado_por_propietario_nombre  = MantenimientoService.get_user_name(tr.confirmado_por_propietario_id, token)
+        return tr  
+    @staticmethod
+    def listar(filters: Dict[str, Any],token) -> Dict[str, Any]:
+        qs=MantenimientoRepository.filter(filters)
+        for tr in qs:
+            MantenimientoService._enriquecer_transferencia(tr, token)
+            _ = list(tr.detalles.all())
+        return qs
+    @staticmethod
+    def mis_mantenimientos(usuario_id: int,role: str,sede_id: int,filters: Dict[str, Any],) -> Dict[str, Any]:
         qs = MantenimientoRepository.filter_mis_mantenimientos(usuario_id, role, sede_id)
         if filters.get('estado'):
             qs = qs.filter(estado=filters['estado'])
         return {'success': True, 'data': qs}
     @staticmethod
-    def obtener(pk: int) -> Dict[str, Any]:
-        return {'success': True, 'data': MantenimientoService._get_or_404(pk)}
+    def obtener(pk: int,token) -> Dict[str, Any]:
+        mant=MantenimientoRepository.get_by_id(pk)
+        if not mant:
+            raise ValidationError("Mantenimiento no existe")
+        MantenimientoService._enriquecer_transferencia(mant, token)
+        _ = list(mant.detalles.all())
+        return mant
     @staticmethod
     @transaction.atomic
     def enviar_a_aprobacion(pk: int,usuario_id: int,trabajos_realizados: str,diagnostico: str,detalles_estado: List[Dict],) -> Dict[str, Any]:

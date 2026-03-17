@@ -84,8 +84,7 @@ class MsUsuariosClient:
             raise ValidationError(f'status:{status_code}. ms-usuarios/validar_usuario. Ubicacion con id={usuario_id} no existe en.')
         if status_code == 503:
             raise ValidationError(f'Status: {status_code}. ms-usuarios/validar_usuario no disponible. Intente más tarde.')
-        if not data.get('is_active', False):
-            raise ValidationError(f'El usuario con id={usuario_id} está inactivo.')
+        
         return data
 class BienService:
     @staticmethod

@@ -16,13 +16,16 @@ class Bien(models.Model):
     estado_bien           = models.ForeignKey(CatEstadoBien, on_delete=models.PROTECT, related_name='bienes')
     estado_funcionamiento = models.ForeignKey(CatEstadoFuncionamiento, on_delete=models.PROTECT, related_name='bienes')
     detalle_tecnico       = models.TextField(null=True, blank=True)
+    
     empresa_id   = models.IntegerField()
     sede_id      = models.IntegerField()
     modulo_id    = models.IntegerField(null=True, blank=True)
     ubicacion_id = models.IntegerField(null=True, blank=True)
     piso         = models.SmallIntegerField(null=True, blank=True)
+    
     usuario_asignado_id = models.IntegerField(null=True, blank=True)
     usuario_registra_id = models.IntegerField()
+    
     anio_adquisicion          = models.SmallIntegerField(null=True, blank=True)
     fecha_compra              = models.DateField(null=True, blank=True)
     numero_orden_compra       = models.CharField(max_length=50, null=True, blank=True)

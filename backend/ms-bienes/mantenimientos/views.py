@@ -100,21 +100,8 @@ class MantenimientoViewSet(ViewSet):
         return sedes[0]
 
     def list(self, request):
-        filters = {
-            key: request.query_params.get(key)
-            for key in ['estado', 'sede_id', 'usuario_realiza_id', 'usuario_propietario_id']
-        }
-        for k in ['sede_id', 'usuario_realiza_id', 'usuario_propietario_id']:
-            if filters[k]:
-                try:
-                    filters[k] = int(filters[k])
-                except ValueError:
-                    filters[k] = None
-        result = MantenimientoService.listar(filters)
-        return Response(
-            MantenimientoListSerializer(result['data'], many=True).data,
-            status=status.HTTP_200_OK,
-        )
+        qs = MantenimientoService.listar(request.query_params, self._get_token(request))
+        return Response(MantenimientoListSerializer(qs, many=True).data)
     def retrieve(self, request, pk=None):
         result = MantenimientoService.obtener(pk)
         return Response(

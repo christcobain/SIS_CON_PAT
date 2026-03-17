@@ -93,6 +93,14 @@ export const CATALOGOS_META = [
     descripcion: 'Razones por las que un bien es dado de baja.',
     perm:        'ms-bienes:catalogos:view_cattipobien',
   },
+   {
+    key:         'motivosMantenimiento',
+    label:       'Motivos de Mantenimiento',
+    icon:        'swap_horiz',
+    grupo:       'motivos',
+    descripcion: 'Razones que justifican el mantenimiento de un bien informático.',
+    perm:        'ms-bienes:catalogos:view_cattipobien',
+  },
   {
     key:         'motivosTransferencia',
     label:       'Motivos de Transferencia',
