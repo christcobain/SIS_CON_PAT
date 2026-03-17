@@ -36,7 +36,7 @@ class MantenimientoService:
             pass  
     @staticmethod
     @transaction.atomic
-    def crear(data: Dict[str, Any],usuario_realiza_id: int,sede_id: int) -> Dict[str, Any]:
+    def crear(data: Dict[str, Any],usuario_realiza_id: int,sede_id: int,modulo_id:int) -> Dict[str, Any]:
         bien_ids = data.pop('bien_ids', [])
         if not bien_ids:
             raise ValidationError('Debe incluir al menos un bien.')
@@ -65,6 +65,7 @@ class MantenimientoService:
             'estado':                 'EN_PROCESO',
             'usuario_realiza_id':     usuario_realiza_id,
             'sede_id':                sede_id,
+            'modulo_id':              modulo_id,            
             'usuario_propietario_id': usuario_propietario_id,
         })
         MantenimientoDetalleRepository.bulk_create(mantenimiento, bienes)

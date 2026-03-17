@@ -98,7 +98,8 @@ class MantenimientoViewSet(ViewSet):
         if not sedes:
             raise ValidationError('El usuario no tiene sede asignada.')
         return sedes[0]
-
+    def _get_modulo(self, request):
+        return request.auth.get('modulo_id', None) if request.auth else None 
     def list(self, request):
         qs = MantenimientoService.listar(request.query_params, self._get_token(request))
         return Response(MantenimientoListSerializer(qs, many=True).data)
@@ -115,6 +116,7 @@ class MantenimientoViewSet(ViewSet):
             ser.validated_data,
             request.user.id,
             self._get_sede(request),
+            self._get_modulo(request)
         )
         return Response(
             MantenimientoDetailSerializer(result['data']).data,
@@ -177,7 +179,6 @@ class MantenimientoViewSet(ViewSet):
             ser.validated_data.get('detalles_estado', []),
         )
         return Response(result, status=status.HTTP_200_OK)
-
     @extend_schema(
         tags=['Mantenimientos'],
         summary='Aprobar mantenimiento (ADMINSEDE)',
@@ -204,7 +205,6 @@ class MantenimientoViewSet(ViewSet):
             ser.validated_data.get('observacion', ''),
         )
         return Response(result, status=status.HTTP_200_OK)
-
     @extend_schema(
         tags=['Mantenimientos'],
         summary='Confirmar conformidad del propietario',
