@@ -66,7 +66,7 @@ class BienViewSet(ViewSet):
                     filters[key] = None
         role    = request.auth.get('role', '') if request.auth else ''
         sede_id = self._get_sede(request)
-        result = BienService.listar(filters, role=role, sede_id=sede_id)
+        result = BienService.listar(filters, role=role, sede_id=sede_id,token=self._get_token(request))
         serializer = BienListSerializer(result['data'], many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     @extend_schema(
@@ -79,7 +79,7 @@ class BienViewSet(ViewSet):
         responses={200: BienDetailSerializer},
     )
     def retrieve(self, request, pk=None):
-        result = BienService.obtener(pk)
+        result = BienService.obtener(pk,self._get_token(request))
         serializer=BienListSerializer(result['data'])
         return Response(serializer.data,status=status.HTTP_200_OK,)
     @extend_schema(

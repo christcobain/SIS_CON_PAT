@@ -83,9 +83,9 @@ class MsUsuariosClient:
         if status_code == 404:
             raise ValidationError(f'status:{status_code}. ms-usuarios/validar_usuario. Ubicacion con id={usuario_id} no existe en.')
         if status_code == 503:
-            raise ValidationError(f'Status: {status_code}. ms-usuarios/validar_usuario no disponible. Intente más tarde.')
-        
+            raise ValidationError(f'Status: {status_code}. ms-usuarios/validar_usuario no disponible. Intente más tarde.')        
         return data
+    
 class BienService:
     @staticmethod
     def _validar_unicidad_serie(numero_serie: str, exclude_pk: int = None):
@@ -129,26 +129,63 @@ class BienService:
         else:
             repo.create(bien, detalle_data)
     @staticmethod
-    def listar(filters: Dict[str, Any], role: str = None, sede_id: int = None) -> Dict[str, Any]:
+    def get_user_name(user_id,token):
+            if not user_id:
+                return None
+            try:
+                usuario = MsUsuariosClient.validar_usuario(user_id, token)
+                if usuario and isinstance(usuario, dict):
+                    return f"{usuario.get('first_name', '')} {usuario.get('last_name', '')}".strip()
+                return "Usuario no encontrado"
+            except Exception:
+                return "Error en consulta"
+    @staticmethod
+    def _enriquecer_transferencia(tr, token):        
+        empresa_origen = MsUsuariosClient.validar_empresa(tr.empresa_id, token)
+        tr.empresa_nombre = empresa_origen.get('nombre') if empresa_origen else None 
+        sede_origen = MsUsuariosClient.validar_sede(tr.sede_id, token)
+        tr.sede_nombre = sede_origen.get('nombre') if sede_origen else None        
+        if tr.modulo_id:
+            modulo = MsUsuariosClient.validar_modulo(tr.modulo_id, token)
+            tr.modulo_nombre = modulo.get('nombre') if modulo else None
+        else:
+            tr.modulo_nombre = None   
+        if tr.ubicacion_id:
+            ubicacion = MsUsuariosClient.validar_ubicacion(tr.ubicacion_id, token)
+            tr.ubicacion_nombre = ubicacion.get('nombre') if ubicacion else None
+        else:
+            tr.ubicacion_nombre = None   
+        tr.usuario_asignado_nombre = BienService.get_user_name(tr.usuario_asignado_id,token)           
+        tr.usuario_registra_nombre = BienService.get_user_name(tr.usuario_registra_id, token)
+        return tr  
+    @staticmethod
+    def listar(filters: Dict[str, Any],token, role: str = None, sede_id: int = None) -> Dict[str, Any]:
         ROLES_VE_TODOS = {'SYSADMIN', 'analistaSistema', 'coordSistema'}
         if role == 'asistSistema' and sede_id:
             filters['sede_id'] = sede_id
         elif role not in ROLES_VE_TODOS and sede_id:
             filters['sede_id'] = sede_id
         qs = BienRepository.filter(filters)
-        return {"success": True, "data": qs}
+        for tr in qs:
+            BienService._enriquecer_transferencia(tr, token)
+            _ = list(tr.detalles.all())
+        return qs
     @staticmethod
-    def obtener(pk: int) -> Dict[str, Any]:
+    def obtener(pk: int,token) -> Dict[str, Any]:
         bien = BienRepository.get_by_id(pk)
         if not bien:
-            raise NotFound(f'Bien no encontrado.')
-        return {"success": True, "data": bien}
+            raise ValidationError("Bien no existe")
+        BienService._enriquecer_transferencia(bien,token)
+        _ = list(bien.detalles.all())
+        return bien
     @staticmethod
-    def listar_por_usuario(usuario_id: int) -> Dict[str, Any]:
-        qs = BienRepository.get_bienes_by_usuario(usuario_id)
-        if not qs:
-            raise NotFound(f'Usuario no cuenta con bienes asignados.')
-        return {"success": True, "data": qs}
+    def listar_por_usuario(usuario_id: int,token) -> Dict[str, Any]:
+        bien = BienRepository.get_bienes_by_usuario(usuario_id)
+        if not bien:
+            raise ValidationError("Usuario no cuenta con Bienes registrados")
+        BienService._enriquecer_transferencia(bien,token)
+        _ = list(bien.detalles.all())
+        return bien
     @staticmethod
     @transaction.atomic
     def crear(data: Dict[str, Any], usuario_registra_id: int, token: str = None) -> Dict[str, Any]:

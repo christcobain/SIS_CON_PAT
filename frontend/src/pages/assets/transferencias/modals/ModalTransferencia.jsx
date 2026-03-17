@@ -4,7 +4,7 @@ import ModalHeader from '../../../../components/modal/ModalHeader';
 import ModalBody   from '../../../../components/modal/ModalBody';
 import ModalFooter from '../../../../components/modal/ModalFooter';
 import { useBienes } from '../../../../hooks/useBienes';
-import { useTransferencias } from '../../../../hooks/useTransferencias';
+
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>

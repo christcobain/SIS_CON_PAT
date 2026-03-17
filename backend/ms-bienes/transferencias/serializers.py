@@ -46,7 +46,8 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Transferencia
         fields = [
-            'id', 'numero_orden', 
+            'id', 
+            'numero_orden', 
             'tipo', 
             'estado_transferencia',
             'usuario_origen_id', 

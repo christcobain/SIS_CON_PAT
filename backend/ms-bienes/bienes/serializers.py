@@ -44,18 +44,64 @@ class BienListSerializer(serializers.ModelSerializer):
     categoria_bien_nombre = serializers.CharField(source='categoria_bien.nombre', read_only=True, default=None)
     tipo_bien_nombre          = serializers.CharField(source='tipo_bien.nombre', read_only=True)
     marca_nombre              = serializers.CharField(source='marca.nombre', read_only=True)
-    estado_bien_nombre        = serializers.CharField(source='estado_bien.nombre', read_only=True)
+    regimen_tenencia_nombre=serializers.CharField(source='regimen_tenencia.nombre', read_only=True)    
+    estado_bien_nombre        = serializers.CharField(source='estado_bien.nombre', read_only=True)    
     estado_funcionamiento_nombre = serializers.CharField(source='estado_funcionamiento.nombre', read_only=True)
+    motivo_baja_nombre        = serializers.CharField(source='motivo_baja.nombre', read_only=True, default=None)
+    
+    empresa_nombre=serializers.CharField(read_only=True)  
+    sede_nombre= serializers.CharField(read_only=True) 
+    modulo_nombre=serializers.CharField(read_only=True) 
+    ubicacion_nombre= serializers.CharField(read_only=True) 
+    usuario_asignado_nombre=serializers.CharField(read_only=True) 
+    usuario_registra_nombre=serializers.CharField(read_only=True) 
     class Meta:
         model  = Bien
         fields = [
-            'id', 'categoria_bien_nombre','tipo_bien_nombre', 'marca_nombre', 'modelo',
-            'codigo_patrimonial', 'numero_serie',
-            'sede_id', 'modulo_id', 'ubicacion_id', 'piso',
+            'id', 
+            'categoria_bien_nombre',
+            'tipo_bien_nombre', 
+            'marca_nombre', 
+            'modelo',
+            'numero_serie',
+            'codigo_patrimonial', 
+            'regimen_tenencia_nombre',
+            'estado_bien_nombre', 
+            'estado_funcionamiento_nombre',
+            'detalle_tecnico',
+            
+            'empresa_id', 
+            'empresa_nombre',            
+            'sede_id', 
+            'sede_nombre', 
+            'modulo_id', 
+            'modulo_nombre', 
+            'ubicacion_id', 
+            'ubicacion_nombre',
+            'piso',
+            
             'usuario_asignado_id',
-            'estado_bien_nombre', 'estado_funcionamiento_nombre',
-            'is_active', 'fecha_registro',
+            'usuario_asignado_nombre',
+            'usuario_registra_id',  
+            'usuario_registra_nombre',    
+            
+            'anio_adquisicion',  
+            'fecha_compra','numero_orden_compra',
+            'fecha_vencimiento_garantia',
+            'fecha_instalacion',
+            'fecha_ultimo_inventario',
+            'observacion',
+            'fecha_ultimo_mantenimiento',
+            'fecha_registro',
+            'fecha_actualizacion',
+            'fecha_baja', 
+            'motivo_baja_nombre',             
+            
+            'is_active', 
+            'corte',
         ]
+        
+        
 
 class BienDetailSerializer(serializers.ModelSerializer):
     categoria_bien_nombre = serializers.CharField(source='categoria_bien.nombre', read_only=True, default=None)
@@ -74,6 +120,9 @@ class BienDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Bien
         fields = '__all__'
+
+
+
 
 class BienDetalleCpuWriteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -98,7 +147,6 @@ class BienDetalleSwitchWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model   = BienDetalleSwitch
         exclude = ['id', 'bien']
-
 class BienWriteSerializer(serializers.Serializer):
     categoria_bien_id = serializers.IntegerField(required=False, allow_null=True)
     tipo_bien_id             = serializers.IntegerField()
