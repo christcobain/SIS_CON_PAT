@@ -11,7 +11,7 @@ from .repositories import (
     TransferenciaAprobacionRepository,
 )
 from bienes.repositories import BienRepository
-from bienes.services import MsUsuariosClient
+from shared.clients import MsUsuariosClient
 
 ROLES_REGISTRA_TRASLADO   = {'analistaSistema', 'coordSistema', 'SYSADMIN'}
 ROLES_REGISTRA_ASIGNACION = {'asistSistema', 'SYSADMIN'}
@@ -278,7 +278,7 @@ class TransferenciaService:
         bienes   = TransferenciaService._get_bienes_validados(bien_ids)
         origen   = TransferenciaService._extraer_origen(bienes)
         if data['sede_destino_id'] == origen['sede_origen_id']:
-            raise ValidationError('La sede destino debe ser diferente a la sede origen.')
+            raise ValidationError('Bien asignado es de la misma Sede destino. Seleccione otro bien.')
         MsUsuariosClient.validar_usuario(data['usuario_destino_id'], token)
         MsUsuariosClient.validar_sede(data['sede_destino_id'], token)
         if data.get('modulo_destino_id'):
@@ -295,8 +295,7 @@ class TransferenciaService:
         TransferenciaService._cambiar_estado_bienes(bienes, 'EN_TRASLADO')
         return {
             "success": True,
-            "message": "Traslado registrado exitosamente.",
-            "data":    {"id": transferencia.id, "numero_orden": transferencia.numero_orden},
+            "message": "Traslado Nro. " + str(transferencia.numero_orden) + " registrado exitosamente."
         }
     @staticmethod
     @transaction.atomic
@@ -328,8 +327,7 @@ class TransferenciaService:
         TransferenciaService._cambiar_estado_bienes(bienes, 'EN_ASIGNACION')
         return {
             "success": True,
-            "message": "Asignación interna registrada exitosamente.",
-            "data":    {"id": transferencia.id, "numero_orden": transferencia.numero_orden},
+            "message": "Asignación interna Nro. " + str(transferencia.numero_orden) + " registrada exitosamente."
         }
     @staticmethod
     @transaction.atomic
@@ -648,7 +646,7 @@ class TransferenciaService:
             'fecha_aprobacion_retorno_entrada': None,
         }
         for campo in [
-            'motivo_id', 'descripcion', 'usuario_destino_id', 'sede_destino_id',
+            'motivo_transferencia_id', 'descripcion', 'usuario_destino_id', 'sede_destino_id',
             'modulo_destino_id', 'ubicacion_destino_id', 'piso_destino',
             'sede_origen_id', 'modulo_origen_id', 'usuario_origen_id',
         ]:

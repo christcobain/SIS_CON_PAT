@@ -5,7 +5,7 @@ const Icon = ({ name, className = '' }) => (
 );
 
 const ROLES_SISTEMA = [
-  'SYSADMIN', 'COORDSISTEMA', 'ADMINSEDE', 'ASISTSISTEMA', 'SEGURSEDE', 'USUARIOFINAL',
+  'SYSADMIN', 'coordSistema', 'adminSede', 'asistSistema', 'segurSede', 'userCorte',
 ];
 
 // ── Componente de Chip Refinado ───────────────────────────────────────────────

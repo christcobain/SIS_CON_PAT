@@ -64,11 +64,11 @@ class BienViewSet(ViewSet):
                     filters[key] = int(filters[key])
                 except ValueError:
                     filters[key] = None
+ 
         role    = request.auth.get('role', '') if request.auth else ''
         sede_id = self._get_sede(request)
-        result = BienService.listar(filters, role=role, sede_id=sede_id,token=self._get_token(request))
-        serializer = BienListSerializer(result['data'], many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        result  = BienService.listar(filters, token=self._get_token(request), role=role, sede_id=sede_id)
+        return Response(BienListSerializer(result['data'], many=True).data, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Bienes'],
         summary="Obtener detalle completo de un bien",
@@ -79,9 +79,8 @@ class BienViewSet(ViewSet):
         responses={200: BienDetailSerializer},
     )
     def retrieve(self, request, pk=None):
-        result = BienService.obtener(pk,self._get_token(request))
-        serializer=BienListSerializer(result['data'])
-        return Response(serializer.data,status=status.HTTP_200_OK,)
+        result = BienService.obtener(pk, token=self._get_token(request))
+        return Response(BienDetailSerializer(result['data']).data, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Bienes'],
         summary="Registrar nuevo bien patrimonial",
@@ -99,19 +98,14 @@ class BienViewSet(ViewSet):
         ser.is_valid(raise_exception=True)
         validated = ser.validated_data
         token = self._get_token(request)
-        print('request.user.==',request.user)
-        print('validated==',validated)
         try:
             tipo_bien = CatTipoBien.objects.get(pk=validated['tipo_bien_id'])
             validated['tipo_bien_nombre'] = tipo_bien.nombre
         except CatTipoBien.DoesNotExist:
-            return Response({"success": False, "error": "tipo_bien_id inválido."}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response({'success': False, 'error': 'tipo_bien_id inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+ 
         result = BienService.crear(validated, usuario_registra_id=request.user.id, token=token)
-        return Response(
-            {"success": True, "message": result['message']},
-            status=status.HTTP_201_CREATED,
-        )
+        return Response({'success': True, 'message': result['message']}, status=status.HTTP_201_CREATED)
     @extend_schema(
         tags=['Bienes'],
         summary="Actualizar datos de un bien",

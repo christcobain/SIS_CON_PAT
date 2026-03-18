@@ -153,7 +153,7 @@ class TrasladoSedeWriteSerializer(serializers.Serializer):
     modulo_destino_id    = serializers.IntegerField(required=False, allow_null=True)
     ubicacion_destino_id = serializers.IntegerField(required=False, allow_null=True)
     piso_destino         = serializers.IntegerField(required=False, allow_null=True)
-    motivo_id            = serializers.IntegerField(required=False, allow_null=True)
+    motivo_transferencia_id            = serializers.IntegerField(required=False, allow_null=True)
     descripcion          = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -164,7 +164,7 @@ class AsignacionInternaWriteSerializer(serializers.Serializer):
     modulo_destino_id    = serializers.IntegerField(required=False, allow_null=True)
     ubicacion_destino_id = serializers.IntegerField(required=False, allow_null=True)
     piso_destino         = serializers.IntegerField(required=False, allow_null=True)
-    motivo_id            = serializers.IntegerField(required=False, allow_null=True)
+    motivo_transferencia_id            = serializers.IntegerField(required=False, allow_null=True)
     descripcion          = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -177,7 +177,7 @@ class CancelacionSerializer(serializers.Serializer):
     detalle_cancelacion   = serializers.CharField(required=False, allow_blank=True)
 class ReenvioSerializer(serializers.Serializer):
     bien_ids             = serializers.ListField(child=serializers.IntegerField(), min_length=1, required=False,)
-    motivo_id            = serializers.IntegerField(required=False, allow_null=True)
+    motivo_transferencia_id            = serializers.IntegerField(required=False, allow_null=True)
     descripcion          = serializers.CharField(required=False, allow_blank=True)
     usuario_destino_id   = serializers.IntegerField(required=False)
     sede_destino_id      = serializers.IntegerField(required=False)

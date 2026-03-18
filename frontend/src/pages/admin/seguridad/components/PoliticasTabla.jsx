@@ -124,6 +124,7 @@ function ModalPolitica({ open, onClose, item, onGuardado }) {
       toast.success(esEditar ? 'Política actualizada.' : 'Política creada.');
       onGuardado();
     } catch (e) {
+      console.log('ERROR=',e)
       toast.error(e?.response?.data?.detail || e?.response?.data?.error || 'Error al guardar la política.');
     } finally { setGuardando(false); }
   };

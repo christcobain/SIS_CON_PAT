@@ -24,8 +24,8 @@ class MantenimientoRepository:
     @staticmethod
     def filter(filters: Dict[str, Any]) -> QuerySet:
         qs = Mantenimiento.objects.prefetch_related('detalles').select_related('motivo_cancelacion')
-        if filters.get('estado'):
-            qs = qs.filter(estado=filters['estado'])
+        if filters.get('estado_mantenimiento'):
+            qs = qs.filter(estado_mantenimiento=filters['estado_mantenimiento'])
         if filters.get('sede_id'):
             qs = qs.filter(sede_id=filters['sede_id'])
         if filters.get('usuario_realiza_id'):

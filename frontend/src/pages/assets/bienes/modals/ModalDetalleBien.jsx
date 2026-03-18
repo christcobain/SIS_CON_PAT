@@ -1,317 +1,399 @@
 import { useState, useEffect } from 'react';
-import Modal        from '../../../../components/modal/Modal';
-import ModalHeader  from '../../../../components/modal/ModalHeader';
-import ModalBody    from '../../../../components/modal/ModalBody';
-import ModalFooter  from '../../../../components/modal/ModalFooter';
+import Modal       from '../../../../components/modal/Modal';
+import ModalHeader from '../../../../components/modal/ModalHeader';
+import ModalBody   from '../../../../components/modal/ModalBody';
+import ModalFooter from '../../../../components/modal/ModalFooter';
 import { useBienes } from '../../../../hooks/useBienes';
+import { useAuthStore } from '../../../../store/authStore';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
 );
 
-function Spinner() {
-  return (
-    <div className="flex items-center justify-center py-16">
-      <svg className="animate-spin h-5 w-5" style={{ color: 'var(--color-primary)' }}
-           fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-      </svg>
-    </div>
-  );
-}
+const fmtF = iso => !iso ? null : new Date(iso).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' });
+const fmtT = iso => !iso ? null : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
-function Dato({ icon, label, value, mono = false, span2 = false }) {
-  if (value === null || value === undefined || value === '') return null;
+const TABS = [
+  { id: 'general',    label: 'General',        icon: 'info'           },
+  { id: 'ubicacion',  label: 'Ubicación',      icon: 'location_on'    },
+  { id: 'adquisicion', label: 'Adquisición',   icon: 'receipt_long'   },
+  { id: 'tecnico',    label: 'Det. Técnico',   icon: 'settings'       },
+];
+
+const FUNC_BADGE = (n = '') => {
+  const u = n.toUpperCase();
+  if (u === 'OPERATIVO')   return { bg: 'rgb(37 99 235 / 0.1)',   color: '#1d4ed8' };
+  if (u === 'AVERIADO')    return { bg: 'rgb(180 83 9 / 0.1)',    color: '#b45309' };
+  if (u === 'INOPERATIVO') return { bg: 'rgb(220 38 38 / 0.1)',   color: '#dc2626' };
+  return { bg: 'var(--color-border-light)', color: 'var(--color-text-muted)' };
+};
+
+function Fila({ label, value, icon, mono = false }) {
+  if (!value && value !== 0) return null;
   return (
-    <div className={`flex items-start gap-2.5 py-2 ${span2 ? 'col-span-2' : ''}`}
-         style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-      <Icon name={icon} className="text-[13px] mt-0.5 shrink-0"
-            style={{ color: 'var(--color-text-faint)' }} />
-      <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-black uppercase tracking-widest"
-           style={{ color: 'var(--color-text-muted)' }}>{label}</p>
-        <p className={`text-sm font-semibold mt-0.5 break-words ${mono ? 'font-mono' : ''}`}
-           style={{ color: 'var(--color-text-primary)' }}>{value}</p>
+    <div className="flex items-start gap-3 py-2.5" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+      <Icon name={icon ?? 'label'} className="text-[15px] mt-0.5 shrink-0"
+        style={{ color: 'var(--color-text-faint)' }} />
+      <div className="min-w-0">
+        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>{label}</p>
+        <p className={`text-xs font-semibold mt-0.5 ${mono ? 'font-mono' : ''}`}
+          style={{ color: 'var(--color-text-primary)' }}>{String(value)}</p>
       </div>
     </div>
   );
 }
 
-function SeccionTitulo({ icon, label }) {
+function Bool({ label, value }) {
+  if (value === null || value === undefined) return null;
   return (
-    <div className="flex items-center gap-2 pt-1 pb-0.5"
-         style={{ borderBottom: '1px solid var(--color-border)' }}>
-      <Icon name={icon} className="text-[14px] text-primary" />
-      <p className="text-[9px] font-black uppercase tracking-widest"
-         style={{ color: 'var(--color-text-muted)' }}>{label}</p>
+    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+      <p className="text-xs" style={{ color: 'var(--color-text-body)' }}>{label}</p>
+      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md"
+        style={{ background: value ? 'rgb(22 163 74 / 0.1)' : 'var(--color-border-light)', color: value ? '#16a34a' : 'var(--color-text-muted)' }}>
+        {value ? 'Sí' : 'No'}
+      </span>
     </div>
   );
 }
 
-const ESTADO_BIEN_CLS = (nombre) => ({
-  'BUENO': 'badge-activo', 'REGULAR': 'badge-pendiente',
-  'MALO': 'badge-cancelado', 'DADO DE BAJA': 'badge-cancelado',
-}[nombre?.toUpperCase()] ?? 'badge-inactivo');
-
-function formatFecha(iso) {
-  if (!iso) return null;
-  return new Date(iso).toLocaleDateString('es-PE', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
-}
-
-// ── Renderiza el bloque de detalle técnico según el tipo presente ─────────────
-function DetalleTecnico({ bien }) {
-  const cpu       = bien.detalle_cpu;
-  const monitor   = bien.detalle_monitor;
-  const impresora = bien.detalle_impresora;
-  const scanner   = bien.detalle_scanner;
-  const sw        = bien.detalle_switch;
-
-  if (!cpu && !monitor && !impresora && !scanner && !sw) return null;
-
+function TabGeneral({ b }) {
+  const fb = FUNC_BADGE(b.estado_funcionamiento_nombre ?? '');
   return (
-    <div className="space-y-3">
-      <SeccionTitulo icon="settings" label="Detalle técnico" />
-      <div className="grid grid-cols-2 gap-x-6">
-        {/* CPU */}
-        {cpu && (
-          <>
-            <Dato icon="computer"   label="Tipo de computadora" value={cpu.tipo_computadora_nombre} />
-            <Dato icon="memory"     label="Procesador"          value={cpu.procesador} />
-            <Dato icon="storage"    label="RAM (GB)"            value={cpu.ram_gb} />
-            <Dato icon="hard_drive" label="Disco (GB)"          value={cpu.capacidad_disco_gb} />
-            <Dato icon="storage"    label="Tipo de disco"       value={cpu.tipo_disco_nombre} />
-            <Dato icon="memory"     label="Arquitectura"        value={cpu.arquitectura_bits_nombre} />
-            <Dato icon="dns"        label="Sistema operativo"   value={cpu.sistema_operativo} />
-            <Dato icon="router"     label="MAC address"         value={cpu.mac_address} mono />
-          </>
-        )}
-        {/* Monitor */}
-        {monitor && (
-          <>
-            <Dato icon="monitor"    label="Tipo de monitor"    value={monitor.tipo_monitor_nombre} />
-            <Dato icon="fullscreen" label="Tamaño (pulgadas)"  value={monitor.tamano_pulgadas} />
-            <Dato icon="display_settings" label="Resolución"   value={monitor.resolucion} />
-            <Dato icon="cable"      label="Interfaz conexión"  value={monitor.interfaz_conexion_nombre} />
-          </>
-        )}
-        {/* Impresora */}
-        {impresora && (
-          <>
-            <Dato icon="print"       label="Tipo de impresión"  value={impresora.tipo_impresion_nombre} />
-            <Dato icon="cable"       label="Interfaz conexión"  value={impresora.interfaz_conexion_nombre} />
-            <Dato icon="straighten"  label="Tamaño de carro"    value={impresora.tamano_carro_nombre} />
-            <Dato icon="speed"       label="Velocidad (ppm)"    value={impresora.velocidad_ppm} />
-          </>
-        )}
-        {/* Scanner */}
-        {scanner && (
-          <>
-            <Dato icon="document_scanner" label="Tipo de escáner"    value={scanner.tipo_escaner_nombre} />
-            <Dato icon="cable"            label="Interfaz conexión"  value={scanner.interfaz_conexion_nombre} />
-            <Dato icon="image"            label="Resolución (DPI)"   value={scanner.resolucion_dpi} />
-            <Dato icon="straighten"       label="Tamaño máx. doc."   value={scanner.tamano_max_documento} />
-          </>
-        )}
-        {/* Switch */}
-        {sw && (
-          <>
-            <Dato icon="hub"    label="N° de puertos"  value={sw.numero_puertos} />
-            <Dato icon="speed"  label="Velocidad Mbps" value={sw.velocidad_mbps} />
-            <Dato icon="toggle_on" label="Administrable" value={sw.es_administrable ? 'Sí (Managed)' : 'No (Unmanaged)'} />
-          </>
-        )}
+    <div className="grid grid-cols-2 gap-6">
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Identificación</p>
+        <Fila label="Tipo de bien"        value={b.tipo_bien_nombre}             icon="devices"         />
+        <Fila label="Categoría"           value={b.categoria_bien_nombre}        icon="folder"          />
+        <Fila label="Marca"               value={b.marca_nombre}                 icon="sell"            />
+        <Fila label="Modelo"              value={b.modelo}                       icon="tag"             />
+        <Fila label="N° de serie"         value={b.numero_serie ?? 'S/N'}        icon="pin" mono />
+        <Fila label="Código patrimonial"  value={b.codigo_patrimonial ?? 'S/C'}  icon="qr_code" mono />
+        <Fila label="Régimen de tenencia" value={b.regimen_tenencia_nombre}      icon="gavel"           />
+      </div>
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Estado</p>
+        <div className="flex items-center gap-2 mb-3 p-3 rounded-xl"
+          style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+          <div className="size-8 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: fb.bg }}>
+            <Icon name="device_unknown" className="text-[16px]" style={{ color: fb.color }} />
+          </div>
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Funcionamiento</p>
+            <p className="text-xs font-bold" style={{ color: fb.color }}>{b.estado_funcionamiento.nombre ?? '—'}</p>
+          </div>
+        </div>
+        <Fila label="Estado del bien"       value={b.estado_bien_nombre}           icon="verified"        />
+        <Fila label="Custodio actual"        value={b.usuario_asignado_nombre}      icon="person"          />
+        <Fila label="Registrado por"         value={b.usuario_registra_nombre}      icon="manage_accounts" />
+        <Fila label="Ult. mantenimiento"     value={fmtF(b.fecha_ultimo_mantenimiento)} icon="build"       />
+        {b.detalle_tecnico && <Fila label="Descripción técnica" value={b.detalle_tecnico} icon="notes" />}
+        {b.observacion && <Fila label="Observación" value={b.observacion} icon="comment" />}
       </div>
     </div>
   );
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
+function TabUbicacion({ b }) {
+  return (
+    <div className="grid grid-cols-2 gap-6">
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Localización actual</p>
+        <Fila label="Empresa / Corte"  value={b.empresa_nombre}    icon="business"    />
+        <Fila label="Sede"             value={b.sede_nombre}       icon="domain"      />
+        <Fila label="Módulo"           value={b.modulo_nombre}     icon="grid_view"   />
+        <Fila label="Ubicación / Área" value={b.ubicacion_nombre}  icon="place"       />
+        <Fila label="Piso"             value={b.piso != null ? `Piso ${b.piso}` : null} icon="stairs" />
+      </div>
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Custodio y fechas</p>
+        <Fila label="Custodio actual"  value={b.usuario_asignado_nombre} icon="person"           />
+        <Fila label="Corte"            value={b.corte}                   icon="account_balance"  />
+        <Fila label="Fecha registro"   value={fmtT(b.fecha_registro)}    icon="calendar_today"   />
+        <Fila label="Última actualiz." value={fmtT(b.fecha_actualizacion)} icon="update"         />
+        {!b.is_active && <Fila label="Fecha de baja" value={fmtF(b.fecha_baja)} icon="event_busy" />}
+        {!b.is_active && <Fila label="Motivo de baja" value={b.motivo_baja_nombre} icon="do_not_disturb_on" />}
+      </div>
+    </div>
+  );
+}
+
+function TabAdquisicion({ b }) {
+  return (
+    <div className="grid grid-cols-2 gap-6">
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Compra</p>
+        <Fila label="Año de adquisición"   value={b.anio_adquisicion}         icon="calendar_month" />
+        <Fila label="Fecha de compra"      value={fmtF(b.fecha_compra)}       icon="shopping_cart"  />
+        <Fila label="N° orden de compra"   value={b.numero_orden_compra}      icon="receipt" mono   />
+        <Fila label="Garantía vence"       value={fmtF(b.fecha_vencimiento_garantia)} icon="shield" />
+      </div>
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Instalación e inventario</p>
+        <Fila label="Fecha instalación"       value={fmtF(b.fecha_instalacion)}       icon="install_desktop" />
+        <Fila label="Último inventario"       value={fmtF(b.fecha_ultimo_inventario)} icon="inventory"       />
+        <Fila label="Régimen de tenencia"     value={b.regimen_tenencia.nombre}       icon="gavel"           />
+      </div>
+    </div>
+  );
+}
+
+function TabTecnico({ b }) {
+  const { tipo_bien_nombre: tt } = b;
+  const cpu = b.detalle_cpu;
+  const mon = b.detalle_monitor;
+  const imp = b.detalle_impresora;
+  const sc  = b.detalle_scanner;
+  const sw  = b.detalle_switch;
+
+  if (!tt && !cpu && !mon && !imp && !sc && !sw) return (
+    <div className="text-center py-10">
+      <Icon name="settings" className="text-[40px]" style={{ color: 'var(--color-text-faint)' }} />
+      <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>Sin detalle técnico especializado</p>
+      {b.detalle_tecnico && (
+        <p className="text-xs mt-2 italic" style={{ color: 'var(--color-text-body)' }}>{b.detalle_tecnico}</p>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {cpu && (
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+            <Icon name="computer" className="text-[14px]" style={{ color: '#1d4ed8' }} />CPU / Computadora
+          </p>
+          <div className="grid grid-cols-2 gap-x-6">
+            <Fila label="Tipo"              value={cpu.tipo_computadora_nombre}  icon="computer"    />
+            <Fila label="Hostname"          value={cpu.hostname}                 icon="dns" mono    />
+            <Fila label="Dominio"           value={cpu.dominio_equipo}           icon="hub"         />
+            <Fila label="IP"                value={cpu.direccion_ip}             icon="wifi" mono   />
+            <Fila label="MAC"               value={cpu.direccion_mac}            icon="router" mono />
+            <Fila label="Función"           value={cpu.funcion_cpu}              icon="work"        />
+            <Fila label="Procesador"        value={cpu.procesador_tipo}          icon="memory"      />
+            <Fila label="Velocidad"         value={cpu.procesador_velocidad}     icon="speed"       />
+            <Fila label="RAM (GB)"          value={cpu.capacidad_ram_gb}         icon="memory_alt"  />
+            <Fila label="Módulos RAM"       value={cpu.cantidad_modulos_ram}     icon="storage"     />
+            <Fila label="Disco"             value={cpu.capacidad_disco}          icon="hard_drive"  />
+            <Fila label="Tipo de disco"     value={cpu.tipo_disco_nombre}        icon="disc_full"   />
+            <Fila label="Arquitectura"      value={cpu.arquitectura_bits_nombre} icon="layers"      />
+            <Fila label="Sistema Operativo" value={cpu.sistema_operativo}        icon="laptop"      />
+            <Fila label="Licencia SO"       value={cpu.licencia_so}              icon="key"         />
+            <Fila label="Office"            value={cpu.version_office}           icon="article"     />
+            <Fila label="Licencia Office"   value={cpu.licencia_office}          icon="key"         />
+            <Fila label="Multimedia"        value={cpu.multimedia}               icon="play_circle" />
+          </div>
+        </div>
+      )}
+
+      {mon && (
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+            <Icon name="desktop_windows" className="text-[14px]" style={{ color: '#7c3aed' }} />Monitor
+          </p>
+          <div className="grid grid-cols-2 gap-x-6">
+            <Fila label="Tipo de monitor"   value={mon.tipo_monitor_nombre}   icon="monitor"      />
+            <Fila label="Tamaño (pulg.)"    value={mon.tamano_pulgadas != null ? `${mon.tamano_pulgadas}"` : null} icon="fullscreen" />
+          </div>
+        </div>
+      )}
+
+      {imp && (
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+            <Icon name="print" className="text-[14px]" style={{ color: '#b45309' }} />Impresora
+          </p>
+          <div className="grid grid-cols-2 gap-x-6">
+            <Fila label="Tipo de impresión"  value={imp.tipo_impresion_nombre}    icon="print"        />
+            <Fila label="Interfaz conexión"  value={imp.interfaz_conexion_nombre} icon="cable"        />
+            <Fila label="Tamaño de carro"    value={imp.tamano_carro_nombre}      icon="straighten"   />
+            <Fila label="Velocidad (ppm)"    value={imp.velocidad_impresion_ppm}  icon="speed"        />
+            <Fila label="RAM (MB)"           value={imp.memoria_ram_mb}           icon="memory"       />
+            <Fila label="Resolución máx."    value={imp.resolucion_maxima_ppp}    icon="hd"           />
+            <Fila label="Hojas soportadas"   value={imp.tamano_hojas_soportadas}  icon="description"  />
+            <Fila label="Alimentación AC"    value={imp.alimentacion_ac}          icon="electrical_services" />
+            <Bool label="Impresión color"    value={imp.impresion_color} />
+            <Bool label="Dúplex"             value={imp.unidad_duplex} />
+            <Bool label="Conexión red"       value={imp.conexion_red} />
+          </div>
+        </div>
+      )}
+
+      {sc && (
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+            <Icon name="scanner" className="text-[14px]" style={{ color: '#0f766e' }} />Scanner
+          </p>
+          <div className="grid grid-cols-2 gap-x-6">
+            <Fila label="Tipo de escáner"        value={sc.tipo_escaner_nombre}       icon="document_scanner" />
+            <Fila label="Interfaz conexión"       value={sc.interfaz_conexion_nombre}  icon="cable"           />
+            <Fila label="Tamaño de documentos"    value={sc.tamano_documentos}         icon="straighten"      />
+            <Fila label="Resolución exploración"  value={sc.resolucion_exploracion}    icon="hd"              />
+            <Fila label="Resolución salida"       value={sc.resolucion_salida}         icon="hd"              />
+            <Fila label="Alimentación AC"         value={sc.alimentacion_ac}           icon="electrical_services" />
+            <Bool label="Alimentador automático"  value={sc.alimentador_automatico} />
+            <Bool label="Metadata"                value={sc.metadata} />
+          </div>
+        </div>
+      )}
+
+      {sw && (
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: 'var(--color-text-muted)' }}>
+            <Icon name="device_hub" className="text-[14px]" style={{ color: '#be185d' }} />Switch / Hub
+          </p>
+          <div className="grid grid-cols-2 gap-x-6">
+            <Fila label="Puertos UTP"        value={sw.cantidad_puertos_utp}  icon="hub"     />
+            <Fila label="Puertos FTP"        value={sw.cantidad_puertos_ftp}  icon="hub"     />
+            <Fila label="Puertos FO"         value={sw.cantidad_puertos_fo}   icon="hub"     />
+            <Fila label="Puertos WAN"        value={sw.cantidad_puertos_wan}  icon="router"  />
+            <Fila label="Velocidad (Mbps)"   value={sw.velocidad_mbps}        icon="speed"   />
+            <Fila label="IP"                 value={sw.direccion_ip}          icon="wifi" mono />
+            <Fila label="MAC"                value={sw.direccion_mac}         icon="router" mono />
+            <Fila label="Chasis slots"       value={sw.chasis_slots}          icon="view_module" />
+            <Fila label="Fuente de poder"    value={sw.fuente_poder}          icon="power"   />
+            <Fila label="Alimentación AC"    value={sw.alimentacion_ac}       icon="electrical_services" />
+            <Bool label="Administrable"      value={sw.admin_software} />
+            <Bool label="Soporta VLAN"       value={sw.soporta_vlan} />
+            <Bool label="Migración ATM"      value={sw.migracion_atm} />
+            <Bool label="Manual incluido"    value={sw.manual_incluido} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ModalDetalleBien({ open, onClose, item, onEditar }) {
   const { obtener } = useBienes();
-
-  const [bien,     setBien]     = useState(null);
-  const [loading,  setLoading]  = useState(false);
+  const role = useAuthStore(s => s.role);
+  const puedeEditar = role === 'SYSADMIN';
+  const [bien,    setBien]    = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [tab,     setTab]     = useState('general');
 
   useEffect(() => {
     if (!open || !item?.id) return;
     let cancelled = false;
     setLoading(true);
     setBien(null);
+    setTab('general');
     obtener(item.id)
-      .then((d)  => { if (!cancelled) setBien(d); })
-      .catch(()  => { if (!cancelled) setBien(item); }) // fallback a item parcial
+      .then(d  => { if (!cancelled) setBien(d); })
+      .catch(() => { if (!cancelled) setBien(item); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [open, item?.id]);
 
   if (!item) return null;
-
-  const data = bien ?? item;
-
+  const b = bien ?? item;
+  const tieneTecnico = !!(b.detalle_cpu || b.detalle_monitor || b.detalle_impresora || b.detalle_scanner || b.detalle_switch || b.detalle_tecnico);
+  const tabsVisibles = tieneTecnico ? TABS : TABS.filter(t => t.id !== 'tecnico');
+  const FUNC_B = FUNC_BADGE(b.estado_funcionamiento_nombre);
   return (
-    <Modal open={open} onClose={onClose} size="lg" closeOnOverlay>
+    <Modal open={open} onClose={onClose} size="xl" closeOnOverlay>
       <ModalHeader
-        title="Detalle de Bien"
         icon="inventory_2"
+        title={`${b.tipo_bien_nombre ?? 'Bien'} — ${b.marca_nombre ?? ''}`.trim()}
+        subtitle={`${b.codigo_patrimonial ?? 'Sin código'} · ${b.numero_serie ?? 'S/N'}`}
         onClose={onClose}
       />
 
-      {/* Nombre del bien */}
-      <div className="px-6 py-2.5 shrink-0"
-           style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-        <p className="text-[15px] font-black leading-tight"
-           style={{ color: 'var(--color-text-primary)' }}>
-          {[data.marca_nombre ?? data.marca?.nombre, data.modelo].filter(Boolean).join(' — ') || `Bien ID #${data.id}`}
-        </p>
-        {data.tipo_bien_nombre && (
-          <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-            {data.tipo_bien_nombre}
-            {data.categoria_bien_nombre ? ` · ${data.categoria_bien_nombre}` : ''}
-          </p>
-        )}
-      </div>
-
       <ModalBody padding={false}>
         {loading ? (
-          <Spinner />
+          <div className="p-6 space-y-3">{[1,2,3,4].map(i => <div key={i} className="skeleton h-10 rounded-xl" />)}</div>
         ) : (
-          <div className="grid grid-cols-12 gap-0" style={{ minHeight: 400 }}>
-
-            {/* Contenido principal */}
-            <div className="col-span-9 overflow-y-auto px-6 py-4 space-y-4"
-                 style={{ borderRight: '1px solid var(--color-border-light)' }}>
-
-              {/* Identificación */}
-              <div>
-                <SeccionTitulo icon="label" label="Identificación" />
-                <div className="grid grid-cols-2 gap-x-6">
-                  <Dato icon="qr_code"    label="Código patrimonial" value={data.codigo_patrimonial} mono />
-                  <Dato icon="tag"        label="N° de serie"        value={data.numero_serie}       mono />
-                  <Dato icon="category"   label="Régimen tenencia"   value={data.regimen_tenencia?.nombre} />
-                  <Dato icon="calendar_today" label="Fecha registro" value={formatFecha(data.fecha_registro)} />
-                </div>
+          <div className="flex" style={{ minHeight: '55vh' }}>
+            <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex gap-5 px-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                {tabsVisibles.map(({ id, label, icon }) => (
+                  <button key={id} onClick={() => setTab(id)}
+                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-3 pt-4 transition-all border-b-2"
+                    style={{ borderBottomColor: tab === id ? 'var(--color-primary)' : 'transparent', color: tab === id ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+                    <Icon name={icon} className="text-[15px]" />{label}
+                  </button>
+                ))}
               </div>
-
-              {/* Estado */}
-              <div>
-                <SeccionTitulo icon="toggle_on" label="Estado" />
-                <div className="grid grid-cols-2 gap-x-6">
-                  <Dato icon="inventory"         label="Estado del bien"        value={data.estado_bien?.nombre ?? data.estado_bien_nombre} />
-                  <Dato icon="power_settings_new" label="Funcionamiento"         value={data.estado_funcionamiento?.nombre ?? data.estado_funcionamiento_nombre} />
-                </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                {tab === 'general'    && <TabGeneral    b={b} />}
+                {tab === 'ubicacion'  && <TabUbicacion  b={b} />}
+                {tab === 'adquisicion' && <TabAdquisicion b={b} />}
+                {tab === 'tecnico'    && <TabTecnico    b={b} />}
               </div>
-
-              {/* Adquisición */}
-              <div>
-                <SeccionTitulo icon="receipt_long" label="Adquisición" />
-                <div className="grid grid-cols-2 gap-x-6">
-                  <Dato icon="event"       label="Año adquisición"   value={data.anio_adquisicion} />
-                  <Dato icon="event"       label="Fecha de compra"   value={formatFecha(data.fecha_compra)} />
-                  <Dato icon="receipt"     label="N° orden compra"   value={data.numero_orden_compra} mono />
-                  <Dato icon="event_busy"  label="Venc. garantía"    value={formatFecha(data.fecha_vencimiento_garantia)} />
-                  <Dato icon="build"       label="Fecha instalación" value={formatFecha(data.fecha_instalacion)} />
-                  <Dato icon="fact_check"  label="Último inventario" value={formatFecha(data.fecha_ultimo_inventario)} />
-                </div>
-              </div>
-
-              {/* Detalle técnico condicional */}
-              {bien && <DetalleTecnico bien={bien} />}
-
-              {/* Observación */}
-              {data.observacion && (
-                <div>
-                  <SeccionTitulo icon="notes" label="Observaciones" />
-                  <p className="text-sm mt-2" style={{ color: 'var(--color-text-body)' }}>
-                    {data.observacion}
-                  </p>
-                </div>
-              )}
             </div>
-
-            {/* Sidebar — ubicación y estado rápido */}
-            <div className="col-span-3 overflow-y-auto p-4 space-y-4"
-                 style={{ background: 'var(--color-surface-alt)' }}>
-
-              {/* Estado rápido */}
-              <section className="card p-4 space-y-2">
-                <h3 className="text-[9px] font-black uppercase tracking-widest"
-                    style={{ color: 'var(--color-text-muted)' }}>Estado</h3>
-                <span className={`badge ${ESTADO_BIEN_CLS(data.estado_bien_nombre ?? data.estado_bien?.nombre)}`}>
-                  {data.estado_bien_nombre ?? data.estado_bien?.nombre ?? '—'}
+            <aside className="w-52 shrink-0 p-4 space-y-3 overflow-y-auto" style={{ borderLeft: '1px solid var(--color-border)' }}>
+              <div className="card p-3 text-center space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado</p>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-xl"
+                  style={{ background: FUNC_B.bg, color: FUNC_B.color }}>
+                  {b.estado_funcionamiento.nombre?? '—'}
                 </span>
-                <div className="pt-1">
-                  <span className="badge badge-inactivo text-[9px]">
-                    {data.estado_funcionamiento_nombre ?? data.estado_funcionamiento?.nombre ?? '—'}
-                  </span>
-                </div>
-                <div className="pt-1">
-                  <span className={data.is_active ? 'badge-activo' : 'badge-inactivo'}>
-                    <span className={`size-1.5 rounded-full ${data.is_active ? 'bg-green-500' : 'bg-slate-400'}`} />
-                    {data.is_active ? 'Activo' : 'Inactivo'}
-                  </span>
-                </div>
-              </section>
+                <p className="text-[9px] font-black font-mono" style={{ color: 'var(--color-primary)' }}>
+                  {b.codigo_patrimonial ?? 'Sin código'}
+                </p>
+              </div>
 
-              {/* Ubicación */}
-              <section className="card p-4 space-y-3">
-                <h3 className="text-[9px] font-black uppercase tracking-widest"
-                    style={{ color: 'var(--color-text-muted)' }}>Ubicación</h3>
+              <div className="card p-3 space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Resumen</p>
                 {[
-                  { icon: 'business',    label: 'Sede',      value: data.sede_id     ? `ID #${data.sede_id}`      : '—' },
-                  { icon: 'widgets',     label: 'Módulo',    value: data.modulo_id   ? `ID #${data.modulo_id}`   : '—' },
-                  { icon: 'room',        label: 'Ubicación', value: data.ubicacion_id ? `ID #${data.ubicacion_id}`: '—' },
-                  { icon: 'stairs',      label: 'Piso',      value: data.piso        ? `Piso ${data.piso}`       : '—' },
-                ].map(({ icon, label, value }) => (
-                  <div key={label} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <Icon name={icon} className="text-[13px]"
-                            style={{ color: 'var(--color-text-faint)' }} />
-                      <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{label}</span>
+                  { label: 'Tipo',     value: b.tipo_bien_nombre ?? '—',       icon: 'devices'      },
+                  { label: 'Marca',    value: b.marca_nombre ?? '—',           icon: 'sell'         },
+                  { label: 'Sede',     value: b.sede_nombre ?? '—',            icon: 'domain'       },
+                  { label: 'Custodio', value: b.usuario_asignado_nombre ?? '—', icon: 'person'      },
+                ].map(s => (
+                  <div key={s.label} className="flex items-start gap-1.5">
+                    <Icon name={s.icon} className="text-[13px] mt-0.5 shrink-0"
+                      style={{ color: 'var(--color-text-faint)' }} />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-black uppercase tracking-widest"
+                        style={{ color: 'var(--color-text-muted)' }}>{s.label}</p>
+                      <p className="text-[11px] font-semibold truncate"
+                        style={{ color: 'var(--color-text-primary)' }}>{s.value}</p>
                     </div>
-                    <span className="text-xs font-black font-mono"
-                          style={{ color: 'var(--color-text-primary)' }}>{value}</span>
                   </div>
                 ))}
-              </section>
+              </div>
 
-              {/* Custodio */}
-              {data.usuario_asignado_id && (
-                <section className="card p-4">
-                  <h3 className="text-[9px] font-black uppercase tracking-widest mb-2"
-                      style={{ color: 'var(--color-text-muted)' }}>Custodio</h3>
-                  <div className="flex items-center gap-2">
-                    <div className="size-8 rounded-full flex items-center justify-center shrink-0"
-                         style={{ background: 'rgba(127,29,29,0.1)' }}>
-                      <Icon name="person" className="text-[15px] text-primary" />
-                    </div>
-                    <span className="text-xs font-black font-mono"
-                          style={{ color: 'var(--color-text-primary)' }}>
-                      ID #{data.usuario_asignado_id}
-                    </span>
-                  </div>
-                </section>
+              {b.tipo_bien_nombre && (
+                <div className="card p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest mb-1.5"
+                    style={{ color: 'var(--color-text-muted)' }}>Tipo técnico</p>
+                  <span className="inline-block text-[10px] font-black px-2 py-1 rounded-lg"
+                    style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)' }}>
+                    {b.tipo_bien_nombre}
+                  </span>
+                </div>
               )}
-            </div>
+
+              <div className="card p-3 space-y-1">
+                <p className="text-[9px] font-black uppercase tracking-widest mb-1"
+                  style={{ color: 'var(--color-text-muted)' }}>Fechas</p>
+                {b.fecha_registro && (
+                  <div>
+                    <p className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>Registro</p>
+                    <p className="text-[10px] font-semibold" style={{ color: 'var(--color-text-body)' }}>{fmtF(b.fecha_registro)}</p>
+                  </div>
+                )}
+                {b.fecha_ultimo_mantenimiento && (
+                  <div>
+                    <p className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>Ult. Mant.</p>
+                    <p className="text-[10px] font-semibold" style={{ color: 'var(--color-text-body)' }}>{fmtF(b.fecha_ultimo_mantenimiento)}</p>
+                  </div>
+                )}
+              </div>
+            </aside>
           </div>
         )}
       </ModalBody>
 
-      <ModalFooter align="between">
-        <span className="text-[9px] font-bold" style={{ color: 'var(--color-text-faint)' }}>
-          ID: {data.id}
-          {data.codigo_patrimonial ? ` · Cód: ${data.codigo_patrimonial}` : ''}
-        </span>
-        <div className="flex items-center gap-2">
-          <button onClick={onClose} className="btn-secondary">Cerrar</button>
-          {onEditar && (
-            <button onClick={() => { onClose(); onEditar(data); }} className="btn-primary">
-              <Icon name="edit" className="text-[16px]" /> Editar
-            </button>
-          )}
-        </div>
+      <ModalFooter align="right">
+        <button onClick={onClose} className="btn-secondary">Cerrar</button>
+        {puedeEditar && (
+          <button onClick={() => { onClose(); onEditar(item); }}
+            className="btn-primary flex items-center gap-2">
+            <Icon name="edit" className="text-[16px]" />Editar bien
+          </button>
+        )}
       </ModalFooter>
     </Modal>
   );

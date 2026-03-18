@@ -32,12 +32,15 @@ export function useTransferencias(activeTab, params) {
 
   const ejecutarYRefrescar = async (fn, ...args) => {
     setActualizando(true);
+    setError(null);
     try {
-      await fn(...args);
+      const resultado= await fn(...args);
       await fetchTransferencias();
-      return { success: true };
+      return resultado;
     } catch (e) {
-      return { success: false, error: e?.response?.data?.error || 'Error en la operación' };
+      const msg = e?.response?.data || 'Error en la operación de transferencia';
+      setError(msg);
+      throw e;
     } finally {
       setActualizando(false);
     }

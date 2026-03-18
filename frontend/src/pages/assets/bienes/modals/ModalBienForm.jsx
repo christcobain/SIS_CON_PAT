@@ -1,562 +1,329 @@
 import { useState, useEffect, useMemo } from 'react';
-import Modal           from '../../../../components/modal/Modal';
-import ModalHeader     from '../../../../components/modal/ModalHeader';
-import ModalBody       from '../../../../components/modal/ModalBody';
-import ModalFooter     from '../../../../components/modal/ModalFooter';
-import ConfirmDialog   from '../../../../components/feedback/ConfirmDialog';
-import { useBienes }   from '../../../..//hooks/useBienes';
-import { useLocaciones } from '../../../../hooks/useLocaciones';
-import { useCatalogos }  from '../../../../hooks/useCatalogos';
-import { useAuthStore }  from '../../../../store/authStore';
-import { useToast }    from '../../../../hooks/useToast';
+import Modal         from '../../../../components/modal/Modal';
+import ModalHeader   from '../../../../components/modal/ModalHeader';
+import ModalBody     from '../../../../components/modal/ModalBody';
+import ModalFooter   from '../../../../components/modal/ModalFooter';
+import ConfirmDialog from '../../../../components/feedback/ConfirmDialog';
+import { useBienes }      from '../../../../hooks/useBienes';
+import { useLocaciones }  from '../../../../hooks/useLocaciones';
+import { useCatalogos }   from '../../../../hooks/useCatalogos';
+import { useAuthStore }   from '../../../../store/authStore';
+import { useToast }       from '../../../../hooks/useToast';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
 );
 
-// ── Detecta la categoría técnica según el nombre del tipo_bien ────────────────
-// El backend almacena los nombres en mayúsculas (CPU, MONITOR, IMPRESORA, SCANNER, SWITCH)
-const TIPO_TECNICO = {
-  CPU:       (nombre) => /CPU|COMPUTAD|PC\b|DESKTOP|LAPTOP|NOTEBOOK/i.test(nombre),
-  MONITOR:   (nombre) => /MONITOR/i.test(nombre),
-  IMPRESORA: (nombre) => /IMPRESORA|PRINTER/i.test(nombre),
-  SCANNER:   (nombre) => /SCANNER|ESCANER|ESCÁNER/i.test(nombre),
-  SWITCH:    (nombre) => /SWITCH|HUB|ROUTER/i.test(nombre),
+const S = {
+  input: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', outline: 'none' },
+  disabled: { background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)', outline: 'none' },
 };
+const onF = e => { e.currentTarget.style.border = '1px solid var(--color-primary)'; };
+const offF = e => { e.currentTarget.style.border = '1px solid var(--color-border)'; };
 
-function detectarTipoTecnico(tipoNombre) {
-  if (!tipoNombre) return null;
-  for (const [tipo, fn] of Object.entries(TIPO_TECNICO)) {
-    if (fn(tipoNombre)) return tipo;
-  }
-  return null;
+function FLabel({ children, required }) {
+  return (
+    <p className="text-[9px] font-black uppercase tracking-widest mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
+      {children}{required && <span className="text-red-500 ml-0.5">*</span>}
+    </p>
+  );
 }
-
-// ── Primitivos de formulario ──────────────────────────────────────────────────
-function FormSection({ title, icon, children }) {
+function FError({ msg }) {
+  if (!msg) return null;
+  return <p className="text-[10px] text-red-500 mt-1 font-semibold flex items-center gap-1"><Icon name="error" className="text-[11px]" />{msg}</p>;
+}
+function FInput({ value, onChange, placeholder, type = 'text', disabled = false, mono = false }) {
+  return (
+    <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+      disabled={disabled}
+      className={`w-full text-sm rounded-xl px-3 py-2.5 transition-all ${mono ? 'font-mono' : ''}`}
+      style={disabled ? S.disabled : S.input}
+      onFocus={disabled ? undefined : onF} onBlur={offF} />
+  );
+}
+function FSelect({ value, onChange, children, disabled = false }) {
+  return (
+    <select value={value ?? ''} onChange={e => onChange(e.target.value)} disabled={disabled}
+      className="w-full text-sm rounded-xl px-3 py-2.5 transition-all cursor-pointer"
+      style={disabled ? S.disabled : S.input}
+      onFocus={disabled ? undefined : onF} onBlur={offF}>
+      {children}
+    </select>
+  );
+}
+function FTextarea({ value, onChange, placeholder, rows = 3 }) {
+  return (
+    <textarea value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows}
+      className="w-full text-sm rounded-xl px-3 py-2.5 transition-all resize-none"
+      style={S.input} onFocus={onF} onBlur={offF} />
+  );
+}
+function Seccion({ title, icon, children }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2"
-           style={{ borderBottom: '1px solid var(--color-border-light)', paddingBottom: '6px' }}>
-        <Icon name={icon} className="text-[16px] text-primary" />
-        <p className="text-[10px] font-black uppercase tracking-widest"
-           style={{ color: 'var(--color-text-muted)' }}>
-          {title}
-        </p>
+      <div className="flex items-center gap-2 pb-2" style={{ borderBottom: '1px solid var(--color-border)' }}>
+        <Icon name={icon} className="text-[16px]" style={{ color: 'var(--color-primary)' }} />
+        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>{title}</p>
       </div>
       {children}
     </div>
   );
 }
 
-function Label({ children, required }) {
-  return (
-    <p className="text-[9px] font-black uppercase tracking-widest mb-1"
-       style={{ color: 'var(--color-text-muted)' }}>
-      {children}{required && <span className="text-red-500 ml-0.5">*</span>}
-    </p>
-  );
+const TIPOS_TECNICOS = ['CPU', 'MONITOR', 'IMPRESORA', 'SCANNER', 'SWITCH'];
+
+function detectarTipoTecnico(nombre = '') {
+  const n = nombre.toUpperCase();
+  return TIPOS_TECNICOS.find(t => n.includes(t)) ?? null;
 }
 
-function FieldError({ msg }) {
-  if (!msg) return null;
-  return <p className="text-[10px] text-red-500 mt-1 font-semibold">{msg}</p>;
-}
-
-function StyledInput({ value, onChange, placeholder, disabled, mono, type = 'text' }) {
-  return (
-    <input
-      type={type}
-      value={value ?? ''}
-      onChange={onChange}
-      placeholder={placeholder}
-      disabled={disabled}
-      className={`w-full text-sm rounded-xl px-3 py-2 transition-all ${mono ? 'font-mono' : ''}`}
-      style={{
-        background: disabled ? 'var(--color-surface-alt)' : 'var(--color-surface)',
-        border:     '1px solid var(--color-border)',
-        color:      disabled ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
-        outline:    'none',
-      }}
-      onFocus={(e)  => { if (!disabled) e.currentTarget.style.border = '1px solid var(--color-primary)'; }}
-      onBlur={(e)   => { e.currentTarget.style.border = '1px solid var(--color-border)'; }}
-    />
-  );
-}
-
-function StyledSelect({ value, onChange, options, placeholder, disabled }) {
-  return (
-    <select
-      value={value ?? ''}
-      onChange={onChange}
-      disabled={disabled}
-      className="w-full text-sm rounded-xl px-3 py-2 transition-all"
-      style={{
-        background: disabled ? 'var(--color-surface-alt)' : 'var(--color-surface)',
-        border:     '1px solid var(--color-border)',
-        color:      value ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
-        outline:    'none',
-        cursor:     disabled ? 'not-allowed' : 'pointer',
-      }}
-      onFocus={(e)  => { if (!disabled) e.currentTarget.style.border = '1px solid var(--color-primary)'; }}
-      onBlur={(e)   => { e.currentTarget.style.border = '1px solid var(--color-border)'; }}
-    >
-      {placeholder && <option value="">{placeholder}</option>}
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
-  );
-}
-
-function StyledTextarea({ value, onChange, placeholder, disabled, rows = 2 }) {
-  return (
-    <textarea
-      value={value ?? ''}
-      onChange={onChange}
-      placeholder={placeholder}
-      disabled={disabled}
-      rows={rows}
-      className="w-full text-sm rounded-xl px-3 py-2 transition-all resize-none"
-      style={{
-        background: disabled ? 'var(--color-surface-alt)' : 'var(--color-surface)',
-        border:     '1px solid var(--color-border)',
-        color:      disabled ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
-        outline:    'none',
-      }}
-      onFocus={(e)  => { if (!disabled) e.currentTarget.style.border = '1px solid var(--color-primary)'; }}
-      onBlur={(e)   => { e.currentTarget.style.border = '1px solid var(--color-border)'; }}
-    />
-  );
-}
-
-// ── Sección de detalle técnico condicional ────────────────────────────────────
-function SeccionDetalleTecnico({ tipoTecnico, detalle, setDetalle, catalogos }) {
+function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
   if (!tipoTecnico) return null;
+  const setD = (k, v) => setDetalle(p => ({ ...p, [k]: v }));
 
-  const setD = (key, val) => setDetalle((prev) => ({ ...prev, [key]: val }));
-
-  const LABEL_MAP = {
-    CPU:       'Detalle de CPU / Computadora',
-    MONITOR:   'Detalle de Monitor',
-    IMPRESORA: 'Detalle de Impresora',
-    SCANNER:   'Detalle de Escáner',
-    SWITCH:    'Detalle de Switch / Hub',
+  const TITULOS = {
+    CPU: 'Especificaciones CPU / Computadora',
+    MONITOR: 'Especificaciones Monitor',
+    IMPRESORA: 'Especificaciones Impresora',
+    SCANNER: 'Especificaciones Escáner',
+    SWITCH: 'Especificaciones Switch / Hub',
   };
 
   return (
-    <FormSection title={LABEL_MAP[tipoTecnico] ?? 'Detalle técnico'} icon="settings">
-
-      {/* ── CPU ────────────────────────────────────────────────────────────── */}
+    <Seccion title={TITULOS[tipoTecnico]} icon="settings">
       {tipoTecnico === 'CPU' && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Tipo de computadora</Label>
-            <StyledSelect
-              value={detalle.tipo_computadora_id ?? ''}
-              onChange={(e) => setD('tipo_computadora_id', e.target.value)}
-              placeholder="Seleccionar..."
-              options={(catalogos.tiposComputadora ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-            />
+            <FLabel>Tipo de computadora</FLabel>
+            <FSelect value={detalle.tipo_computadora_id} onChange={v => setD('tipo_computadora_id', v)}>
+              <option value="">Seleccionar...</option>
+              {(catalogos.tiposComputadora ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </FSelect>
           </div>
+          <div><FLabel>Hostname</FLabel><FInput value={detalle.hostname} onChange={v => setD('hostname', v)} placeholder="Ej: PC-JUZGADO01" mono /></div>
+          <div><FLabel>IP</FLabel><FInput value={detalle.direccion_ip} onChange={v => setD('direccion_ip', v)} placeholder="192.168.1.100" mono /></div>
+          <div><FLabel>MAC</FLabel><FInput value={detalle.direccion_mac} onChange={v => setD('direccion_mac', v)} placeholder="AA:BB:CC:DD:EE:FF" mono /></div>
+          <div><FLabel>Procesador</FLabel><FInput value={detalle.procesador_tipo} onChange={v => setD('procesador_tipo', v)} placeholder="Ej: Intel Core i7-12700" /></div>
+          <div><FLabel>Velocidad procesador</FLabel><FInput value={detalle.procesador_velocidad} onChange={v => setD('procesador_velocidad', v)} placeholder="Ej: 3.6 GHz" /></div>
           <div>
-            <Label>Procesador</Label>
-            <StyledInput
-              value={detalle.procesador}
-              onChange={(e) => setD('procesador', e.target.value)}
-              placeholder="Ej: Intel Core i7-1165G7"
-            />
+            <FLabel>Tipo de disco</FLabel>
+            <FSelect value={detalle.tipo_disco_id} onChange={v => setD('tipo_disco_id', v)}>
+              <option value="">Seleccionar...</option>
+              {(catalogos.tiposDisco ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </FSelect>
           </div>
+          <div><FLabel>Capacidad disco</FLabel><FInput value={detalle.capacidad_disco} onChange={v => setD('capacidad_disco', v)} placeholder="Ej: 512 GB" /></div>
+          <div><FLabel>RAM (GB)</FLabel><FInput value={detalle.capacidad_ram_gb} onChange={v => setD('capacidad_ram_gb', v)} placeholder="Ej: 16 GB" /></div>
           <div>
-            <Label>RAM (GB)</Label>
-            <StyledInput
-              value={detalle.ram_gb}
-              onChange={(e) => setD('ram_gb', e.target.value)}
-              placeholder="Ej: 16"
-              type="number"
-            />
+            <FLabel>Arquitectura</FLabel>
+            <FSelect value={detalle.arquitectura_bits_id} onChange={v => setD('arquitectura_bits_id', v)}>
+              <option value="">Seleccionar...</option>
+              {(catalogos.arquitecturasBits ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </FSelect>
           </div>
-          <div>
-            <Label>Capacidad disco (GB)</Label>
-            <StyledInput
-              value={detalle.capacidad_disco_gb}
-              onChange={(e) => setD('capacidad_disco_gb', e.target.value)}
-              placeholder="Ej: 512"
-              type="number"
-            />
-          </div>
-          <div>
-            <Label>Tipo de disco</Label>
-            <StyledSelect
-              value={detalle.tipo_disco_id ?? ''}
-              onChange={(e) => setD('tipo_disco_id', e.target.value)}
-              placeholder="Seleccionar..."
-              options={(catalogos.tiposDisco ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-            />
-          </div>
-          <div>
-            <Label>Arquitectura bits</Label>
-            <StyledSelect
-              value={detalle.arquitectura_bits_id ?? ''}
-              onChange={(e) => setD('arquitectura_bits_id', e.target.value)}
-              placeholder="Seleccionar..."
-              options={(catalogos.arquitecturasBits ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-            />
-          </div>
-          <div>
-            <Label>Sistema operativo</Label>
-            <StyledInput
-              value={detalle.sistema_operativo}
-              onChange={(e) => setD('sistema_operativo', e.target.value)}
-              placeholder="Ej: Windows 11 Pro"
-            />
-          </div>
-          <div>
-            <Label>MAC address</Label>
-            <StyledInput
-              value={detalle.mac_address}
-              onChange={(e) => setD('mac_address', e.target.value)}
-              placeholder="Ej: AA:BB:CC:DD:EE:FF"
-              mono
-            />
-          </div>
+          <div><FLabel>Sistema operativo</FLabel><FInput value={detalle.sistema_operativo} onChange={v => setD('sistema_operativo', v)} placeholder="Ej: Windows 11 Pro" /></div>
+          <div><FLabel>Licencia SO</FLabel><FInput value={detalle.licencia_so} onChange={v => setD('licencia_so', v)} placeholder="Ej: MAK-XXXXX" mono /></div>
+          <div><FLabel>Office versión</FLabel><FInput value={detalle.version_office} onChange={v => setD('version_office', v)} placeholder="Ej: Microsoft 365" /></div>
+          <div><FLabel>Licencia Office</FLabel><FInput value={detalle.licencia_office} onChange={v => setD('licencia_office', v)} placeholder="Ej: PKY-XXXXX" mono /></div>
         </div>
       )}
-
-      {/* ── MONITOR ────────────────────────────────────────────────────────── */}
       {tipoTecnico === 'MONITOR' && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Tipo de monitor</Label>
-            <StyledSelect
-              value={detalle.tipo_monitor_id ?? ''}
-              onChange={(e) => setD('tipo_monitor_id', e.target.value)}
-              placeholder="Seleccionar..."
-              options={(catalogos.tiposMonitor ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-            />
+            <FLabel>Tipo de monitor</FLabel>
+            <FSelect value={detalle.tipo_monitor_id} onChange={v => setD('tipo_monitor_id', v)}>
+              <option value="">Seleccionar...</option>
+              {(catalogos.tiposMonitor ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </FSelect>
           </div>
-          <div>
-            <Label>Tamaño pulgadas</Label>
-            <StyledInput
-              value={detalle.tamano_pulgadas}
-              onChange={(e) => setD('tamano_pulgadas', e.target.value)}
-              placeholder="Ej: 24"
-              type="number"
-            />
-          </div>
-          <div>
-            <Label>Resolución</Label>
-            <StyledInput
-              value={detalle.resolucion}
-              onChange={(e) => setD('resolucion', e.target.value)}
-              placeholder="Ej: 1920x1080"
-            />
-          </div>
-          <div>
-            <Label>Interfaz de conexión</Label>
-            <StyledSelect
-              value={detalle.interfaz_conexion_id ?? ''}
-              onChange={(e) => setD('interfaz_conexion_id', e.target.value)}
-              placeholder="Seleccionar..."
-              options={(catalogos.interfacesConexion ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-            />
-          </div>
+          <div><FLabel>Tamaño (pulgadas)</FLabel><FInput type="number" value={detalle.tamano_pulgadas} onChange={v => setD('tamano_pulgadas', v)} placeholder="Ej: 24" /></div>
         </div>
       )}
-
-      {/* ── IMPRESORA ──────────────────────────────────────────────────────── */}
       {tipoTecnico === 'IMPRESORA' && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Tipo de impresión</Label>
-            <StyledSelect
-              value={detalle.tipo_impresion_id ?? ''}
-              onChange={(e) => setD('tipo_impresion_id', e.target.value)}
-              placeholder="Seleccionar..."
-              options={(catalogos.tiposImpresion ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-            />
+            <FLabel>Tipo de impresión</FLabel>
+            <FSelect value={detalle.tipo_impresion_id} onChange={v => setD('tipo_impresion_id', v)}>
+              <option value="">Seleccionar...</option>
+              {(catalogos.tiposImpresion ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </FSelect>
           </div>
           <div>
-            <Label>Interfaz de conexión</Label>
-            <StyledSelect
-              value={detalle.interfaz_conexion_id ?? ''}
-              onChange={(e) => setD('interfaz_conexion_id', e.target.value)}
-              placeholder="Seleccionar..."
-              options={(catalogos.interfacesConexion ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-            />
+            <FLabel>Interfaz conexión</FLabel>
+            <FSelect value={detalle.interfaz_conexion_id} onChange={v => setD('interfaz_conexion_id', v)}>
+              <option value="">Seleccionar...</option>
+              {(catalogos.interfacesConexion ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </FSelect>
           </div>
           <div>
-            <Label>Tamaño de carro</Label>
-            <StyledSelect
-              value={detalle.tamano_carro_id ?? ''}
-              onChange={(e) => setD('tamano_carro_id', e.target.value)}
-              placeholder="Seleccionar..."
-              options={(catalogos.tamanosCarro ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-            />
+            <FLabel>Tamaño de carro</FLabel>
+            <FSelect value={detalle.tamano_carro_id} onChange={v => setD('tamano_carro_id', v)}>
+              <option value="">Seleccionar...</option>
+              {(catalogos.tamanosCarro ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </FSelect>
           </div>
-          <div>
-            <Label>Velocidad ppm</Label>
-            <StyledInput
-              value={detalle.velocidad_ppm}
-              onChange={(e) => setD('velocidad_ppm', e.target.value)}
-              placeholder="Ej: 30"
-              type="number"
-            />
-          </div>
+          <div><FLabel>Velocidad (ppm)</FLabel><FInput type="number" value={detalle.velocidad_impresion_ppm} onChange={v => setD('velocidad_impresion_ppm', v)} placeholder="Ej: 40" /></div>
         </div>
       )}
-
-      {/* ── SCANNER ────────────────────────────────────────────────────────── */}
       {tipoTecnico === 'SCANNER' && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Tipo de escáner</Label>
-            <StyledSelect
-              value={detalle.tipo_escaner_id ?? ''}
-              onChange={(e) => setD('tipo_escaner_id', e.target.value)}
-              placeholder="Seleccionar..."
-              options={(catalogos.tiposEscaner ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-            />
+            <FLabel>Tipo de escáner</FLabel>
+            <FSelect value={detalle.tipo_escaner_id} onChange={v => setD('tipo_escaner_id', v)}>
+              <option value="">Seleccionar...</option>
+              {(catalogos.tiposEscaner ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </FSelect>
           </div>
           <div>
-            <Label>Interfaz de conexión</Label>
-            <StyledSelect
-              value={detalle.interfaz_conexion_id ?? ''}
-              onChange={(e) => setD('interfaz_conexion_id', e.target.value)}
-              placeholder="Seleccionar..."
-              options={(catalogos.interfacesConexion ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-            />
+            <FLabel>Interfaz conexión</FLabel>
+            <FSelect value={detalle.interfaz_conexion_id} onChange={v => setD('interfaz_conexion_id', v)}>
+              <option value="">Seleccionar...</option>
+              {(catalogos.interfacesConexion ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </FSelect>
           </div>
-          <div>
-            <Label>Resolución DPI</Label>
-            <StyledInput
-              value={detalle.resolucion_dpi}
-              onChange={(e) => setD('resolucion_dpi', e.target.value)}
-              placeholder="Ej: 1200"
-              type="number"
-            />
-          </div>
-          <div>
-            <Label>Tamaño máx. documento</Label>
-            <StyledInput
-              value={detalle.tamano_max_documento}
-              onChange={(e) => setD('tamano_max_documento', e.target.value)}
-              placeholder="Ej: A4"
-            />
-          </div>
+          <div><FLabel>Tamaño documentos</FLabel><FInput value={detalle.tamano_documentos} onChange={v => setD('tamano_documentos', v)} placeholder="Ej: A4" /></div>
+          <div><FLabel>Resolución exploración</FLabel><FInput value={detalle.resolucion_exploracion} onChange={v => setD('resolucion_exploracion', v)} placeholder="Ej: 600 dpi" /></div>
         </div>
       )}
-
-      {/* ── SWITCH ─────────────────────────────────────────────────────────── */}
       {tipoTecnico === 'SWITCH' && (
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>N° de puertos</Label>
-            <StyledInput
-              value={detalle.numero_puertos}
-              onChange={(e) => setD('numero_puertos', e.target.value)}
-              placeholder="Ej: 24"
-              type="number"
-            />
-          </div>
-          <div>
-            <Label>Velocidad (Mbps)</Label>
-            <StyledInput
-              value={detalle.velocidad_mbps}
-              onChange={(e) => setD('velocidad_mbps', e.target.value)}
-              placeholder="Ej: 1000"
-              type="number"
-            />
-          </div>
-          <div>
-            <Label>Managed</Label>
-            <StyledSelect
-              value={String(detalle.es_administrable ?? '')}
-              onChange={(e) => setD('es_administrable', e.target.value === 'true')}
-              options={[
-                { value: 'true',  label: 'Administrable (Managed)' },
-                { value: 'false', label: 'No administrable (Unmanaged)' },
-              ]}
-              placeholder="Seleccionar..."
-            />
-          </div>
+          <div><FLabel>IP</FLabel><FInput value={detalle.direccion_ip} onChange={v => setD('direccion_ip', v)} placeholder="192.168.1.1" mono /></div>
+          <div><FLabel>MAC</FLabel><FInput value={detalle.direccion_mac} onChange={v => setD('direccion_mac', v)} placeholder="AA:BB:CC:DD:EE:FF" mono /></div>
+          <div><FLabel>Puertos UTP</FLabel><FInput type="number" value={detalle.cantidad_puertos_utp} onChange={v => setD('cantidad_puertos_utp', v)} placeholder="Ej: 24" /></div>
+          <div><FLabel>Velocidad (Mbps)</FLabel><FInput type="number" value={detalle.velocidad_mbps} onChange={v => setD('velocidad_mbps', v)} placeholder="Ej: 1000" /></div>
         </div>
       )}
-    </FormSection>
+    </Seccion>
   );
 }
 
-// ── Estado inicial del formulario ─────────────────────────────────────────────
-const FORM_INICIAL = {
-  // Básico
-  tipo_bien_id:             '',
-  categoria_bien_id:        '',
-  marca_id:                 '',
-  modelo:                   '',
-  numero_serie:             '',
-  codigo_patrimonial:       '',
-  regimen_tenencia_id:      '',
-  estado_bien_id:           '',
-  estado_funcionamiento_id: '',
-  observacion:              '',
-  // Adquisición
-  anio_adquisicion:             '',
-  fecha_compra:                 '',
-  numero_orden_compra:          '',
-  fecha_vencimiento_garantia:   '',
-  fecha_instalacion:            '',
-  fecha_ultimo_inventario:      '',
-  // Ubicación
-  empresa_id:   '',
-  sede_id:      '',
-  modulo_id:    '',
-  ubicacion_id: '',
-  piso:         '',
+const FORM_VACIO = {
+  tipo_bien_id: '', categoria_bien_id: '', marca_id: '', modelo: '',
+  numero_serie: '', codigo_patrimonial: '', regimen_tenencia_id: '',
+  estado_bien_id: '', estado_funcionamiento_id: '',
+  observacion: '', anio_adquisicion: '', fecha_compra: '',
+  numero_orden_compra: '', fecha_vencimiento_garantia: '',
+  empresa_id: '', sede_id: '', modulo_id: '', ubicacion_id: '', piso: '',
 };
 
-const DETALLE_INICIAL = {};
-
-// ── Componente principal ──────────────────────────────────────────────────────
 export default function ModalBienForm({ open, onClose, item = null, onGuardado }) {
   const toast      = useToast();
-  const modoEditar = Boolean(item);
-
-  // Hooks
-  const { crear, actualizar } = useBienes();
-  const { sedes, modulos, ubicaciones, empresas } = useLocaciones();
-  const { fetchCatalogos, ...catData } = useCatalogos();
-
-  // authStore — para empresa_id del usuario autenticado
-  const empresaId = useAuthStore((s) => s.empresaId);
-
-  // Estado formulario
-  const [form,           setForm]           = useState(FORM_INICIAL);
-  const [detalle,        setDetalle]        = useState(DETALLE_INICIAL);
-  const [errors,         setErrors]         = useState({});
-  const [confirmGuardar, setConfirmGuardar] = useState(false);
-  const [guardando,      setGuardando]      = useState(false);
-
-  // Catálogos necesarios
-  const catalogosNecesarios = [
-    'categoriasBien', 'tiposBien', 'marcas', 'regimenTenencia',
-    'estadosBien', 'estadosFuncionamiento',
-    'tiposComputadora', 'tiposDisco', 'arquitecturasBits',
-    'tiposMonitor', 'tiposEscaner', 'tiposImpresion',
-    'interfacesConexion', 'tamanosCarro',
-  ];
+  const modoEditar = !!item;
+  const { crear, actualizar }                 = useBienes();
+  const { sedes, modulos, empresas }          = useLocaciones();
+  const { fetchCatalogos, ...catData }        = useCatalogos();
+  const empresaId                             = useAuthStore(s => s.empresaId);
+  const sedes_auth                            = useAuthStore(s => s.sedes);
+  const [form,     setForm]     = useState({ ...FORM_VACIO });
+  const [detalle,  setDetalle]  = useState({});
+  const [errors,   setErrors]   = useState({});
+  const [confirm,  setConfirm]  = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    fetchCatalogos(catalogosNecesarios);
+    fetchCatalogos([
+      'categoriasBien', 'tiposBien', 'marcas', 'regimenTenencia',
+      'estadosBien', 'estadosFuncionamiento',
+      'tiposComputadora', 'tiposDisco', 'arquitecturasBits',
+      'tiposMonitor', 'tiposEscaner', 'tiposImpresion',
+      'interfacesConexion', 'tamanosCarro',
+    ]);
   }, [open]);
 
-  // Pre-llena en modo editar
   useEffect(() => {
     if (!open) return;
     if (modoEditar && item) {
       setForm({
-        tipo_bien_id:             item.tipo_bien_id           ?? item.tipo_bien?.id        ?? '',
-        categoria_bien_id:        item.categoria_bien_id      ?? item.categoria_bien?.id   ?? '',
-        marca_id:                 item.marca_id               ?? item.marca?.id            ?? '',
-        modelo:                   item.modelo                 ?? '',
-        numero_serie:             item.numero_serie            ?? '',
-        codigo_patrimonial:       item.codigo_patrimonial     ?? '',
-        regimen_tenencia_id:      item.regimen_tenencia_id    ?? item.regimen_tenencia?.id ?? '',
-        estado_bien_id:           item.estado_bien_id         ?? item.estado_bien?.id      ?? '',
-        estado_funcionamiento_id: item.estado_funcionamiento_id ?? item.estado_funcionamiento?.id ?? '',
-        observacion:              item.observacion            ?? '',
-        anio_adquisicion:         item.anio_adquisicion       ?? '',
-        fecha_compra:             item.fecha_compra            ?? '',
-        numero_orden_compra:      item.numero_orden_compra    ?? '',
+        tipo_bien_id:             String(item.tipo_bien_id ?? item.tipo_bien?.id ?? ''),
+        categoria_bien_id:        String(item.categoria_bien_id ?? item.categoria_bien?.id ?? ''),
+        marca_id:                 String(item.marca_id ?? item.marca?.id ?? ''),
+        modelo:                   item.modelo ?? '',
+        numero_serie:             item.numero_serie ?? '',
+        codigo_patrimonial:       item.codigo_patrimonial ?? '',
+        regimen_tenencia_id:      String(item.regimen_tenencia_id ?? item.regimen_tenencia?.id ?? ''),
+        estado_bien_id:           String(item.estado_bien_id ?? item.estado_bien?.id ?? ''),
+        estado_funcionamiento_id: String(item.estado_funcionamiento_id ?? item.estado_funcionamiento?.id ?? ''),
+        observacion:              item.observacion ?? '',
+        anio_adquisicion:         item.anio_adquisicion ?? '',
+        fecha_compra:             item.fecha_compra ?? '',
+        numero_orden_compra:      item.numero_orden_compra ?? '',
         fecha_vencimiento_garantia: item.fecha_vencimiento_garantia ?? '',
-        fecha_instalacion:        item.fecha_instalacion      ?? '',
-        fecha_ultimo_inventario:  item.fecha_ultimo_inventario ?? '',
-        empresa_id:               item.empresa_id             ?? empresaId ?? '',
-        sede_id:                  item.sede_id                ?? '',
-        modulo_id:                item.modulo_id              ?? '',
-        ubicacion_id:             item.ubicacion_id           ?? '',
-        piso:                     item.piso                   ?? '',
+        empresa_id:               String(item.empresa_id ?? ''),
+        sede_id:                  String(item.sede_id ?? ''),
+        modulo_id:                String(item.modulo_id ?? ''),
+        ubicacion_id:             String(item.ubicacion_id ?? ''),
+        piso:                     item.piso ?? '',
       });
-      // Detalle técnico pre-llenado (viene de BienDetailSerializer)
-      const d = item.detalle_cpu || item.detalle_monitor ||
-                item.detalle_impresora || item.detalle_scanner ||
-                item.detalle_switch || {};
+      const d = item.detalle_cpu ?? item.detalle_monitor ?? item.detalle_impresora ?? item.detalle_scanner ?? item.detalle_switch ?? {};
       setDetalle(d);
     } else {
-      setForm({ ...FORM_INICIAL, empresa_id: empresaId ?? '' });
-      setDetalle(DETALLE_INICIAL);
+      const sedePorDefecto = sedes_auth?.[0]?.id ?? '';
+      setForm({ ...FORM_VACIO, empresa_id: String(empresaId ?? ''), sede_id: String(sedePorDefecto) });
+      setDetalle({});
     }
     setErrors({});
   }, [open, item?.id]);
 
-  // Detecta tipo técnico según el nombre del tipo seleccionado
-  const tiposBienCat  = catData.tiposBien ?? [];
-  const tipoSeleccionado = tiposBienCat.find((t) => String(t.id) === String(form.tipo_bien_id));
-  const tipoTecnico   = detectarTipoTecnico(tipoSeleccionado?.nombre);
+  const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  // Módulos y ubicaciones filtrados según sede seleccionada
-  const modulosFiltrados    = modulos.filter((m) =>
-    !form.sede_id || String(m.sede_id) === String(form.sede_id)
-  );
-  const ubicacionesFiltradas = ubicaciones.filter((u) =>
-    !form.modulo_id || String(u.modulo_id) === String(form.modulo_id)
-  );
+  const categorias       = catData.categoriasBien ?? [];
+  const tiposBien        = catData.tiposBien ;
+  const marcas           = catData.marcas ?? [];
+  const regimenes        = catData.regimenTenencia ?? [];
+  const estadosBien      = catData.estadosBien ?? [];
+  const estadosFuncion   = catData.estadosFuncionamiento ?? [];
+  const categoriaSel     = categorias.find(c => String(c.id) === String(form.categoria_bien_id));
+  const esInformatico    = categoriaSel?.nombre?.toUpperCase().includes('INFORM');
+  const tipoSel          = tiposBien.find(t => String(t.id) === String(form.tipo_bien_id));
+  const tipoTecnico      = esInformatico ? detectarTipoTecnico(tipoSel?.nombre ?? '') : null;
+  const tiposFiltrados   = useMemo(() => {
+    if (!form.categoria_bien_id) return tiposBien;
+    return tiposBien.filter(t => String(t.categoria_bien_id ?? '') === String(form.categoria_bien_id));
+  }, [tiposBien, form.categoria_bien_id]);
+  const sedeSelObj       = sedes.find(s => String(s.id) === String(form.sede_id));
+  const ubicaciones      = sedeSelObj?.ubicaciones ?? [];
+  const modulosActivos   = (modulos ?? []).filter(m => m.is_active !== false);
+  const idBueno          = estadosBien.find(e => e.nombre?.toUpperCase().includes('BUENO') || e.nombre?.toUpperCase().includes('ACTIVO'))?.id;
+  const idOperativo      = estadosFuncion.find(e => e.nombre?.toUpperCase().includes('OPERATIVO'))?.id;
 
-  const setF = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
+  useEffect(() => {
+    if (!modoEditar && idBueno)    setF('estado_bien_id',           String(idBueno));
+    if (!modoEditar && idOperativo) setF('estado_funcionamiento_id', String(idOperativo));
+  }, [idBueno, idOperativo, modoEditar]);
 
   const validar = () => {
     const e = {};
-    if (!form.tipo_bien_id)             e.tipo_bien_id             = 'Campo obligatorio.';
-    if (!form.marca_id)                 e.marca_id                 = 'Campo obligatorio.';
-    if (!form.modelo.trim())            e.modelo                   = 'Campo obligatorio.';
-    if (!form.regimen_tenencia_id)      e.regimen_tenencia_id      = 'Campo obligatorio.';
-    if (!form.estado_bien_id)           e.estado_bien_id           = 'Campo obligatorio.';
-    if (!form.estado_funcionamiento_id) e.estado_funcionamiento_id = 'Campo obligatorio.';
-    if (!form.empresa_id)               e.empresa_id               = 'Campo obligatorio.';
-    if (!form.sede_id)                  e.sede_id                  = 'Campo obligatorio.';
+    if (!form.tipo_bien_id)        e.tipo_bien_id        = 'Obligatorio.';
+    if (!form.marca_id)            e.marca_id            = 'Obligatorio.';
+    if (!form.modelo.trim())       e.modelo              = 'Obligatorio.';
+    if (!form.regimen_tenencia_id) e.regimen_tenencia_id = 'Obligatorio.';
+    if (!form.empresa_id)          e.empresa_id          = 'Obligatorio.';
+    if (!form.sede_id)             e.sede_id             = 'Obligatorio.';
     return e;
   };
 
-  const handleSolicitarGuardar = () => {
-    const e = validar();
-    if (Object.keys(e).length) { setErrors(e); return; }
-    setConfirmGuardar(true);
-  };
-
-  const handleGuardarConfirmado = async () => {
+  const handleGuardar = async () => {
+    setConfirm(false);
     setGuardando(true);
-
-    // Construye payload según BienWriteSerializer
-    const payload = {
-      tipo_bien_id:             Number(form.tipo_bien_id)             || undefined,
-      categoria_bien_id:        Number(form.categoria_bien_id)        || undefined,
-      marca_id:                 Number(form.marca_id)                 || undefined,
-      modelo:                   form.modelo.trim(),
-      numero_serie:             form.numero_serie.trim()              || undefined,
-      codigo_patrimonial:       form.codigo_patrimonial.trim()        || undefined,
-      regimen_tenencia_id:      Number(form.regimen_tenencia_id)      || undefined,
-      estado_bien_id:           Number(form.estado_bien_id)           || undefined,
-      estado_funcionamiento_id: Number(form.estado_funcionamiento_id) || undefined,
-      observacion:              form.observacion.trim()               || undefined,
-      anio_adquisicion:         form.anio_adquisicion                 || undefined,
-      fecha_compra:             form.fecha_compra                     || undefined,
-      numero_orden_compra:      form.numero_orden_compra.trim()       || undefined,
-      fecha_vencimiento_garantia: form.fecha_vencimiento_garantia     || undefined,
-      fecha_instalacion:        form.fecha_instalacion                || undefined,
-      fecha_ultimo_inventario:  form.fecha_ultimo_inventario          || undefined,
-      empresa_id:               Number(form.empresa_id)               || undefined,
-      sede_id:                  Number(form.sede_id)                  || undefined,
-      modulo_id:                Number(form.modulo_id)                || undefined,
-      ubicacion_id:             Number(form.ubicacion_id)             || undefined,
-      piso:                     Number(form.piso)                     || undefined,
-      // Detalle técnico — se envía solo si hay tipo técnico detectado
-      detalle:                  tipoTecnico ? detalle : {},
-    };
-
-    // Limpia undefined
-    Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
-
     try {
+      const detallePayload = tipoTecnico ? Object.fromEntries(Object.entries(detalle).filter(([, v]) => v !== '' && v != null)) : {};
+      const payload = {
+        ...Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : (isNaN(v) || v === null ? v : Number(v) === v || typeof v === 'string' ? v : Number(v))])),
+        estado_bien_id:           Number(form.estado_bien_id)           || undefined,
+        estado_funcionamiento_id: Number(form.estado_funcionamiento_id) || undefined,
+        empresa_id:               Number(form.empresa_id)               || undefined,
+        sede_id:                  Number(form.sede_id)                  || undefined,
+        modulo_id:                form.modulo_id    ? Number(form.modulo_id)    : null,
+        ubicacion_id:             form.ubicacion_id ? Number(form.ubicacion_id) : null,
+        tipo_bien_id:             Number(form.tipo_bien_id)             || undefined,
+        marca_id:                 Number(form.marca_id)                 || undefined,
+        regimen_tenencia_id:      Number(form.regimen_tenencia_id)      || undefined,
+        categoria_bien_id:        form.categoria_bien_id ? Number(form.categoria_bien_id) : null,
+        piso:                     form.piso ? Number(form.piso) : null,
+        fecha_instalacion:        null,
+        detalle:                  detallePayload,
+      };
       if (modoEditar) {
         await actualizar(item.id, payload);
         toast.success('Bien actualizado correctamente.');
@@ -567,346 +334,245 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
       onGuardado?.();
       onClose();
     } catch (e) {
-      const msg = e?.response?.data?.error
-        ?? Object.values(e?.response?.data ?? {})?.[0]?.[0]
-        ?? 'Error al guardar el bien.';
+      const msg = e?.response?.data?.error ?? Object.values(e?.response?.data ?? {})?.[0]?.[0] ?? 'Error al guardar.';
       toast.error(msg);
-    } finally {
-      setGuardando(false);
-      setConfirmGuardar(false);
-    }
+    } finally { setGuardando(false); setConfirm(false); }
   };
 
-  const catalogos = {
-    tiposComputadora:  catData.tiposComputadora  ?? [],
-    tiposDisco:        catData.tiposDisco        ?? [],
-    arquitecturasBits: catData.arquitecturasBits ?? [],
-    tiposMonitor:      catData.tiposMonitor      ?? [],
-    tiposEscaner:      catData.tiposEscaner      ?? [],
-    tiposImpresion:    catData.tiposImpresion    ?? [],
-    interfacesConexion:catData.interfacesConexion ?? [],
-    tamanosCarro:      catData.tamanosCarro      ?? [],
+  const handleValidar = () => {
+    const e = validar();
+    if (Object.keys(e).length) { setErrors(e); toast.error('Completa los campos obligatorios.'); return; }
+    setConfirm(true);
   };
 
   return (
     <>
-      <Modal open={open} onClose={onClose} size="xl" closeOnOverlay={!guardando && !confirmGuardar}>
+      <Modal open={open} onClose={onClose} size="xl" closeOnOverlay={!guardando && !confirm}>
         <ModalHeader
-          title={modoEditar ? 'Editar Bien' : 'Registrar Nuevo Bien'}
-          subtitle={modoEditar ? `ID #${item?.id} · ${item?.modelo ?? ''}` : 'Completa los datos del bien patrimonial'}
           icon="inventory_2"
+          title={modoEditar ? `Editar bien #${item?.id}` : 'Registrar nuevo bien patrimonial'}
+          subtitle={modoEditar ? `${item?.tipo_bien_nombre ?? ''} — ${item?.modelo ?? ''}` : 'Completa los datos del activo patrimonial'}
           onClose={onClose}
         />
 
         <ModalBody>
           <div className="space-y-6">
 
-            {/* ── Sección 1: Identificación básica ─────────────────────────── */}
-            <FormSection title="Identificación del bien" icon="label">
-              <div className="grid grid-cols-2 gap-3">
-
-                <div>
-                  <Label required>Tipo de bien</Label>
-                  <StyledSelect
-                    value={form.tipo_bien_id}
-                    onChange={(e) => {
-                      setF('tipo_bien_id', e.target.value);
-                      setDetalle(DETALLE_INICIAL); // limpia detalle al cambiar tipo
-                    }}
-                    placeholder="Seleccionar tipo..."
-                    options={(catData.tiposBien ?? []).map((t) => ({ value: t.id, label: t.nombre }))}
-                  />
-                  <FieldError msg={errors.tipo_bien_id} />
-                </div>
-
-                <div>
-                  <Label>Categoría</Label>
-                  <StyledSelect
-                    value={form.categoria_bien_id}
-                    onChange={(e) => setF('categoria_bien_id', e.target.value)}
-                    placeholder="Seleccionar categoría..."
-                    options={(catData.categoriasBien ?? []).map((c) => ({ value: c.id, label: c.nombre }))}
-                  />
-                </div>
-
-                <div>
-                  <Label required>Marca</Label>
-                  <StyledSelect
-                    value={form.marca_id}
-                    onChange={(e) => setF('marca_id', e.target.value)}
-                    placeholder="Seleccionar marca..."
-                    options={(catData.marcas ?? []).map((m) => ({ value: m.id, label: m.nombre }))}
-                  />
-                  <FieldError msg={errors.marca_id} />
-                </div>
-
-                <div>
-                  <Label required>Modelo</Label>
-                  <StyledInput
-                    value={form.modelo}
-                    onChange={(e) => setF('modelo', e.target.value)}
-                    placeholder="Ej: EliteBook 840 G9"
-                  />
-                  <FieldError msg={errors.modelo} />
-                </div>
-
-                <div>
-                  <Label>N° de serie</Label>
-                  <StyledInput
-                    value={form.numero_serie}
-                    onChange={(e) => setF('numero_serie', e.target.value)}
-                    placeholder="Ej: 5CD1234XYZ"
-                    mono
-                  />
-                </div>
-
-                <div>
-                  <Label>Código patrimonial</Label>
-                  <StyledInput
-                    value={form.codigo_patrimonial}
-                    onChange={(e) => setF('codigo_patrimonial', e.target.value)}
-                    placeholder="Ej: 000012345"
-                    mono
-                  />
-                </div>
-
-                <div>
-                  <Label required>Régimen de tenencia</Label>
-                  <StyledSelect
-                    value={form.regimen_tenencia_id}
-                    onChange={(e) => setF('regimen_tenencia_id', e.target.value)}
-                    placeholder="Seleccionar..."
-                    options={(catData.regimenTenencia ?? []).map((r) => ({ value: r.id, label: r.nombre }))}
-                  />
-                  <FieldError msg={errors.regimen_tenencia_id} />
-                </div>
-
-                <div>
-                  <Label required>Estado del bien</Label>
-                  <StyledSelect
-                    value={form.estado_bien_id}
-                    onChange={(e) => setF('estado_bien_id', e.target.value)}
-                    placeholder="Seleccionar..."
-                    options={(catData.estadosBien ?? []).map((e) => ({ value: e.id, label: e.nombre }))}
-                  />
-                  <FieldError msg={errors.estado_bien_id} />
-                </div>
-
-                <div>
-                  <Label required>Estado de funcionamiento</Label>
-                  <StyledSelect
-                    value={form.estado_funcionamiento_id}
-                    onChange={(e) => setF('estado_funcionamiento_id', e.target.value)}
-                    placeholder="Seleccionar..."
-                    options={(catData.estadosFuncionamiento ?? []).map((e) => ({ value: e.id, label: e.nombre }))}
-                  />
-                  <FieldError msg={errors.estado_funcionamiento_id} />
-                </div>
-
-                <div className="col-span-2">
-                  <Label>Observación</Label>
-                  <StyledTextarea
-                    value={form.observacion}
-                    onChange={(e) => setF('observacion', e.target.value)}
-                    placeholder="Observaciones adicionales sobre el bien..."
-                  />
-                </div>
-              </div>
-            </FormSection>
-
-            {/* ── Sección 2: Adquisición ────────────────────────────────────── */}
-            <FormSection title="Datos de adquisición" icon="receipt_long">
+            <Seccion title="Identificación del bien" icon="label">
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label>Año de adquisición</Label>
-                  <StyledInput
-                    value={form.anio_adquisicion}
-                    onChange={(e) => setF('anio_adquisicion', e.target.value)}
-                    placeholder="Ej: 2023"
-                    type="number"
-                  />
+                  <FLabel required>Categoría</FLabel>
+                  <FSelect value={form.categoria_bien_id}
+                    onChange={v => { setF('categoria_bien_id', v); setF('tipo_bien_id', ''); setDetalle({}); }}>
+                    <option value="">Seleccionar categoría...</option>
+                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    
+                  </FSelect>
+                  <FError msg={errors.categoria_bien_id} />
                 </div>
                 <div>
-                  <Label>Fecha de compra</Label>
-                  <StyledInput
-                    value={form.fecha_compra}
-                    onChange={(e) => setF('fecha_compra', e.target.value)}
-                    type="date"
-                  />
+                  <FLabel required>Tipo de bien</FLabel>
+                  <FSelect value={form.tipo_bien_id}  onChange={v => { setF('tipo_bien_id', v); setDetalle({}); }}
+                    disabled={!form.categoria_bien_id}>
+                    <option value="">Seleccionar tipo...</option>
+                    {tiposFiltrados.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                    {console.log(tiposFiltrados)} 
+                  </FSelect>
+                  <FError msg={errors.tipo_bien_id} />
                 </div>
                 <div>
-                  <Label>N° orden de compra</Label>
-                  <StyledInput
-                    value={form.numero_orden_compra}
-                    onChange={(e) => setF('numero_orden_compra', e.target.value)}
-                    placeholder="Ej: OC-2023-0045"
-                    mono
-                  />
+                  <FLabel required>Marca</FLabel>
+                  <FSelect value={form.marca_id} onChange={v => setF('marca_id', v)}>
+                    <option value="">Seleccionar marca...</option>
+                    {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                  </FSelect>
+                  <FError msg={errors.marca_id} />
                 </div>
                 <div>
-                  <Label>Venc. garantía</Label>
-                  <StyledInput
-                    value={form.fecha_vencimiento_garantia}
-                    onChange={(e) => setF('fecha_vencimiento_garantia', e.target.value)}
-                    type="date"
-                  />
+                  <FLabel required>Modelo</FLabel>
+                  <FInput value={form.modelo} onChange={v => setF('modelo', v)} placeholder="Ej: Latitude 5420" />
+                  <FError msg={errors.modelo} />
                 </div>
                 <div>
-                  <Label>Fecha de instalación</Label>
-                  <StyledInput
-                    value={form.fecha_instalacion}
-                    onChange={(e) => setF('fecha_instalacion', e.target.value)}
-                    type="date"
-                  />
+                  <FLabel>N° de serie</FLabel>
+                  <FInput value={form.numero_serie} onChange={v => setF('numero_serie', v)} placeholder="S/N si no aplica" mono />
                 </div>
                 <div>
-                  <Label>Último inventario</Label>
-                  <StyledInput
-                    value={form.fecha_ultimo_inventario}
-                    onChange={(e) => setF('fecha_ultimo_inventario', e.target.value)}
-                    type="date"
-                  />
+                  <FLabel>Código patrimonial</FLabel>
+                  <FInput value={form.codigo_patrimonial} onChange={v => setF('codigo_patrimonial', v)} placeholder="S/C si no aplica" mono />
                 </div>
               </div>
-            </FormSection>
+            </Seccion>
 
-            {/* ── Sección 3: Ubicación ──────────────────────────────────────── */}
-            <FormSection title="Ubicación física" icon="location_on">
-              <div className="grid grid-cols-2 gap-3">
-
+            {form.categoria_bien_id && !esInformatico && (
+              <div className="flex items-start gap-3 p-4 rounded-xl"
+                style={{ background: 'rgb(180 83 9 / 0.06)', border: '1px solid rgb(180 83 9 / 0.2)' }}>
+                <Icon name="construction" className="text-[20px] shrink-0 mt-0.5" style={{ color: '#b45309' }} />
                 <div>
-                  <Label required>Empresa / Corte</Label>
-                  <StyledSelect
-                    value={form.empresa_id}
-                    onChange={(e) => setF('empresa_id', e.target.value)}
-                    placeholder="Seleccionar empresa..."
-                    options={(empresas ?? []).map((e) => ({
-                      value: e.id,
-                      label: e.nombre_corto ? `${e.nombre_corto} — ${e.nombre}` : e.nombre,
-                    }))}
-                  />
-                  <FieldError msg={errors.empresa_id} />
-                </div>
-
-                <div>
-                  <Label required>Sede</Label>
-                  <StyledSelect
-                    value={form.sede_id}
-                    onChange={(e) => {
-                      setF('sede_id', e.target.value);
-                      setF('modulo_id', '');
-                      setF('ubicacion_id', '');
-                    }}
-                    placeholder="Seleccionar sede..."
-                    options={(sedes ?? []).filter((s) =>
-                      !form.empresa_id || String(s.empresa_id) === String(form.empresa_id)
-                    ).map((s) => ({ value: s.id, label: s.nombre }))}
-                  />
-                  <FieldError msg={errors.sede_id} />
-                </div>
-
-                <div>
-                  <Label>Módulo</Label>
-                  <StyledSelect
-                    value={form.modulo_id}
-                    onChange={(e) => {
-                      setF('modulo_id', e.target.value);
-                      setF('ubicacion_id', '');
-                    }}
-                    placeholder="Seleccionar módulo..."
-                    disabled={!form.sede_id}
-                    options={modulosFiltrados.map((m) => ({ value: m.id, label: m.nombre }))}
-                  />
-                </div>
-
-                <div>
-                  <Label>Ubicación / Área</Label>
-                  <StyledSelect
-                    value={form.ubicacion_id}
-                    onChange={(e) => setF('ubicacion_id', e.target.value)}
-                    placeholder="Seleccionar ubicación..."
-                    disabled={!form.modulo_id}
-                    options={ubicacionesFiltradas.map((u) => ({ value: u.id, label: u.nombre }))}
-                  />
-                </div>
-
-                <div>
-                  <Label>Piso</Label>
-                  <StyledInput
-                    value={form.piso}
-                    onChange={(e) => setF('piso', e.target.value)}
-                    placeholder="Ej: 3"
-                    type="number"
-                  />
-                </div>
-              </div>
-            </FormSection>
-
-            {/* ── Sección 4: Detalle técnico (condicional) ─────────────────── */}
-            {tipoTecnico && (
-              <div className="rounded-2xl p-1"
-                   style={{ background: 'rgba(127,29,29,0.04)', border: '1px dashed rgba(127,29,29,0.2)' }}>
-                <div className="p-4">
-                  {/* Badge indicador del tipo detectado */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <Icon name="sensors" className="text-[15px] text-primary" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-primary">
-                      Tipo detectado: {tipoTecnico}
-                    </span>
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ background: 'rgba(127,29,29,0.1)', color: 'var(--color-primary)' }}>
-                      Detalle técnico requerido
-                    </span>
-                  </div>
-                  <SeccionDetalleTecnico
-                    tipoTecnico={tipoTecnico}
-                    detalle={detalle}
-                    setDetalle={setDetalle}
-                    catalogos={catalogos}
-                  />
+                  <p className="text-sm font-bold" style={{ color: '#b45309' }}>Módulo en desarrollo</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-text-body)' }}>
+                    El registro de bienes muebles, inmuebles y otras categorías estará disponible próximamente.
+                    Por ahora el sistema soporta el registro completo de bienes <strong>Informáticos</strong>.
+                    Puedes registrar el bien con los datos básicos sin detalle técnico.
+                  </p>
                 </div>
               </div>
             )}
 
+            <Seccion title="Adquisición" icon="receipt_long">
+              <div className="grid grid-cols-4 gap-3">
+                <div>
+                  <FLabel required>Régimen tenencia</FLabel>
+                  <FSelect value={form.regimen_tenencia_id} onChange={v => setF('regimen_tenencia_id', v)}>
+                    <option value="">Seleccionar...</option>
+                    {regimenes.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                  </FSelect>
+                  <FError msg={errors.regimen_tenencia_id} />
+                </div>
+                <div>
+                  <FLabel>Año adquisición</FLabel>
+                  <FInput type="number" value={form.anio_adquisicion} onChange={v => setF('anio_adquisicion', v)} placeholder="Ej: 2023" />
+                </div>
+                <div>
+                  <FLabel>Fecha de compra</FLabel>
+                  <FInput type="date" value={form.fecha_compra} onChange={v => setF('fecha_compra', v)} />
+                </div>
+                <div>
+                  <FLabel>N° orden de compra</FLabel>
+                  <FInput value={form.numero_orden_compra} onChange={v => setF('numero_orden_compra', v)} placeholder="Ej: OC-2024-001" mono />
+                </div>
+                <div>
+                  <FLabel>Garantía vence</FLabel>
+                  <FInput type="date" value={form.fecha_vencimiento_garantia} onChange={v => setF('fecha_vencimiento_garantia', v)} />
+                </div>
+                <div className="col-span-3">
+                  <FLabel>Observación</FLabel>
+                  <FInput value={form.observacion} onChange={v => setF('observacion', v)} placeholder="Observaciones adicionales..." />
+                </div>
+              </div>
+            </Seccion>
+
+            <Seccion title="Estado del bien" icon="verified">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 p-3 rounded-xl"
+                  style={{ background: 'rgb(22 163 74 / 0.06)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
+                  <Icon name="check_circle" className="text-[22px]" style={{ color: '#16a34a' }} />
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado del bien</p>
+                    <p className="text-sm font-bold" style={{ color: '#16a34a' }}>
+                      {estadosBien.find(e => String(e.id) === String(form.estado_bien_id))?.nombre ?? 'Bueno / Activo'}
+                    </p>
+                  </div>
+                  {modoEditar && (
+                    <FSelect value={form.estado_bien_id} onChange={v => setF('estado_bien_id', v)}>
+                      <option value="">Seleccionar...</option>
+                      {estadosBien.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+                    </FSelect>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-xl"
+                  style={{ background: 'rgb(37 99 235 / 0.06)', border: '1px solid rgb(37 99 235 / 0.2)' }}>
+                  <Icon name="power_settings_new" className="text-[22px]" style={{ color: '#1d4ed8' }} />
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado funcionamiento</p>
+                    <p className="text-sm font-bold" style={{ color: '#1d4ed8' }}>
+                      {estadosFuncion.find(e => String(e.id) === String(form.estado_funcionamiento_id))?.nombre ?? 'Operativo'}
+                    </p>
+                  </div>
+                  {modoEditar && (
+                    <FSelect value={form.estado_funcionamiento_id} onChange={v => setF('estado_funcionamiento_id', v)}>
+                      <option value="">Seleccionar...</option>
+                      {estadosFuncion.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+                    </FSelect>
+                  )}
+                </div>
+              </div>
+              {!modoEditar && (
+                <p className="text-[10px]" style={{ color: 'var(--color-text-faint)' }}>
+                  * El estado se asigna automáticamente como <strong>Activo / Operativo</strong>. Cambia al registrar mantenimientos o bajas.
+                </p>
+              )}
+            </Seccion>
+
+            <Seccion title="Ubicación física" icon="location_on">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <FLabel required>Empresa / Corte</FLabel>
+                  <FSelect value={form.empresa_id} onChange={v => { setF('empresa_id', v); setF('sede_id', ''); setF('modulo_id', ''); setF('ubicacion_id', ''); }}>
+                    <option value="">Seleccionar...</option>
+                    {(empresas ?? []).map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+                  </FSelect>
+                  <FError msg={errors.empresa_id} />
+                </div>
+                <div>
+                  <FLabel required>Sede</FLabel>
+                  <FSelect value={form.sede_id} onChange={v => { setF('sede_id', v); setF('modulo_id', ''); setF('ubicacion_id', ''); }}
+                    disabled={!form.empresa_id}>
+                    <option value="">Seleccionar sede...</option>
+                    {sedes.filter(s => !form.empresa_id || String(s.empresa_id) === String(form.empresa_id)).map(s => (
+                      <option key={s.id} value={s.id}>{s.nombre}</option>
+                    ))}
+                  </FSelect>
+                  <FError msg={errors.sede_id} />
+                </div>
+                <div>
+                  <FLabel>Módulo</FLabel>
+                  <FSelect value={form.modulo_id} onChange={v => { setF('modulo_id', v); setF('ubicacion_id', ''); }}>
+                    <option value="">Sin módulo</option>
+                    {modulosActivos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                  </FSelect>
+                </div>
+                <div>
+                  <FLabel>Ubicación / Área</FLabel>
+                  <FSelect value={form.ubicacion_id} onChange={v => setF('ubicacion_id', v)} disabled={!form.sede_id}>
+                    <option value="">Sin ubicación</option>
+                    {ubicaciones.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+                  </FSelect>
+                </div>
+                <div>
+                  <FLabel>Piso</FLabel>
+                  <FInput type="number" value={form.piso} onChange={v => setF('piso', v)} placeholder="Ej: 2" />
+                </div>
+              </div>
+              <div className="mt-2 flex items-start gap-2 p-2.5 rounded-xl"
+                style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+                <Icon name="info" className="text-[14px] shrink-0 mt-0.5" style={{ color: 'var(--color-text-faint)' }} />
+                <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+                  La ubicación inicial es la del registrador. Cambia mediante <strong>Traslado</strong> o <strong>Asignación interna</strong>.
+                </p>
+              </div>
+            </Seccion>
+
+            <SeccionDetalle tipoTecnico={tipoTecnico} detalle={detalle} setDetalle={setDetalle}
+              catalogos={{
+                tiposComputadora:  catData.tiposComputadora  ?? [],
+                tiposDisco:        catData.tiposDisco        ?? [],
+                arquitecturasBits: catData.arquitecturasBits ?? [],
+                tiposMonitor:      catData.tiposMonitor      ?? [],
+                tiposEscaner:      catData.tiposEscaner      ?? [],
+                tiposImpresion:    catData.tiposImpresion    ?? [],
+                interfacesConexion:catData.interfacesConexion ?? [],
+                tamanosCarro:      catData.tamanosCarro      ?? [],
+              }} />
           </div>
         </ModalBody>
 
-        <ModalFooter align="between">
-          <span className="text-[9px] font-bold" style={{ color: 'var(--color-text-faint)' }}>
-            {tipoTecnico
-              ? `Tipo técnico detectado: ${tipoTecnico}`
-              : 'Sin detalle técnico adicional'}
-          </span>
-          <div className="flex items-center gap-2">
-            <button onClick={onClose} disabled={guardando} className="btn-secondary">
-              Cancelar
-            </button>
-            <button
-              onClick={handleSolicitarGuardar}
-              disabled={guardando}
-              className="btn-primary flex items-center gap-2"
-              style={{ opacity: guardando ? 0.6 : 1 }}>
-              <Icon name="save" className="text-[16px]" />
-              {modoEditar ? 'Actualizar bien' : 'Registrar bien'}
-            </button>
-          </div>
+        <ModalFooter align="right">
+          <button onClick={onClose} className="btn-secondary">Cancelar</button>
+          <button onClick={handleValidar} disabled={guardando}
+            className="btn-primary flex items-center gap-2">
+            {guardando ? <span className="btn-loading-spin" /> : <Icon name={modoEditar ? 'save' : 'add_circle'} className="text-[16px]" />}
+            {modoEditar ? 'Guardar cambios' : 'Registrar bien'}
+          </button>
         </ModalFooter>
       </Modal>
 
-      <ConfirmDialog
-        open={confirmGuardar}
-        title={modoEditar ? 'Confirmar actualización' : 'Confirmar registro'}
-        message={
-          modoEditar
-            ? `¿Guardar los cambios del bien ID #${item?.id}?`
-            : `¿Registrar el bien "${tipoSeleccionado?.nombre ?? ''} — ${form.modelo}"?`
-        }
-        confirmLabel={modoEditar ? 'Sí, actualizar' : 'Sí, registrar'}
-        variant="primary"
-        loading={guardando}
-        onConfirm={handleGuardarConfirmado}
-        onClose={() => setConfirmGuardar(false)}
-      />
+      <ConfirmDialog open={confirm}
+        title={modoEditar ? 'Confirmar edición' : 'Confirmar registro'}
+        message={`¿${modoEditar ? 'Guardar cambios en' : 'Registrar'} el bien "${tipoSel?.nombre ?? ''} — ${form.modelo}"?`}
+        confirmLabel={modoEditar ? 'Sí, guardar' : 'Sí, registrar'}
+        variant="primary" loading={guardando}
+        onConfirm={handleGuardar} onClose={() => setConfirm(false)} />
     </>
   );
 }

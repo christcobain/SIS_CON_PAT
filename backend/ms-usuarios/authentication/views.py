@@ -431,7 +431,7 @@ class PasswordPolicyView(ViewSet):
             404: ErrorResponseSerializer
         }
     )
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['put'])
     def activate(self, request, pk=None):
         result = PasswordPolicyService.activate(pk)   
         if not result['success']:
@@ -447,7 +447,7 @@ class PasswordPolicyView(ViewSet):
         }
     )
     @action(detail=True, methods=['delete'])
-    def dectivate(self, request, pk=None):
+    def deactivate(self, request, pk=None):
         result = PasswordPolicyService.deactivate(pk)   
         if not result['success']:
             return Response(result, status=status.HTTP_404_NOT_FOUND)  

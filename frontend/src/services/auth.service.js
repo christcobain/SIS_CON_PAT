@@ -16,7 +16,7 @@ const authService = {
     return response.data;
   },
   // ==========================================
-  // GESTIÓN DE CONTRASEÑAS
+  // GESTIÓN DE CONTRASEÑAS Y POLITICAS
   changePasswordSelf: async (username, currentPassword, newPassword) => {
     const response = await axiosUsuarios.post('/auth/changepassworduser/', {
       username: username,
@@ -35,15 +35,38 @@ const authService = {
   resetPasswordByDni: async (username) => {
     const response = await axiosUsuarios.post('/auth/changepassword/', { username });
     return response.data;
+  },  
+
+  listarPoliticas: async () => {
+    const response = await axiosUsuarios.get('/auth/passwordpolicy/');
+    return response.data;
+  },  
+  detallePolitica:async(id)=>{
+    const response = await axiosUsuarios.get(`/auth/passwordpolicy/${id}/`);
+    return response.data;
+  
+  },
+  crearPolitica:async(body)=>{
+    const response = await axiosUsuarios.post('/auth/passwordpolicy/',{ body });
+    return response.data;
+  },
+  actualizarPolitica:async(id,body)=>{
+    const response = await axiosUsuarios.put(`/auth/passwordpolicy/${id}/`, body );
+    return response.data;
+  },
+  activarPolitica:async(id)=>{
+    const response = await axiosUsuarios.put(`/auth/passwordpolicy/${id}/activate/` );
+    return response.data;
+  },
+  desactivarPolitica:async(id)=>{
+    const response = await axiosUsuarios.put(`/auth/passwordpolicy/${id}/deactivate/` );
+    return response.data;
   },
   getPasswordPolicyActive: async () => {
     const response = await axiosUsuarios.get('/auth/passwordpolicy/active/');
     return response.data;
   },
-  listarPoliticas: async () => {
-    const response = await axiosUsuarios.get('/auth/passwordpolicy/');
-    return response.data;
-  },
+
   // ==========================================
   // MONITOREO Y CONFIGURACIÓN (SYSADMIN)
   getSessions: async (dni = null) => {

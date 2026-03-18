@@ -119,7 +119,7 @@ function TablaIntentos({ items }) {
       <TablaWrapper columnas={cols}>
         {items.map(a => (
           <tr key={a.id} className="hover:bg-surface-alt/60">
-            <td className="font-mono text-xs font-bold">{a.dni}</td>
+            <td className="font-mono text-xs font-bold">{a.username}</td>
             <td className="font-mono text-xs">{a.ip_address}</td>
             <td><BadgeIntento success={a.success} tipo={a.attempt_type} /></td>
             <td className="text-xs">{fmtT(a.attempted_at)}</td>

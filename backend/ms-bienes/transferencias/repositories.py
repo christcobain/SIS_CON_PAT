@@ -110,7 +110,7 @@ class TransferenciaDetalleRepository:
     ):
         qs = TransferenciaDetalle.objects.filter(
             bien_id=bien_id,
-            transferencia__estado__in=[
+            transferencia__estado_transferencia__in=[
                 'PENDIENTE_APROBACION',
                 'DEVUELTO',
                 'EN_RETORNO',

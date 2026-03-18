@@ -9,7 +9,7 @@ from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,Paragraph, 
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.graphics.shapes import Drawing, Circle, String
-from bienes.services import MsUsuariosClient
+from shared.clients import MsUsuariosClient
 
 logger = logging.getLogger(__name__)
 
@@ -289,7 +289,7 @@ def generar_pdf_mantenimiento(mantenimiento, cookie: str = '') -> bytes:
     # ── 5. DATOS INICIALES / TRABAJOS REALIZADOS / DIAGNÓSTICO ───────────────
     bloques_txt = [
         ('Datos iniciales / Descripción del problema',
-         mantenimiento.datos_iniciales or '—'),
+         mantenimiento.diagnostico_inicial or '—'),
         ('Trabajos realizados',
          mantenimiento.trabajos_realizados or '—'),
         ('Diagnóstico final',

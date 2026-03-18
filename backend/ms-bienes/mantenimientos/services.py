@@ -9,7 +9,7 @@ from .repositories import (MantenimientoRepository,MantenimientoDetalleRepositor
     MantenimientoImagenRepository)
 from bienes.repositories import BienRepository
 from catalogos.models import CatEstadoFuncionamiento
-from bienes.services import MsUsuariosClient
+from shared.clients import MsUsuariosClient
 
 class MantenimientoService:
     @staticmethod

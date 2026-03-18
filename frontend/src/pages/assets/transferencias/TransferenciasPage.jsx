@@ -50,13 +50,14 @@ export default function TransferenciasPage() {
 
     const onConfirmarCancelacion = async () => {
         try {
-            await cancelar(itemCancel.id, { motivo_cancelacion_id: 1, detalle_cancelacion: 'Cancelado desde panel' });
-            toast.success('Transferencia cancelada correctamente');
+            let result;
+            result=await cancelar(itemCancel.id, { motivo_cancelacion_id: 1, detalle_cancelacion: 'Cancelado desde panel' });
+            toast.success(result?.message );
             setConfirmCancel(false);
             setItemCancel(null);
             refetch();
         } catch (e) {
-            toast.error(e?.response?.data?.error || 'No se pudo cancelar');
+            toast.error(e?.message.error || 'No se pudo cancelar');
         }
     };
 
@@ -65,7 +66,7 @@ export default function TransferenciasPage() {
             await descargarPDF(id);
             toast.info('Generando documento...');
         } catch (e) {
-            toast.error('Error al descargar el PDF');
+            toast.error(e?.response?.data?.error || 'No se pudo generar el documento');
         }
     }; 
 
@@ -165,8 +166,7 @@ export default function TransferenciasPage() {
                 reenviarTransferencia={reenviarTransferencia}
                 onGuardado={() => { 
                     setModalForm(false); 
-                    setItemEditar(null); 
-                    toast.success(itemEditar ? 'Actualizado correctamente' : 'Registrado correctamente');
+                    setItemEditar(null);
                     refetch();
                 }}
             />

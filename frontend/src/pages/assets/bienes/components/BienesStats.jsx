@@ -6,8 +6,7 @@ const Icon = ({ name, className = '' }) => (
 
 // ── Componente de KPI Estándar del Proyecto ──────────────────────────────────
 function KpiCard({ icon, colorClass, label, value, loading, trend }) {
-  // Configuración de colores dinámicos basados en una sola clase de color
-  // Esto asegura que el modo oscuro se vea bien automáticamente
+
   const colorMap = {
     primary: "text-primary bg-primary/10 border-primary/20",
     emerald: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
@@ -93,7 +92,7 @@ export default function BienesStats({ bienes = [], loading = false }) {
       <KpiCard
         icon="settings_input_component"
         colorClass="blue"
-        label="En Funcionamiento"
+        label="Operativos"
         value={operativos}
         loading={loading}
       />

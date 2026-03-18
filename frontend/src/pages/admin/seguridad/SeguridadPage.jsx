@@ -13,8 +13,8 @@ const Icon = ({ name, className = '' }) => (
 
 const TABS = [
   { id: 'sesiones',     label: 'Sesiones activas',  icon: 'wifi'           },
-  { id: 'historial',    label: 'Historial',          icon: 'manage_history' },
-  { id: 'intentos',     label: 'Intentos',           icon: 'login'          },
+  { id: 'historial',    label: 'Historial Sesiones',          icon: 'manage_history' },
+  { id: 'intentos',     label: 'Registro de Intentos',           icon: 'login'          },
   { id: 'credenciales', label: 'Credenciales',       icon: 'key'            },
   { id: 'politicas',    label: 'Políticas',          icon: 'policy'         },
 ];

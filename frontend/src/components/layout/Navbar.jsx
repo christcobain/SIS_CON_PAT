@@ -1,6 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import authService from '../../services/auth.service';
 import { useAuth } from '../../hooks/useAuth';
 
 const BREADCRUMB_MAP = {
@@ -46,11 +45,11 @@ export default function Navbar({ onToggleSidebar }) {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const user      = useAuthStore((s) => s.user);
   const role      = useAuthStore((s) => s.role);
+  const sedes      = useAuthStore((s) => s.sedes[0].nombre);
   const [seccion, pagina] = BREADCRUMB_MAP[location.pathname] ?? ['Sistema', 'Página'];
   const roleName  = getRoleName(user?.role ?? role);
   const initials  = getInitials(user?.nombres, user?.apellidos);
   const fullName  = user ? `${user.nombres ?? ''} ${user.apellidos ?? ''}`.trim() : 'Usuario';
-
   const handleLogout = async () => {
     try { 
       await logout(); 
@@ -91,18 +90,18 @@ export default function Navbar({ onToggleSidebar }) {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            <span className="text-[10px] font-black text-white/80 uppercase tracking-tighter">Sincronizado</span>
+            <span className="text-[10px] font-black text-white/80 uppercase tracking-tighter">Sede: {sedes}</span>
           </div>
 
-          <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+          <div className="flex items-center gap-3 pl-4 border-l border-white/10"> 
             <div className="text-right hidden sm:block">
               <p className="text-white font-black text-[11px] leading-none uppercase tracking-wide">{fullName}</p>
-              <p className="text-white/50 font-bold text-[9px] mt-1 uppercase tracking-tighter">{roleName}</p>
+              <p className="text-white/50 font-bold text-[9px] mt-1 uppercase tracking-tighter">Rol: {roleName}</p>
             </div>
             <div className="size-8 rounded-xl bg-gradient-to-tr from-white/10 to-white/30 border border-white/30 flex items-center justify-center text-white text-[10px] font-black shadow-inner">
               {initials}
             </div>
-          </div>
+          </div> 
         </div>
       </div>
 

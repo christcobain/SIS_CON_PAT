@@ -105,7 +105,6 @@ class MantenimientoDetailSerializer(serializers.ModelSerializer):
 
 class MantenimientoCreateSerializer(serializers.Serializer):
     bien_ids        = serializers.ListField(child=serializers.IntegerField(), min_length=1)
-    datos_iniciales = serializers.CharField(required=False, allow_blank=True)
 class DetalleEstadoSerializer(serializers.Serializer):
     bien_id                    = serializers.IntegerField()
     estado_funcionamiento_id   = serializers.IntegerField()

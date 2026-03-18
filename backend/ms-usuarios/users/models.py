@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import models
 from django.core.validators import RegexValidator
 from roles.models import Role
-from locations.models import Empresa,Sede
+from locations.models import Empresa,Sede,Ubicacion,Modulo
 
 #--TABLA INDEPENDIENTE CONMO SI FUERA UNA BBD EXTERNA DE OTRA ENTIDAD---
 class BDEmpleados(models.Model):
@@ -66,7 +66,7 @@ class User(AbstractUser):
         ]
     def __str__(self):
         ordering = ['last_name', 'first_name']
-        return f'{self.first_name} {self.last_name} ({self.dni})'
+        return f'{self.first_name} {self.last_name} ({self.cargo})'
     def get_tipo_usuario(self):
         return 'Sistema' if self.es_usuario_sistema else 'Jurisdiccional'
     def puede_acceder_al_sistema(self):

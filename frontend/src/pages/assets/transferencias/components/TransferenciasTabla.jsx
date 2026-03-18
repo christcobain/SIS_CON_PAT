@@ -8,12 +8,12 @@ const Icon = ({ name, className = '' }) => (
 const fmtT = iso => !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
 const BADGE = {
-  PENDIENTE_APROBACION:  { label: 'Pendiente',         cls: 'badge-pendiente'  },
-  EN_ESPERA_CONFORMIDAD: { label: 'Espera conform.',   cls: 'badge-en-proceso' },
-  EN_RETORNO:            { label: 'En retorno',         cls: 'badge-en-proceso' },
-  ATENDIDO:              { label: 'Atendido',           cls: 'badge-atendido'   },
-  DEVUELTO:              { label: 'Devuelto',           cls: 'badge-devuelto'   },
-  CANCELADO:             { label: 'Cancelado',          cls: 'badge-cancelado'  },
+  PENDIENTE_APROBACION:  { label: 'PENDIENTE_APROBACION',         cls: 'badge-pendiente'  },
+  EN_ESPERA_CONFORMIDAD: { label: 'EN_ESPERA_CONFORMIDAD',   cls: 'badge-en-proceso' },
+  EN_RETORNO:            { label: 'EN_RETORNO',         cls: 'badge-en-proceso' },
+  ATENDIDO:              { label: 'ATENDIDO',           cls: 'badge-atendido'   },
+  DEVUELTO:              { label: 'DEVUELTO',           cls: 'badge-devuelto'   },
+  CANCELADO:             { label: 'CANCELADO',          cls: 'badge-cancelado'  },
 };
 
 function filtrarItems(items, filtros) {
@@ -28,7 +28,7 @@ function filtrarItems(items, filtros) {
   );
 }
 
-function AccionesFila({ item, role, onVerDetalle, onEditar, onCancelar, onDownload }) {
+function AccionesFila({ item,  onVerDetalle, onEditar, onCancelar, onDownload }) {
   const estado = item.estado_transferencia;
   const esRegistrador = item.usuario_origen_id === useAuthStore.getState().user?.id;
   const puedeEditar = (estado === 'DEVUELTO') && esRegistrador;
@@ -73,7 +73,7 @@ function AccionesFila({ item, role, onVerDetalle, onEditar, onCancelar, onDownlo
 }
 
 export default function TransferenciasTabla({
-  items = [], filtros = {}, loading, error, refetch,
+  items = [], filtros = {}, loading, 
   activeTab, onVerDetalle, onEditar, onCancelar, onDownload,
 }) {
   const filtrados = useMemo(() => filtrarItems(items, filtros), [items, filtros]);

@@ -1,15 +1,7 @@
-"""
-transferencias/pdf_generator.py
-
-Genera el PDF oficial de Traslado / Asignación de Bienes Muebles Patrimoniales.
-Usa MsUsuariosClient de bienes/services.py para resolver nombres.
-"""
 import io
 import logging
 from pathlib import Path
-
 from django.conf import settings
-
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.lib.units import cm
@@ -20,8 +12,7 @@ from reportlab.platypus import (
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.graphics.shapes import Drawing, Circle, String
-
-from bienes.services import MsUsuariosClient
+from shared.clients import MsUsuariosClient
 
 logger = logging.getLogger(__name__)
 

@@ -22,7 +22,9 @@ const MENU = [
       { label: 'Catálogos', icon: 'category', to: '/catalogos', perm: 'ms-bienes:catalogos:add_catcategoriabien' },
       { label: 'Inventario', icon: 'warehouse', to: '/bienes', perm: 'ms-bienes:bienes:view_bien' },
       { label: 'Mantenimiento', icon: 'engineering', to: '/mantenimientos', perm: 'ms-bienes:mantenimientos:view_mantenimiento' },
-      { label: 'Transferencias', icon: 'swap_horiz', to: '/transferencias', perm: 'ms-bienes:transferencias:view_transferencia' },
+      { label: 'Transferencias', icon: 'swap_horiz', to: '/transferencias', perm: ['ms-bienes:transferencias:view_transferencia', 
+                                                                                 'ms-bienes:transferencias:change_transferenciadetalle'
+  ] },
       { label: 'Bajas de Activos', icon: 'delete_sweep', to: '/bajas', perm: 'ms-bienes:bienes:delete_bien' },
     ],
   },
@@ -51,6 +53,8 @@ export default function Sidebar({ collapsed }) {
   const canView = (perm) => {
     if (!perm) return true;
     if (role === 'SYSADMIN') return true;
+    if (Array.isArray(perm)) {
+      return perm.some(p => permissionsFlat.includes(p));    }
     return permissionsFlat.includes(perm);
   };
 
@@ -129,7 +133,6 @@ export default function Sidebar({ collapsed }) {
 
           const isGroupOpen = openGroup === id && !collapsed;
           const isGroupActive = visibles.some(i => location.pathname.startsWith(i.to));
-
           return (
             <div key={id} className="group/item">
               <button
