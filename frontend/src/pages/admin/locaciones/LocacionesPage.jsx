@@ -25,7 +25,6 @@ const FILTROS_INICIALES = { search: '', is_active: '', empresa_id: '' };
 
 export default function LocacionesPage() {
   const toast = useToast();
-
   const {
     sedes, modulos, ubicaciones, empresas, departamentos,
     loading, error, actualizando, refetch,

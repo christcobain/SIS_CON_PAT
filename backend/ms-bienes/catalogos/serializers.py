@@ -27,6 +27,7 @@ class CatalogoWriteSerializer(serializers.Serializer):
 class CatTipoBienSerializer(CatalogoBaseSerializer):
     class Meta(CatalogoBaseSerializer.Meta):
         model = CatTipoBien
+        fields = CatalogoBaseSerializer.Meta.fields + ['categoria_bien_id']
 class catTipoTarjetaVideoSerializer(CatalogoBaseSerializer):
     class Meta(CatalogoBaseSerializer.Meta):
         model = CatTipoTarjetaVideo

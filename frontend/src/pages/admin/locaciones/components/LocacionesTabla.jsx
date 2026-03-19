@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState,  useEffect } from 'react';
 import Can from '../../../../components/auth/Can';
 import EmptyState from '../../../../components/feedback/EmptyState';
 import ErrorState  from '../../../../components/feedback/ErrorState';
@@ -19,9 +19,9 @@ export default function LocacionesTabla({
   onToggleEstado,
 }) {
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10); // Puedes hacerlo dinámico si gustas
+  const [pageSize] = useState(10); 
 
-  // Resetear página al cambiar de tab
+
   useEffect(() => {
     setPage(1);
   }, [activeTab]);
@@ -29,7 +29,6 @@ export default function LocacionesTabla({
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const pagActual = Math.min(page, totalPages);
 
-  // Mapeo de permisos por tab
   const permissionChange = {
     sedes: 'ms-usuarios:locations:change_sede',
     modulos: 'ms-usuarios:locations:change_modulo',
@@ -72,8 +71,6 @@ export default function LocacionesTabla({
 
   if (items.length === 0)
     return <EmptyState icon="search_off" title="No se encontraron registros" />;
-
-  // Lógica de rebanado para la vista local (si el backend no pagina)
   const startIndex = (pagActual - 1) * pageSize;
   const itemsVisibles = items.slice(startIndex, startIndex + pageSize);
 

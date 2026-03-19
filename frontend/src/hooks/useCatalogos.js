@@ -12,6 +12,7 @@ export function useCatalogos() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [actualizando, setActualizando] = useState(false);
+
   const fetchCatalogos = useCallback(async (nombres = []) => {
     if (nombres.length === 0) return;    
     setLoading(true);
@@ -48,6 +49,7 @@ export function useCatalogos() {
     setActualizando(true);
     try {
       const result = await service[accion](...args);
+      console.log('usecatag=',result)
       await fetchCatalogos([catalogoNombre]);
       return result;
     } catch (e) {

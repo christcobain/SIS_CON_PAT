@@ -11,6 +11,7 @@ import { useCatalogos }  from '../../../../hooks/useCatalogos';
 import { useBienesEnriquecidos } from '../../../../hooks/useBienesEnriquecidos';
 import { useAuthStore }  from '../../../../store/authStore';
 import { useToast }      from '../../../../hooks/useToast';
+import usuariosService   from '../../../../services/usuarios.service';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
@@ -55,6 +56,7 @@ const FUNC_COLOR = (n = '') => {
   return { color: '#64748b', bg: 'var(--color-border-light)' };
 };
 
+// ── Tarjeta de bien en la lista de selección ──────────────────────────────────
 function TarjetaBien({ b, seleccionado, onToggle }) {
   const estadoB = ESTADO_BIEN_COLOR(b.estado_bien_nombre ?? '');
   const funcB   = FUNC_COLOR(b.estado_funcionamiento_nombre ?? '');
@@ -77,7 +79,6 @@ function TarjetaBien({ b, seleccionado, onToggle }) {
           }} />
         {seleccionado && <Icon name="check" className="absolute inset-0 flex items-center justify-center text-[11px] pointer-events-none" style={{ color: '#fff' }} />}
       </div>
-
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <div>
@@ -85,34 +86,13 @@ function TarjetaBien({ b, seleccionado, onToggle }) {
             <p className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>{b.codigo_patrimonial ?? 'S/C'} · {b.modelo}</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
-              style={{ background: estadoB.bg, color: estadoB.color }}>
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md" style={{ background: estadoB.bg, color: estadoB.color }}>
               {b.estado_bien_nombre ?? '—'}
             </span>
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
-              style={{ background: funcB.bg, color: funcB.color }}>
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md" style={{ background: funcB.bg, color: funcB.color }}>
               {b.estado_funcionamiento_nombre ?? '—'}
             </span>
           </div>
-        </div>
-        <div className="mt-1.5 flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1">
-            <Icon name="domain" className="text-[12px]" style={{ color: 'var(--color-text-faint)' }} />
-            <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{b.sede_nombre ?? `Sede #${b.sede_id}`}</span>
-          </div>
-          {b.modulo_nombre && (
-            <div className="flex items-center gap-1">
-              <Icon name="grid_view" className="text-[12px]" style={{ color: 'var(--color-text-faint)' }} />
-              <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{b.modulo_nombre}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-1">
-            <Icon name="person" className="text-[12px]" style={{ color: 'var(--color-text-faint)' }} />
-            <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{b.usuario_asignado_nombre ?? '—'}</span>
-          </div>
-          {b.piso != null && (
-            <span className="text-[10px]" style={{ color: 'var(--color-text-faint)' }}>Piso {b.piso}</span>
-          )}
         </div>
         {!puedeSeleccionar && (
           <p className="text-[10px] mt-1.5 font-semibold" style={{ color: estadoB.color }}>
@@ -121,6 +101,38 @@ function TarjetaBien({ b, seleccionado, onToggle }) {
         )}
       </div>
     </label>
+  );
+}
+
+// ── Chips compactos de bienes seleccionados ───────────────────────────────────
+function ResumenBienesSeleccionados({ bienesSeleccionados, onQuitar }) {
+  if (!bienesSeleccionados.length) return null;
+  return (
+    <div className="mt-3 p-3 rounded-xl" style={{ background: 'rgb(127 29 29 / 0.05)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
+      <p className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: 'var(--color-primary)' }}>
+        <Icon name="check_circle" className="text-[13px]" />
+        {bienesSeleccionados.length} bien(es) seleccionado(s)
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {bienesSeleccionados.map(b => (
+          <div key={b.id}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold"
+            style={{ background: 'var(--color-surface)', border: '1px solid rgb(127 29 29 / 0.25)', color: 'var(--color-text-primary)' }}>
+            <Icon name="devices" className="text-[12px]" style={{ color: 'var(--color-primary)' }} />
+            <span className="truncate max-w-[120px]">
+              {b.tipo_bien_nombre ?? 'Bien'} — {b.codigo_patrimonial ?? b.modelo ?? `#${b.id}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => onQuitar(b.id)}
+              className="size-4 flex items-center justify-center rounded-full hover:bg-red-500 hover:text-white transition-all shrink-0"
+              style={{ color: 'var(--color-text-muted)' }}>
+              <Icon name="close" className="text-[10px]" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -137,15 +149,18 @@ export default function ModalTransferencia({
   const toast      = useToast();
   const isTraslado = activeTab === 'TRASLADO_SEDE';
   const isEditar   = !!item;
- 
-  const sedes_auth = useAuthStore(s => s.sedes);
+
+  const sedes_auth   = useAuthStore(s => s.sedes);
   const sede_auth_id = sedes_auth?.[0]?.id;
 
-
   const { bienes: todosBienes, loading: loadingBienes } = useBienes({});
-  const { sedes, modulos,ubicaciones } = useLocaciones();
-  const { usuarios: usuariosMs } = useUsuarios({ is_active: true });
-  const { fetchCatalogos, motivosTransferencia = [] } = useCatalogos();
+  const { sedes, modulos, ubicaciones }                 = useLocaciones();
+  const { usuarios: usuariosMs }                        = useUsuarios({ is_active: true });
+  const { fetchCatalogos, motivosTransferencia = [] }   = useCatalogos();
+
+  // ── Usuarios filtrados por sede destino seleccionada ─────────────────────────
+  const [usuariosPorSede, setUsuariosPorSede] = useState([]);
+  const [loadingUsuariosSede, setLoadingUsuariosSede] = useState(false);
 
   const bienesConNombres = useBienesEnriquecidos(todosBienes, { sedes, modulos, usuarios: usuariosMs });
 
@@ -167,7 +182,7 @@ export default function ModalTransferencia({
         modulo_destino_id:    String(item.modulo_destino_id ?? ''),
         ubicacion_destino_id: String(item.ubicacion_destino_id ?? ''),
         piso_destino:         item.piso_destino ?? '',
-        motivo_transferencia_id:            String(item.motivo_transferencia_id ?? ''),
+        motivo_transferencia_id: String(item.motivo_transferencia_id ?? ''),
         descripcion:          item.descripcion ?? '',
       });
     } else {
@@ -175,8 +190,48 @@ export default function ModalTransferencia({
     }
   }, [open, item?.id, isTraslado]);
 
+  // ── Al cambiar sede destino, cargar usuarios de esa sede ────────────────────
+  useEffect(() => {
+    const sedeId = form.sede_destino_id;
+    if (!sedeId) {
+      // Sin sede seleccionada: para asignación interna usar usuarios de la propia sede
+      if (!isTraslado) {
+        const misUsuarios = usuariosMs.filter(u =>
+          (u.sedes ?? []).some(s => String(s.id) === String(sede_auth_id))
+        );
+        setUsuariosPorSede(misUsuarios);
+      } else {
+        setUsuariosPorSede([]);
+      }
+      return;
+    }
+
+    // Para traslado: filtrar usuarios que pertenecen a la sede destino
+    const usuariosFiltrados = usuariosMs.filter(u =>
+      (u.sedes ?? []).some(s => String(s.id) === String(sedeId))
+    );
+
+    if (usuariosFiltrados.length > 0) {
+      setUsuariosPorSede(usuariosFiltrados);
+    } else {
+      // Si no hay en el estado local, llamar al API directamente
+      setLoadingUsuariosSede(true);
+      usuariosService.listar({ is_active: true })
+        .then(data => {
+          const lista = Array.isArray(data) ? data : data?.results ?? [];
+          const filtrados = lista.filter(u =>
+            (u.sedes ?? []).some(s => String(s.id) === String(sedeId))
+          );
+          setUsuariosPorSede(filtrados);
+        })
+        .catch(() => setUsuariosPorSede([]))
+        .finally(() => setLoadingUsuariosSede(false));
+    }
+  }, [form.sede_destino_id, isTraslado, usuariosMs, sede_auth_id]);
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  // Bienes filtrados por buscador
   const bienesFiltradosBuscador = useMemo(() => {
     const base = isTraslado
       ? bienesConNombres
@@ -193,10 +248,18 @@ export default function ModalTransferencia({
     );
   }, [bienesConNombres, buscador, isTraslado, sede_auth_id]);
 
-  // const sedeDestObj       = (sedes ?? []).find(s => String(s.id) === String(form.sede_destino_id));
-  const ubicacionesDest   = (ubicaciones ?? []).filter(m => m.is_active !== false);
-  const modulosActivos    = (modulos ?? []).filter(m => m.is_active !== false);
-  const toggleBien = id => set('bien_ids', form.bien_ids.includes(id) ? form.bien_ids.filter(x => x !== id) : [...form.bien_ids, id]);
+  // Bienes actualmente seleccionados (objetos completos para el resumen)
+  const bienesSeleccionados = useMemo(() =>
+    bienesConNombres.filter(b => form.bien_ids.includes(b.id)),
+    [bienesConNombres, form.bien_ids]
+  );
+
+  const ubicacionesDest = (ubicaciones ?? []).filter(m => m.is_active !== false);
+  const modulosActivos  = (modulos ?? []).filter(m => m.is_active !== false);
+
+  const toggleBien = id => set('bien_ids',
+    form.bien_ids.includes(id) ? form.bien_ids.filter(x => x !== id) : [...form.bien_ids, id]
+  );
 
   const validar = () => {
     const e = {};
@@ -216,22 +279,18 @@ export default function ModalTransferencia({
       ...(form.modulo_destino_id    && { modulo_destino_id:    Number(form.modulo_destino_id)    }),
       ...(form.ubicacion_destino_id && { ubicacion_destino_id: Number(form.ubicacion_destino_id) }),
       ...(form.piso_destino         && { piso_destino:         Number(form.piso_destino)         }),
-      ...(form.motivo_transferencia_id            && { motivo_transferencia_id:            Number(form.motivo_transferencia_id)            }),
-      ...(form.descripcion.trim()   && { descripcion:          form.descripcion.trim()           }),
+      ...(form.motivo_transferencia_id && { motivo_transferencia_id: Number(form.motivo_transferencia_id) }),
+      ...(form.descripcion?.trim()  && { descripcion: form.descripcion.trim() }),
     };
     try {
       let result;
-      if (isEditar) {
-        result =await reenviarTransferencia(item.id, payload);
-      } else if (isTraslado) {
-        result=await crearTraslado(payload);
-      } else {
-        result =await crearAsignacion(payload);
-      }
-      toast.success(result?.message  );
+      if (isEditar)        result = await reenviarTransferencia(item.id, payload);
+      else if (isTraslado) result = await crearTraslado(payload);
+      else                 result = await crearAsignacion(payload);
+      toast.success(result?.message ?? 'Operación exitosa.');
       onGuardado();
     } catch (err) {
-      toast.error( err?.response.data );
+      toast.error(err?.response?.data?.error ?? err?.response?.data?.detail ?? 'Error al registrar.');
     } finally { setGuardando(false); }
   };
 
@@ -255,7 +314,9 @@ export default function ModalTransferencia({
 
         <ModalBody>
           <div className="grid grid-cols-2 gap-5">
-            <div className="space-y-4">
+
+            {/* ── Columna izquierda: selección de bienes ──────────────────── */}
+            <div className="space-y-3">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <FLabel required>Bienes a transferir</FLabel>
@@ -265,6 +326,8 @@ export default function ModalTransferencia({
                     </span>
                   )}
                 </div>
+
+                {/* Buscador */}
                 <div className="relative mb-2">
                   <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[17px] pointer-events-none"
                     style={{ color: buscador ? 'var(--color-primary)' : 'var(--color-text-faint)' }} />
@@ -273,15 +336,25 @@ export default function ModalTransferencia({
                     className="w-full text-xs rounded-xl py-2.5 pr-4 transition-all"
                     style={{ ...S.input, paddingLeft: 36 }} onFocus={onF} onBlur={offF} />
                 </div>
+
+                {/* ── Resumen compacto de bienes seleccionados ── */}
+                <ResumenBienesSeleccionados
+                  bienesSeleccionados={bienesSeleccionados}
+                  onQuitar={toggleBien}
+                />
+
+                {/* Lista de bienes */}
                 {loadingBienes ? (
-                  <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="skeleton h-16 rounded-xl" />)}</div>
+                  <div className="space-y-2 mt-2">{[1, 2, 3].map(i => <div key={i} className="skeleton h-16 rounded-xl" />)}</div>
                 ) : bienesFiltradosBuscador.length === 0 ? (
-                  <div className="text-center py-8 rounded-xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+                  <div className="text-center py-8 rounded-xl mt-2" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
                     <Icon name="inventory_2" className="text-[32px]" style={{ color: 'var(--color-text-faint)' }} />
-                    <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>Sin bienes{buscador ? ' con esa búsqueda' : ' disponibles'}</p>
+                    <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>
+                      Sin bienes{buscador ? ' con esa búsqueda' : ' disponibles'}
+                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-2 overflow-y-auto pr-1" style={{ maxHeight: '45vh' }}>
+                  <div className="space-y-2 overflow-y-auto pr-1 mt-2" style={{ maxHeight: '40vh' }}>
                     {bienesFiltradosBuscador.map(b => (
                       <TarjetaBien key={b.id} b={b}
                         seleccionado={form.bien_ids.includes(b.id)}
@@ -289,6 +362,7 @@ export default function ModalTransferencia({
                     ))}
                   </div>
                 )}
+
                 {errors.bien_ids && (
                   <p className="text-[10px] text-red-500 mt-1 font-semibold flex items-center gap-1">
                     <Icon name="error" className="text-[11px]" />{errors.bien_ids}
@@ -297,12 +371,21 @@ export default function ModalTransferencia({
               </div>
             </div>
 
+            {/* ── Columna derecha: datos del destino ──────────────────────── */}
             <div className="space-y-4">
+
+              {/* Sede destino (solo traslados) */}
               {isTraslado && (
                 <div>
                   <FLabel required>Sede destino</FLabel>
-                  <FSelect value={form.sede_destino_id}
-                    onChange={v => { set('sede_destino_id', v); set('modulo_destino_id', ''); set('ubicacion_destino_id', ''); }}>
+                  <FSelect
+                    value={form.sede_destino_id}
+                    onChange={v => {
+                      set('sede_destino_id', v);
+                      set('modulo_destino_id', '');
+                      set('ubicacion_destino_id', '');
+                      set('usuario_destino_id', ''); // resetear usuario al cambiar sede
+                    }}>
                     <option value="">Seleccionar sede...</option>
                     {(sedes ?? []).filter(s => s.is_active !== false).map(s => (
                       <option key={s.id} value={s.id}>{s.nombre}</option>
@@ -312,17 +395,42 @@ export default function ModalTransferencia({
                 </div>
               )}
 
+              {/* Usuario destinatario — filtrado por sede destino seleccionada */}
               <div>
-                <FLabel required>Usuario destinatario</FLabel>
-                <FSelect value={form.usuario_destino_id} onChange={v => set('usuario_destino_id', v)}>
-                  <option value="">Seleccionar usuario...</option>
-                  {(usuariosMs ?? []).map(u => (
-                    <option key={u.id} value={u.id}>{u.first_name} {u.last_name} — {u.cargo}</option>
-                  ))}
-                </FSelect>
+                <FLabel required>
+                  Usuario destinatario
+                  {isTraslado && form.sede_destino_id && (
+                    <span className="ml-2 text-[9px] font-bold normal-case" style={{ color: 'var(--color-text-muted)' }}>
+                      (usuarios de la sede seleccionada)
+                    </span>
+                  )}
+                </FLabel>
+                {loadingUsuariosSede ? (
+                  <div className="skeleton h-10 rounded-xl" />
+                ) : (
+                  <FSelect
+                    value={form.usuario_destino_id}
+                    onChange={v => set('usuario_destino_id', v)}
+                    disabled={isTraslado && !form.sede_destino_id}
+                  >
+                    <option value="">
+                      {isTraslado && !form.sede_destino_id
+                        ? '← Selecciona primero la sede'
+                        : usuariosPorSede.length === 0
+                          ? 'Sin usuarios en esta sede'
+                          : 'Seleccionar usuario...'}
+                    </option>
+                    {usuariosPorSede.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.first_name} {u.last_name} — {u.cargo || u.role?.name || 'Sin cargo'}
+                      </option>
+                    ))}
+                  </FSelect>
+                )}
                 {errors.usuario_destino_id && <p className="text-[10px] text-red-500 mt-1">{errors.usuario_destino_id}</p>}
               </div>
 
+              {/* Módulo destino */}
               <div>
                 <FLabel>Módulo destino</FLabel>
                 <FSelect value={form.modulo_destino_id} onChange={v => { set('modulo_destino_id', v); set('ubicacion_destino_id', ''); }}>
@@ -331,6 +439,7 @@ export default function ModalTransferencia({
                 </FSelect>
               </div>
 
+              {/* Ubicación destino */}
               <div>
                 <FLabel>Ubicación destino</FLabel>
                 <FSelect value={form.ubicacion_destino_id} onChange={v => set('ubicacion_destino_id', v)}>
@@ -339,6 +448,7 @@ export default function ModalTransferencia({
                 </FSelect>
               </div>
 
+              {/* Piso y Motivo */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <FLabel>Piso</FLabel>
@@ -357,6 +467,7 @@ export default function ModalTransferencia({
                 </div>
               </div>
 
+              {/* Descripción */}
               <div>
                 <FLabel>Descripción / Justificación</FLabel>
                 <textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)} rows={3}
@@ -365,6 +476,7 @@ export default function ModalTransferencia({
                   style={S.input} onFocus={onF} onBlur={offF} />
               </div>
 
+              {/* Info del flujo */}
               <div className="p-3 rounded-xl" style={{
                 background: isTraslado ? 'rgb(37 99 235 / 0.06)' : 'rgb(22 163 74 / 0.06)',
                 border: `1px solid ${isTraslado ? 'rgb(37 99 235 / 0.2)' : 'rgb(22 163 74 / 0.2)'}`,
@@ -374,8 +486,8 @@ export default function ModalTransferencia({
                     style={{ color: isTraslado ? '#1d4ed8' : '#16a34a' }} />
                   <p className="text-[11px]" style={{ color: 'var(--color-text-body)' }}>
                     {isTraslado
-                      ? 'Solo bienes en estado ACTIVO pueden trasladarse. El flujo requiere: ADMINSEDE → SEGURSEDE salida → SEGURSEDE entrada.'
-                      : 'Solo bienes en estado ACTIVO de tu sede pueden asignarse. Requiere aprobación de ADMINSEDE.'}
+                      ? 'Solo bienes ACTIVO pueden trasladarse. Flujo: ADMINSEDE → SEGURSEDE salida → SEGURSEDE entrada.'
+                      : 'Solo bienes ACTIVO de tu sede pueden asignarse. Requiere aprobación de ADMINSEDE.'}
                   </p>
                 </div>
               </div>
@@ -393,7 +505,8 @@ export default function ModalTransferencia({
         </ModalFooter>
       </Modal>
 
-      <ConfirmDialog open={confirm}
+      <ConfirmDialog
+        open={confirm}
         title={isEditar ? 'Confirmar reenvío' : (isTraslado ? 'Confirmar traslado' : 'Confirmar asignación')}
         message={`¿${isEditar ? 'Reenviar' : 'Registrar'} con ${form.bien_ids.length} bien(es) seleccionado(s)?`}
         confirmLabel={isEditar ? 'Sí, reenviar' : 'Sí, registrar'}

@@ -18,7 +18,7 @@ const S = {
   input: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', outline: 'none' },
   disabled: { background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)', outline: 'none' },
 };
-const onF = e => { e.currentTarget.style.border = '1px solid var(--color-primary)'; };
+const onF  = e => { e.currentTarget.style.border = '1px solid var(--color-primary)'; };
 const offF = e => { e.currentTarget.style.border = '1px solid var(--color-border)'; };
 
 function FLabel({ children, required }) {
@@ -49,13 +49,6 @@ function FSelect({ value, onChange, children, disabled = false }) {
       onFocus={disabled ? undefined : onF} onBlur={offF}>
       {children}
     </select>
-  );
-}
-function FTextarea({ value, onChange, placeholder, rows = 3 }) {
-  return (
-    <textarea value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows}
-      className="w-full text-sm rounded-xl px-3 py-2.5 transition-all resize-none"
-      style={S.input} onFocus={onF} onBlur={offF} />
   );
 }
 function Seccion({ title, icon, children }) {
@@ -203,17 +196,22 @@ const FORM_VACIO = {
   estado_bien_id: '', estado_funcionamiento_id: '',
   observacion: '', anio_adquisicion: '', fecha_compra: '',
   numero_orden_compra: '', fecha_vencimiento_garantia: '',
-  empresa_id: '', sede_id: '', modulo_id: '', ubicacion_id: '', piso: '',
+  ubicacion_id: '', piso: '',
 };
 
 export default function ModalBienForm({ open, onClose, item = null, onGuardado }) {
   const toast      = useToast();
   const modoEditar = !!item;
-  const { crear, actualizar }                 = useBienes();
-  const { sedes, modulos, empresas }          = useLocaciones();
-  const { fetchCatalogos, ...catData }        = useCatalogos();
-  const empresaId                             = useAuthStore(s => s.empresaId);
-  const sedes_auth                            = useAuthStore(s => s.sedes);
+  const { crear, actualizar }          = useBienes();
+  const { ubicaciones }   = useLocaciones();
+  const { fetchCatalogos, ...catalogos } = useCatalogos();
+  
+  const empresaId    = useAuthStore(s => s.empresaId);
+  const empresaNombre = useAuthStore(s => s.empresaNombre);
+  const sedes_auth   = useAuthStore(s => s.sedes);
+  const modulo_id_auth = useAuthStore(s => s.modulo_id);
+  const modulo_nombre_auth = useAuthStore(s => s.modulo_nombre);
+  const sedeDefault  = sedes_auth?.[0];
   const [form,     setForm]     = useState({ ...FORM_VACIO });
   const [detalle,  setDetalle]  = useState({});
   const [errors,   setErrors]   = useState({});
@@ -229,7 +227,8 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
       'tiposMonitor', 'tiposEscaner', 'tiposImpresion',
       'interfacesConexion', 'tamanosCarro',
     ]);
-  }, [open]);
+  }, [open, fetchCatalogos]);
+  
 
   useEffect(() => {
     if (!open) return;
@@ -249,8 +248,6 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
         fecha_compra:             item.fecha_compra ?? '',
         numero_orden_compra:      item.numero_orden_compra ?? '',
         fecha_vencimiento_garantia: item.fecha_vencimiento_garantia ?? '',
-        empresa_id:               String(item.empresa_id ?? ''),
-        sede_id:                  String(item.sede_id ?? ''),
         modulo_id:                String(item.modulo_id ?? ''),
         ubicacion_id:             String(item.ubicacion_id ?? ''),
         piso:                     item.piso ?? '',
@@ -258,40 +255,47 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
       const d = item.detalle_cpu ?? item.detalle_monitor ?? item.detalle_impresora ?? item.detalle_scanner ?? item.detalle_switch ?? {};
       setDetalle(d);
     } else {
-      const sedePorDefecto = sedes_auth?.[0]?.id ?? '';
-      setForm({ ...FORM_VACIO, empresa_id: String(empresaId ?? ''), sede_id: String(sedePorDefecto) });
+      setForm({ ...FORM_VACIO });
       setDetalle({});
     }
     setErrors({});
-  }, [open, item?.id]);
+  }, [modoEditar,open]);
 
   const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const categorias       = catData.categoriasBien ?? [];
-  const tiposBien        = catData.tiposBien ;
-  const marcas           = catData.marcas ?? [];
-  const regimenes        = catData.regimenTenencia ?? [];
-  const estadosBien      = catData.estadosBien ?? [];
-  const estadosFuncion   = catData.estadosFuncionamiento ?? [];
-  const categoriaSel     = categorias.find(c => String(c.id) === String(form.categoria_bien_id));
-  const esInformatico    = categoriaSel?.nombre?.toUpperCase().includes('INFORM');
-  const tipoSel          = tiposBien.find(t => String(t.id) === String(form.tipo_bien_id));
-  const tipoTecnico      = esInformatico ? detectarTipoTecnico(tipoSel?.nombre ?? '') : null;
-  const tiposFiltrados   = useMemo(() => {
-    if (!form.categoria_bien_id) return [];
+  const categorias     = catalogos.categoriasBien ?? [];
+  const tiposBien      = catalogos.tiposBien ?? [];
+  const marcas         = catalogos.marcas ?? [];
+  const regimenes      = catalogos.regimenTenencia ?? [];
+  const estadosBien    = catalogos.estadosBien ?? [];
+  const estadosFuncion = catalogos.estadosFuncionamiento ?? [];
+  {console.log(categorias)}
 
-  return tiposBien.filter(t => 
-    String(t.categoria_bien_id) === String(form.categoria_bien_id)
-  );
-}, [tiposBien, form.categoria_bien_id]);
-  const sedeSelObj       = sedes.find(s => String(s.id) === String(form.sede_id));
-  const ubicaciones      = sedeSelObj?.ubicaciones ?? [];
-  const modulosActivos   = (modulos ?? []).filter(m => m.is_active !== false);
-  const idBueno          = estadosBien.find(e => e.nombre?.toUpperCase().includes('BUENO') || e.nombre?.toUpperCase().includes('ACTIVO'))?.id;
-  const idOperativo      = estadosFuncion.find(e => e.nombre?.toUpperCase().includes('OPERATIVO'))?.id;
+  const categoriaSel = categorias.find(c => String(c.id) === String(form.categoria_bien_id));
+  const esInformatico = categoriaSel?.nombre?.toUpperCase().includes('INFORM');
+
+  const tipoSel    = tiposBien.find(t => String(t.id) === String(form.tipo_bien_id));
+  const tipoTecnico = esInformatico ? detectarTipoTecnico(tipoSel?.nombre ?? '') : null;
+  const tiposFiltrados = useMemo(() => {
+    if (!form.categoria_bien_id) return [];
+    const apiIncluyeCategoria = tiposBien.some(
+      t => t.categoria_bien_id != null || t.categoria_id != null
+    );
+    if (apiIncluyeCategoria) {
+      return tiposBien.filter(t =>
+        String(t.categoria_bien_id ?? t.categoria_id ?? '') === String(form.categoria_bien_id)
+      );
+    }
+    return tiposBien.filter(t => t.is_active !== false);
+  }, [tiposBien, form.categoria_bien_id]);
+
+  const ubicacionesActivos = (ubicaciones ?? []).filter(m => m.is_active !== false);
+
+  const idBueno     = estadosBien.find(e => e.nombre?.toUpperCase().includes('BUENO') || e.nombre?.toUpperCase().includes('ACTIVO'))?.id;
+  const idOperativo = estadosFuncion.find(e => e.nombre?.toUpperCase().includes('OPERATIVO'))?.id;
 
   useEffect(() => {
-    if (!modoEditar && idBueno)    setF('estado_bien_id',           String(idBueno));
+    if (!modoEditar && idBueno)     setF('estado_bien_id',           String(idBueno));
     if (!modoEditar && idOperativo) setF('estado_funcionamiento_id', String(idOperativo));
   }, [idBueno, idOperativo, modoEditar]);
 
@@ -301,8 +305,6 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
     if (!form.marca_id)            e.marca_id            = 'Obligatorio.';
     if (!form.modelo.trim())       e.modelo              = 'Obligatorio.';
     if (!form.regimen_tenencia_id) e.regimen_tenencia_id = 'Obligatorio.';
-    if (!form.empresa_id)          e.empresa_id          = 'Obligatorio.';
-    if (!form.sede_id)             e.sede_id             = 'Obligatorio.';
     return e;
   };
 
@@ -310,34 +312,46 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
     setConfirm(false);
     setGuardando(true);
     try {
-      const detallePayload = tipoTecnico ? Object.fromEntries(Object.entries(detalle).filter(([, v]) => v !== '' && v != null)) : {};
+      const detallePayload = tipoTecnico
+        ? Object.fromEntries(Object.entries(detalle).filter(([, v]) => v !== '' && v != null))
+        : {};
       const payload = {
-        ...Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : (isNaN(v) || v === null ? v : Number(v) === v || typeof v === 'string' ? v : Number(v))])),
-        estado_bien_id:           Number(form.estado_bien_id)           || undefined,
-        estado_funcionamiento_id: Number(form.estado_funcionamiento_id) || undefined,
-        empresa_id:               Number(form.empresa_id)               || undefined,
-        sede_id:                  Number(form.sede_id)                  || undefined,
-        modulo_id:                form.modulo_id    ? Number(form.modulo_id)    : null,
-        ubicacion_id:             form.ubicacion_id ? Number(form.ubicacion_id) : null,
-        tipo_bien_id:             Number(form.tipo_bien_id)             || undefined,
-        marca_id:                 Number(form.marca_id)                 || undefined,
-        regimen_tenencia_id:      Number(form.regimen_tenencia_id)      || undefined,
+        empresa_id:               Number(empresaId),
+        sede_id:                  sedeDefault?.id ? Number(sedeDefault.id) : undefined,
+        tipo_bien_id:             Number(form.tipo_bien_id) || undefined,
         categoria_bien_id:        form.categoria_bien_id ? Number(form.categoria_bien_id) : null,
+        marca_id:                 Number(form.marca_id) || undefined,
+        modelo:                   form.modelo,
+        numero_serie:             form.numero_serie || null,
+        codigo_patrimonial:       form.codigo_patrimonial || null,
+        regimen_tenencia_id:      Number(form.regimen_tenencia_id) || undefined,
+        estado_bien_id:           Number(form.estado_bien_id) || undefined,
+        estado_funcionamiento_id: Number(form.estado_funcionamiento_id) || undefined,
+        observacion:              form.observacion || null,
+        anio_adquisicion:         form.anio_adquisicion || null,
+        fecha_compra:             form.fecha_compra || null,
+        numero_orden_compra:      form.numero_orden_compra || null,
+        fecha_vencimiento_garantia: form.fecha_vencimiento_garantia || null,
+        modulo_id:                Number(modulo_id_auth),
+        ubicacion_id:             form.ubicacion_id ? Number(form.ubicacion_id) : null,
         piso:                     form.piso ? Number(form.piso) : null,
         fecha_instalacion:        null,
         detalle:                  detallePayload,
       };
+      let result;
       if (modoEditar) {
-        await actualizar(item.id, payload);
-        toast.success('Bien actualizado correctamente.');
+        result=await actualizar(item.id, payload);
+        toast.success(result.response?.data?.mensaje  ||'Bien actualizado correctamente.');
       } else {
-        await crear(payload);
-        toast.success('Bien registrado correctamente.');
+        result=await crear(payload);
+        toast.success(result.response?.data?.mensaje  ||'Bien registrado correctamente.');
       }
       onGuardado?.();
       onClose();
     } catch (e) {
-      const msg = e?.response?.data?.error ?? Object.values(e?.response?.data ?? {})?.[0]?.[0] ?? 'Error al guardar.';
+      const msg = e?.response?.data?.error
+        ?? Object.values(e?.response?.data ?? {})?.[0]?.[0]
+        ?? 'Error al guardar.';
       toast.error(msg);
     } finally { setGuardando(false); setConfirm(false); }
   };
@@ -357,35 +371,48 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
           subtitle={modoEditar ? `${item?.tipo_bien_nombre ?? ''} — ${item?.modelo ?? ''}` : 'Completa los datos del activo patrimonial'}
           onClose={onClose}
         />
-
         <ModalBody>
           <div className="space-y-6">
-
+            {/* Sección: Identificación del bien */}
             <Seccion title="Identificación del bien" icon="label">
               <div className="grid grid-cols-3 gap-3">
+                {/* Categoría */}
                 <div>
                   <FLabel required>Categoría</FLabel>
-                  <FSelect value={form.categoria_bien_id}
-                    onChange={v => { 
-                      setF('categoria_bien_id', v); 
+                  <FSelect
+                    value={form.categoria_bien_id} onChange={v => {
+                      setF('categoria_bien_id', v);
                       setF('tipo_bien_id', '');
-                     setDetalle({}); }}>
+                      setDetalle({});
+                    }}
+                  >
                     <option value="">Seleccionar categoría...</option>
-                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                    
+                    {categorias?.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                   </FSelect>
                   <FError msg={errors.categoria_bien_id} />
                 </div>
+
+                {/* Tipo de bien — se habilita SOLO cuando hay categoría */}
                 <div>
                   <FLabel required>Tipo de bien</FLabel>
-                  <FSelect value={form.tipo_bien_id}  onChange={v => { setF('tipo_bien_id', v); setDetalle({}); }}
-                    disabled={!form.categoria_bien_id || tiposFiltrados.length === 0}>
-                    <option value="">Seleccionar tipo...</option>
+                  <FSelect
+                    value={form.tipo_bien_id}
+                    onChange={v => { setF('tipo_bien_id', v); setDetalle({}); }}
+                    disabled={!form.categoria_bien_id}
+                  >
+                    <option value="">
+                      {!form.categoria_bien_id
+                        ? '← Selecciona primero la categoría'
+                        : tiposFiltrados.length === 0
+                          ? 'Sin tipos para esta categoría'
+                          : 'Seleccionar tipo...'}
+                    </option>
                     {tiposFiltrados.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-                    {console.log(tiposFiltrados)} 
                   </FSelect>
                   <FError msg={errors.tipo_bien_id} />
                 </div>
+
+                {/* Marca */}
                 <div>
                   <FLabel required>Marca</FLabel>
                   <FSelect value={form.marca_id} onChange={v => setF('marca_id', v)}>
@@ -394,6 +421,7 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
                   </FSelect>
                   <FError msg={errors.marca_id} />
                 </div>
+
                 <div>
                   <FLabel required>Modelo</FLabel>
                   <FInput value={form.modelo} onChange={v => setF('modelo', v)} placeholder="Ej: Latitude 5420" />
@@ -410,6 +438,7 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
               </div>
             </Seccion>
 
+            {/* Aviso para no-informáticos */}
             {form.categoria_bien_id && !esInformatico && (
               <div className="flex items-start gap-3 p-4 rounded-xl"
                 style={{ background: 'rgb(180 83 9 / 0.06)', border: '1px solid rgb(180 83 9 / 0.2)' }}>
@@ -418,13 +447,13 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
                   <p className="text-sm font-bold" style={{ color: '#b45309' }}>Módulo en desarrollo</p>
                   <p className="text-xs mt-1" style={{ color: 'var(--color-text-body)' }}>
                     El registro de bienes muebles, inmuebles y otras categorías estará disponible próximamente.
-                    Por ahora el sistema soporta el registro completo de bienes <strong>Informáticos</strong>.
                     Puedes registrar el bien con los datos básicos sin detalle técnico.
                   </p>
                 </div>
               </div>
             )}
 
+            {/* Sección: Adquisición */}
             <Seccion title="Adquisición" icon="receipt_long">
               <div className="grid grid-cols-4 gap-3">
                 <div>
@@ -458,39 +487,42 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
               </div>
             </Seccion>
 
+            {/* Sección: Estado del bien */}
             <Seccion title="Estado del bien" icon="verified">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-3 p-3 rounded-xl"
                   style={{ background: 'rgb(22 163 74 / 0.06)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
                   <Icon name="check_circle" className="text-[22px]" style={{ color: '#16a34a' }} />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado del bien</p>
-                    <p className="text-sm font-bold" style={{ color: '#16a34a' }}>
-                      {estadosBien.find(e => String(e.id) === String(form.estado_bien_id))?.nombre ?? 'Bueno / Activo'}
-                    </p>
+                    {modoEditar ? (
+                      <FSelect value={form.estado_bien_id} onChange={v => setF('estado_bien_id', v)}>
+                        <option value="">Seleccionar...</option>
+                        {estadosBien.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+                      </FSelect>
+                    ) : (
+                      <p className="text-sm font-bold" style={{ color: '#16a34a' }}>
+                        {estadosBien.find(e => String(e.id) === String(form.estado_bien_id))?.nombre ?? 'Bueno / Activo (automático)'}
+                      </p>
+                    )}
                   </div>
-                  {modoEditar && (
-                    <FSelect value={form.estado_bien_id} onChange={v => setF('estado_bien_id', v)}>
-                      <option value="">Seleccionar...</option>
-                      {estadosBien.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-                    </FSelect>
-                  )}
                 </div>
                 <div className="flex items-center gap-3 p-3 rounded-xl"
                   style={{ background: 'rgb(37 99 235 / 0.06)', border: '1px solid rgb(37 99 235 / 0.2)' }}>
                   <Icon name="power_settings_new" className="text-[22px]" style={{ color: '#1d4ed8' }} />
-                  <div>
+                  <div className="flex-1">
                     <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado funcionamiento</p>
-                    <p className="text-sm font-bold" style={{ color: '#1d4ed8' }}>
-                      {estadosFuncion.find(e => String(e.id) === String(form.estado_funcionamiento_id))?.nombre ?? 'Operativo'}
-                    </p>
+                    {modoEditar ? (
+                      <FSelect value={form.estado_funcionamiento_id} onChange={v => setF('estado_funcionamiento_id', v)}>
+                        <option value="">Seleccionar...</option>
+                        {estadosFuncion.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+                      </FSelect>
+                    ) : (
+                      <p className="text-sm font-bold" style={{ color: '#1d4ed8' }}>
+                        {estadosFuncion.find(e => String(e.id) === String(form.estado_funcionamiento_id))?.nombre ?? 'Operativo (automático)'}
+                      </p>
+                    )}
                   </div>
-                  {modoEditar && (
-                    <FSelect value={form.estado_funcionamiento_id} onChange={v => setF('estado_funcionamiento_id', v)}>
-                      <option value="">Seleccionar...</option>
-                      {estadosFuncion.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-                    </FSelect>
-                  )}
                 </div>
               </div>
               {!modoEditar && (
@@ -500,66 +532,89 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
               )}
             </Seccion>
 
+            {/* Sección: Ubicación — Empresa y Sede fijas del login, solo módulo/piso editables */}
             <Seccion title="Ubicación física" icon="location_on">
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <FLabel required>Empresa / Corte</FLabel>
-                  <FSelect value={form.empresa_id} onChange={v => { setF('empresa_id', v); setF('sede_id', ''); setF('modulo_id', ''); setF('ubicacion_id', ''); }}>
-                    <option value="">Seleccionar...</option>
-                    {(empresas ?? []).map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-                  </FSelect>
-                  <FError msg={errors.empresa_id} />
+              {/* Info de la empresa y sede del usuario logueado */}
+
+              <div className="grid grid-cols-4 gap-1 mb-1">
+                <div className="flex items-center gap-3 p-3 rounded-xl"
+                  style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+                  <Icon name="business" className="text-[18px]" style={{ color: 'var(--color-primary)' }} />
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Empresa / Corte</p>
+                    <p className="text-xs font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                      {empresaNombre ?? `ID ${empresaId}`}
+                    </p>
+                  </div>
+                  <Icon name="lock" className="text-[14px] shrink-0" style={{ color: 'var(--color-text-faint)' }} />
                 </div>
-                <div>
-                  <FLabel required>Sede</FLabel>
-                  <FSelect value={form.sede_id} onChange={v => { setF('sede_id', v); setF('modulo_id', ''); setF('ubicacion_id', ''); }}
-                    disabled={!form.empresa_id}>
-                    <option value="">Seleccionar sede...</option>
-                    {sedes.filter(s => !form.empresa_id || String(s.empresa_id) === String(form.empresa_id)).map(s => (
-                      <option key={s.id} value={s.id}>{s.nombre}</option>
-                    ))}
-                  </FSelect>
-                  <FError msg={errors.sede_id} />
+
+                <div className="flex items-center gap-1 p-3 rounded-xl"
+                  style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+                  <Icon name="domain" className="text-[18px]" style={{ color: 'var(--color-primary)' }} />
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Sede asignada</p>
+                    <p className="text-xs font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                      {sedeDefault?.nombre ?? 'Sin sede asignada'}
+                    </p>
+                  </div>
+                  <Icon name="lock" className="text-[14px] shrink-0" style={{ color: 'var(--color-text-faint)' }} />
                 </div>
+              
+
+              <div className="flex items-center gap-1 p-3 rounded-xl"
+                  style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+                  <Icon name="domain" className="text-[18px]" style={{ color: 'var(--color-primary)' }} />
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Modulo asignado</p>
+                    <p className="text-xs font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                      {modulo_nombre_auth?? 'Sin módulo asignad'}
+                    </p>
+                  </div>
+                  <Icon name="lock" className="text-[14px] shrink-0" style={{ color: 'var(--color-text-faint)' }} />
+                </div>             
+
+              </div>
+              <div className="flex items-start gap-2 p-2.5 rounded-xl mb-3"
+                style={{ background: 'rgb(127 29 29 / 0.04)', border: '1px solid rgb(127 29 29 / 0.15)' }}>
+                <Icon name="info" className="text-[14px] shrink-0 mt-0.5" style={{ color: 'var(--color-primary)' }} />
+                <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+                  La empresa, sede y módulo se asignan automáticamente según tu usuario de sesión. Solo puedes especificar el piso.
+                </p>
+              </div>
+              {/* Ubicacion — configurables */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <FLabel>Módulo</FLabel>
-                  <FSelect value={form.modulo_id} onChange={v => { setF('modulo_id', v); setF('ubicacion_id', ''); }}>
-                    <option value="">Sin módulo</option>
-                    {modulosActivos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                  <FLabel>Ubicación Funcional</FLabel>
+                  <FSelect value={form.ubicacion_id} onChange={v => setF('ubicacion_id', v)}>
+                    <option value="">Seleccionar ubicación...</option>
+                    {ubicacionesActivos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)} 
                   </FSelect>
                 </div>
-                <div>
-                  <FLabel>Ubicación / Área</FLabel>
-                  <FSelect value={form.ubicacion_id} onChange={v => setF('ubicacion_id', v)} disabled={!form.sede_id}>
-                    <option value="">Sin ubicación</option>
-                    {ubicaciones.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
-                  </FSelect>
-                </div>
-                <div>
+               <div>
                   <FLabel>Piso</FLabel>
                   <FInput type="number" value={form.piso} onChange={v => setF('piso', v)} placeholder="Ej: 2" />
                 </div>
               </div>
-              <div className="mt-2 flex items-start gap-2 p-2.5 rounded-xl"
-                style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
-                <Icon name="info" className="text-[14px] shrink-0 mt-0.5" style={{ color: 'var(--color-text-faint)' }} />
-                <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-                  La ubicación inicial es la del registrador. Cambia mediante <strong>Traslado</strong> o <strong>Asignación interna</strong>.
-                </p>
-              </div>
+            
             </Seccion>
 
-            <SeccionDetalle tipoTecnico={tipoTecnico} detalle={detalle} setDetalle={setDetalle}
+            {/* Detalle técnico si aplica */}
+            <SeccionDetalle
+              tipoTecnico={tipoTecnico}
+              detalle={detalle}
+              setDetalle={setDetalle}
               catalogos={{
-                tiposComputadora:  catData.tiposComputadora  ?? [],
-                tiposDisco:        catData.tiposDisco        ?? [],
-                arquitecturasBits: catData.arquitecturasBits ?? [],
-                tiposMonitor:      catData.tiposMonitor      ?? [],
-                tiposEscaner:      catData.tiposEscaner      ?? [],
-                tiposImpresion:    catData.tiposImpresion    ?? [],
-                interfacesConexion:catData.interfacesConexion ?? [],
-                tamanosCarro:      catData.tamanosCarro      ?? [],
-              }} />
+                tiposComputadora:  catalogos.tiposComputadora  ?? [],
+                tiposDisco:        catalogos.tiposDisco        ?? [],
+                arquitecturasBits: catalogos.arquitecturasBits ?? [],
+                tiposMonitor:      catalogos.tiposMonitor      ?? [],
+                tiposEscaner:      catalogos.tiposEscaner      ?? [],
+                tiposImpresion:    catalogos.tiposImpresion    ?? [],
+                interfacesConexion: catalogos.interfacesConexion ?? [],
+                tamanosCarro:      catalogos.tamanosCarro      ?? [],
+              }}
+            />
           </div>
         </ModalBody>
 
@@ -573,12 +628,16 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
         </ModalFooter>
       </Modal>
 
-      <ConfirmDialog open={confirm}
+      <ConfirmDialog
+        open={confirm}
         title={modoEditar ? 'Confirmar edición' : 'Confirmar registro'}
-        message={`¿${modoEditar ? 'Guardar cambios en' : 'Registrar'} el bien "${tipoSel?.nombre ?? ''} — ${form.modelo}"?`}
+        message={`¿${modoEditar ? 'Guardar cambios en' : 'Registrar'} el bien "${tipoSel?.nombre ?? form.tipo_bien_id} — ${form.modelo}"?`}
         confirmLabel={modoEditar ? 'Sí, guardar' : 'Sí, registrar'}
-        variant="primary" loading={guardando}
-        onConfirm={handleGuardar} onClose={() => setConfirm(false)} />
+        variant="primary"
+        loading={guardando}
+        onConfirm={handleGuardar}
+        onClose={() => setConfirm(false)}
+      />
     </>
   );
 }

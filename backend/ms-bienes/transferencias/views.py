@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,OR
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from drf_spectacular.utils import (
@@ -71,8 +71,10 @@ _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
 )
 class TransferenciaViewSet(ViewSet):
     def get_permissions(self):
+        view_detalle = HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')
+        view_transf = HasJWTPermission('ms-bienes:transferencias:view_transferencia')
         perms = {
-            'list':                    [HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')],
+            'list': [OR(view_detalle, view_transf)],
             'retrieve':                [HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')],
             'mis_transferencias':      [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
             'documento':               [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],

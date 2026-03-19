@@ -22,9 +22,9 @@ function FiltroChip({ label, onRemove }) {
 }
 
 function SearchSelect({ placeholder, items = [], labelKey = 'nombre', valueKey = 'id', value, onSelect, onClear }) {
-  const [query,    setQuery]    = useState('');
-  const [open,     setOpen]     = useState(false);
-  const [focused,  setFocused]  = useState(false);
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const ref = useRef(null);
   const inputRef = useRef(null);
 
@@ -43,18 +43,8 @@ function SearchSelect({ placeholder, items = [], labelKey = 'nombre', valueKey =
     return items.filter(i => String(i[labelKey]).toLowerCase().includes(q)).slice(0, 30);
   }, [items, query, labelKey]);
 
-  const handleSelect = item => {
-    onSelect(item[valueKey], item[labelKey]);
-    setQuery('');
-    setOpen(false);
-  };
-
-  const handleClear = e => {
-    e.stopPropagation();
-    onClear();
-    setQuery('');
-    setOpen(false);
-  };
+  const handleSelect = item => { onSelect(item[valueKey]); setQuery(''); setOpen(false); };
+  const handleClear  = e => { e.stopPropagation(); onClear(); setQuery(''); setOpen(false); };
 
   return (
     <div ref={ref} className="relative">
@@ -63,8 +53,7 @@ function SearchSelect({ placeholder, items = [], labelKey = 'nombre', valueKey =
         style={{
           background: 'var(--color-surface)',
           border: `1px solid ${focused || open ? 'var(--color-primary)' : 'var(--color-border)'}`,
-          padding: '0 10px',
-          height: 41,
+          padding: '0 10px', height: 41,
         }}
         onClick={() => { setOpen(true); inputRef.current?.focus(); }}>
         <Icon name="search" className="text-[16px] shrink-0 mr-2"
@@ -74,8 +63,7 @@ function SearchSelect({ placeholder, items = [], labelKey = 'nombre', valueKey =
             {selected[labelKey]}
           </span>
         ) : (
-          <input ref={inputRef}
-            type="text" value={query}
+          <input ref={inputRef} type="text" value={query}
             onChange={e => { setQuery(e.target.value); setOpen(true); }}
             onFocus={() => { setFocused(true); setOpen(true); }}
             onBlur={() => setFocused(false)}
@@ -94,7 +82,6 @@ function SearchSelect({ placeholder, items = [], labelKey = 'nombre', valueKey =
         <Icon name="arrow_drop_down" className="text-[20px] shrink-0"
           style={{ color: 'var(--color-text-faint)', transform: open ? 'rotate(180deg)' : '', transition: 'transform .2s' }} />
       </div>
-
       {open && (
         <div className="absolute z-50 mt-1 w-full rounded-xl shadow-xl overflow-hidden"
           style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', maxHeight: 220 }}>
@@ -131,30 +118,37 @@ function FSelect({ value, onChange, children }) {
   );
 }
 
+// ── Componente principal ──────────────────────────────────────────────────────
 export default function BienesFiltros({
   filtros, onFiltroChange, onLimpiar,
-  sedes = [], modulos = [], tiposBien = [], estadosFuncionamiento = [],
+  sedes = [], modulos = [], tiposBien = [], estadosFuncionamiento = [], estadosBien = [],
 }) {
-  const hayFiltros = filtros.search || filtros.sede_id || filtros.modulo_id || filtros.custodio_q || filtros.tipo_bien_id || filtros.estado_funcionamiento_id;
+  const hayFiltros = filtros.search || filtros.sede_id || filtros.modulo_id
+    || filtros.custodio_q || filtros.tipo_bien_id
+    || filtros.estado_bien_id || filtros.estado_funcionamiento_id;
 
-  const sedeSel   = sedes.find(s  => String(s.id) === String(filtros.sede_id));
-  const moduloSel = modulos.find(m => String(m.id) === String(filtros.modulo_id));
+  const sedeSel    = sedes.find(s  => String(s.id)  === String(filtros.sede_id));
+  const moduloSel  = modulos.find(m => String(m.id)  === String(filtros.modulo_id));
+  const tipoSel    = tiposBien.find(t => String(t.id) === String(filtros.tipo_bien_id));
+  const estBienSel = estadosBien.find(e => String(e.id) === String(filtros.estado_bien_id));
+  const estFuncSel = estadosFuncionamiento.find(e => String(e.id) === String(filtros.estado_funcionamiento_id));
 
   return (
     <div className="card shadow-sm overflow-hidden">
       <div className="p-4 space-y-3">
-
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-          <div className="md:col-span-3">
+
+          {/* Búsqueda */}
+          <div className="md:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 block"
-              style={{ color: 'var(--color-text-muted)' }}>Búsqueda libre</label>
+              style={{ color: 'var(--color-text-muted)' }}>Búsqueda</label>
             <div className="relative">
               <Icon name="search"
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[18px] pointer-events-none"
                 style={{ color: filtros.search ? 'var(--color-primary)' : 'var(--color-text-faint)' }} />
               <input type="text" value={filtros.search || ''}
                 onChange={e => onFiltroChange('search', e.target.value)}
-                placeholder="Código, serie, modelo..."
+                placeholder="Serie, código..."
                 className="form-input text-xs"
                 style={{ paddingLeft: 40, height: 41 }} />
               {filtros.search && (
@@ -167,30 +161,20 @@ export default function BienesFiltros({
             </div>
           </div>
 
+          {/* Sede */}
           <div className="md:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 block"
               style={{ color: 'var(--color-text-muted)' }}>Sede</label>
             <SearchSelect
-              placeholder="Buscar sede..."
+              placeholder="Sede..."
               items={sedes}
               value={filtros.sede_id}
-              onSelect={(id) => onFiltroChange('sede_id', id)}
+              onSelect={id => onFiltroChange('sede_id', id)}
               onClear={() => onFiltroChange('sede_id', '')}
             />
           </div>
 
-          <div className="md:col-span-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 block"
-              style={{ color: 'var(--color-text-muted)' }}>Módulo</label>
-            <SearchSelect
-              placeholder="Buscar módulo..."
-              items={modulos}
-              value={filtros.modulo_id}
-              onSelect={(id) => onFiltroChange('modulo_id', id)}
-              onClear={() => onFiltroChange('modulo_id', '')}
-            />
-          </div>
-
+          {/* Custodio */}
           <div className="md:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 block"
               style={{ color: 'var(--color-text-muted)' }}>Custodio</label>
@@ -200,7 +184,7 @@ export default function BienesFiltros({
                 style={{ color: filtros.custodio_q ? 'var(--color-primary)' : 'var(--color-text-faint)' }} />
               <input type="text" value={filtros.custodio_q || ''}
                 onChange={e => onFiltroChange('custodio_q', e.target.value)}
-                placeholder="Nombre del custodio..."
+                placeholder="Nombre..."
                 className="form-input text-xs"
                 style={{ paddingLeft: 36, height: 41 }} />
               {filtros.custodio_q && (
@@ -213,24 +197,37 @@ export default function BienesFiltros({
             </div>
           </div>
 
-          <div className="md:col-span-1">
+          {/* Tipo de bien */}
+          <div className="md:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 block"
-              style={{ color: 'var(--color-text-muted)' }}>Tipo bien</label>
+              style={{ color: 'var(--color-text-muted)' }}>Tipo</label>
             <FSelect value={filtros.tipo_bien_id || ''} onChange={v => onFiltroChange('tipo_bien_id', v)}>
               <option value="">Todos</option>
-              {tiposBien.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+              {tiposBien.map(t => <option key={t.id} value={String(t.id)}>{t.nombre}</option>)}
             </FSelect>
           </div>
 
+          {/* Estado del bien (administrativo) */}
           <div className="md:col-span-1">
             <label className="text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 block"
               style={{ color: 'var(--color-text-muted)' }}>Estado</label>
-            <FSelect value={filtros.estado_funcionamiento_id || ''} onChange={v => onFiltroChange('estado_funcionamiento_id', v)}>
+            <FSelect value={filtros.estado_bien_id || ''} onChange={v => onFiltroChange('estado_bien_id', v)}>
               <option value="">Todos</option>
-              {estadosFuncionamiento.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+              {estadosBien.map(e => <option key={e.id} value={String(e.id)}>{e.nombre}</option>)}
             </FSelect>
           </div>
 
+          {/* Estado de funcionamiento (técnico) */}
+          <div className="md:col-span-2">
+            <label className="text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 block"
+              style={{ color: 'var(--color-text-muted)' }}>Funcionamiento</label>
+            <FSelect value={filtros.estado_funcionamiento_id || ''} onChange={v => onFiltroChange('estado_funcionamiento_id', v)}>
+              <option value="">Todos</option>
+              {estadosFuncionamiento.map(e => <option key={e.id} value={String(e.id)}>{e.nombre}</option>)}
+            </FSelect>
+          </div>
+
+          {/* Limpiar */}
           <div className="md:col-span-1 flex items-end">
             <button onClick={onLimpiar} disabled={!hayFiltros} title="Limpiar filtros"
               className="flex items-center justify-center w-full rounded-xl border transition-all duration-200 cursor-pointer"
@@ -249,16 +246,23 @@ export default function BienesFiltros({
           </div>
         </div>
 
+        {/* Chips de filtros activos */}
         {hayFiltros && (
           <div className="flex flex-wrap items-center gap-2 pt-3"
             style={{ borderTop: '1px solid var(--color-border-light)' }}>
-            <span className="text-[9px] font-black uppercase tracking-widest mr-1" style={{ color: 'var(--color-text-faint)' }}>Activos:</span>
-            {filtros.search && <FiltroChip label={`"${filtros.search}"`} onRemove={() => onFiltroChange('search', '')} />}
-            {filtros.sede_id && <FiltroChip label={sedeSel?.nombre ?? `Sede #${filtros.sede_id}`} onRemove={() => onFiltroChange('sede_id', '')} />}
-            {filtros.modulo_id && <FiltroChip label={moduloSel?.nombre ?? `Mód. #${filtros.modulo_id}`} onRemove={() => onFiltroChange('modulo_id', '')} />}
-            {filtros.custodio_q && <FiltroChip label={`Custodio: "${filtros.custodio_q}"`} onRemove={() => onFiltroChange('custodio_q', '')} />}
-            {filtros.tipo_bien_id && <FiltroChip label={tiposBien.find(t => String(t.id) === String(filtros.tipo_bien_id))?.nombre ?? 'Tipo'} onRemove={() => onFiltroChange('tipo_bien_id', '')} />}
-            {filtros.estado_funcionamiento_id && <FiltroChip label={estadosFuncionamiento.find(e => String(e.id) === String(filtros.estado_funcionamiento_id))?.nombre ?? 'Estado'} onRemove={() => onFiltroChange('estado_funcionamiento_id', '')} />}
+            <span className="text-[9px] font-black uppercase tracking-widest mr-1"
+              style={{ color: 'var(--color-text-faint)' }}>Activos:</span>
+            {filtros.search        && <FiltroChip label={`"${filtros.search}"`}                           onRemove={() => onFiltroChange('search', '')} />}
+            {filtros.sede_id       && <FiltroChip label={sedeSel?.nombre   ?? `Sede #${filtros.sede_id}`}  onRemove={() => onFiltroChange('sede_id', '')} />}
+            {filtros.modulo_id     && <FiltroChip label={moduloSel?.nombre ?? `Mód. #${filtros.modulo_id}`} onRemove={() => onFiltroChange('modulo_id', '')} />}
+            {filtros.custodio_q    && <FiltroChip label={`Custodio: "${filtros.custodio_q}"`}             onRemove={() => onFiltroChange('custodio_q', '')} />}
+            {filtros.tipo_bien_id  && <FiltroChip label={tipoSel?.nombre   ?? 'Tipo'}                     onRemove={() => onFiltroChange('tipo_bien_id', '')} />}
+            {filtros.estado_bien_id && (
+              <FiltroChip label={estBienSel?.nombre ?? 'Estado'} onRemove={() => onFiltroChange('estado_bien_id', '')} />
+            )}
+            {filtros.estado_funcionamiento_id && (
+              <FiltroChip label={estFuncSel?.nombre ?? 'Func.'} onRemove={() => onFiltroChange('estado_funcionamiento_id', '')} />
+            )}
           </div>
         )}
       </div>
@@ -266,6 +270,19 @@ export default function BienesFiltros({
   );
 }
 
+function resolverEstadoBienId(b) {
+  if (b.estado_bien_id != null)    return String(b.estado_bien_id);
+  if (b.estado_bien?.id != null)   return String(b.estado_bien.id);
+  return '';
+}
+
+function resolverEstadoFuncId(b) {
+  if (b.estado_funcionamiento_id != null) return String(b.estado_funcionamiento_id);
+  if (b.estado_funcionamiento?.id != null) return String(b.estado_funcionamiento.id);
+  return '';
+}
+
+// ── Hook de filtrado local ────────────────────────────────────────────────────
 export function useFiltradoLocal(bienes = [], filtros = {}) {
   return useMemo(() => {
     let res = bienes;
@@ -276,9 +293,7 @@ export function useFiltradoLocal(bienes = [], filtros = {}) {
         b.codigo_patrimonial?.toLowerCase().includes(q) ||
         b.numero_serie?.toLowerCase().includes(q)       ||
         b.modelo?.toLowerCase().includes(q)             ||
-        b.tipo_bien_nombre?.toLowerCase().includes(q)   ||
-        b.marca_nombre?.toLowerCase().includes(q)       ||
-        b.detalle_tecnico?.toLowerCase().includes(q)
+        b.tipo_bien_nombre?.toLowerCase().includes(q)
       );
     }
 
@@ -299,10 +314,24 @@ export function useFiltradoLocal(bienes = [], filtros = {}) {
       res = res.filter(b => String(b.tipo_bien_id) === String(filtros.tipo_bien_id));
     }
 
+
+    if (filtros.estado_bien_id) {
+      res = res.filter(b => resolverEstadoBienId(b) === String(filtros.estado_bien_id));
+    }
+
     if (filtros.estado_funcionamiento_id) {
-      res = res.filter(b => String(b.estado_funcionamiento_id ?? '') === String(filtros.estado_funcionamiento_id));
+      res = res.filter(b => resolverEstadoFuncId(b) === String(filtros.estado_funcionamiento_id));
     }
 
     return res;
-  }, [bienes, filtros.search, filtros.sede_id, filtros.modulo_id, filtros.custodio_q, filtros.tipo_bien_id, filtros.estado_funcionamiento_id]);
+  }, [
+    bienes,
+    filtros.search,
+    filtros.sede_id,
+    filtros.modulo_id,
+    filtros.custodio_q,
+    filtros.tipo_bien_id,
+    filtros.estado_bien_id,
+    filtros.estado_funcionamiento_id,
+  ]);
 }
