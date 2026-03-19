@@ -41,10 +41,10 @@ class DependencyViewSet(ViewSet):
             'filters':[HasJWTPermission('ms-usuarios:users:view_dependencia')],
             'list':[HasJWTPermission('ms-usuarios:users:view_dependencia')],
             'retrieve':[HasJWTPermission('ms-usuarios:users:view_dependencia')],
-            'create':[IsSysAdmin()],
-            'update': [IsSysAdmin()],
-            'activate': [IsSysAdmin()],   
-            'deactivate': [IsSysAdmin()],
+            'create':[HasJWTPermission('ms-usuarios:users:add_dependencia')],
+            'update': [HasJWTPermission('ms-usuarios:users:change_dependencia')],
+            'activate': [HasJWTPermission('ms-usuarios:users:change_dependencia')],
+            'deactivate': [HasJWTPermission('ms-usuarios:users:change_dependencia')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(

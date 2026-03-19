@@ -64,7 +64,7 @@ function AccionesFila({ item,  onVerDetalle, onEditar, onCancelar, onDownload })
           className="size-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors"
           style={{ color: '#dc2626' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgb(220 38 38 / 0.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}> 
           <Icon name="cancel" className="text-[19px]" />
         </button>
       )}

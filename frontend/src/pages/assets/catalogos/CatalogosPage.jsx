@@ -1,12 +1,13 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useCatalogos }    from '../../../hooks/useCatalogos';
 import { useToast }        from '../../../hooks/useToast';
 import ConfirmDialog       from '../../../components/feedback/ConfirmDialog';
 import CatalogosStats      from './components/CatalogosStats';
 import CatalogosFiltros     from './components/CatalogosFiltros';
 import CatalogosTabla      from './components/CatalogosTabla';
-import ModalCatalogo       from './modals/ModalCatalogo';
 import { CATALOGOS_META, GRUPOS, getCatalogosPorGrupo } from './catalogosMeta';
+
+const ModalCatalogo = lazy(() => import('./modals/ModalCatalogo'));
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
@@ -14,7 +15,6 @@ const Icon = ({ name, className = '' }) => (
 
 const FILTROS_INICIALES = { search: '', is_active: '' };
 
-// ── Componente de Navegación Lateral (Sidebar) ──────────────────────────────
 function CatalogoSelector({ catalogoActivo, onSeleccionar, conteos, loading }) {
   return (
     <aside className="flex flex-col h-full bg-surface border-r border-border min-h-[600px]">
@@ -72,11 +72,9 @@ function CatalogoSelector({ catalogoActivo, onSeleccionar, conteos, loading }) {
   );
 }
 
-// ── Página Principal ────────────────────────────────────────────────────────
 export default function CatalogosPage() {
   const toast = useToast();
   
-  // 1. Inicialización de Estados
   const [catalogoActivo, setCatalogoActivo] = useState(CATALOGOS_META[0]);
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
   const [conteos, setConteos] = useState({});
@@ -91,7 +89,6 @@ export default function CatalogosPage() {
     ...catalogoData
   } = useCatalogos();
 
-  // 2. Efectos de Carga de Datos
   useEffect(() => {
     if (catalogoActivo?.key) {
       fetchCatalogos([catalogoActivo.key]);
@@ -106,7 +103,6 @@ export default function CatalogosPage() {
     }
   }, [itemsActivos.length, loading, catalogoActivo?.key]);
 
-  // 3. Handlers de Filtros
   const onFiltroChange = useCallback((key, val) => {
     setFiltros(prev => ({ ...prev, [key]: val }));
   }, []);
@@ -115,7 +111,6 @@ export default function CatalogosPage() {
     setFiltros(FILTROS_INICIALES);
   }, []);
 
-  // 4. Lógica de Filtrado (Client-side)
   const itemsFiltrados = useMemo(() => {
     const txt = filtros.search.toLowerCase().trim();
     return itemsActivos.filter((item) => {
@@ -127,7 +122,6 @@ export default function CatalogosPage() {
     });
   }, [itemsActivos, filtros]);
 
-  // 5. Gestión de Modales
   const [modalForm, setModalForm] = useState(false);
   const [itemEditar, setItemEditar] = useState(null);
   const [confirmToggle, setConfirmToggle] = useState(false);
@@ -152,7 +146,6 @@ export default function CatalogosPage() {
   return (
     <div className="flex flex-col gap-6 p-4 max-w-[1600px] mx-auto animate-in fade-in duration-500 h-auto pb-20">
       
-      {/* ── Header Estilo Card ────────────────────────────────────────── */}
       <header className="card p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -177,10 +170,8 @@ export default function CatalogosPage() {
         </div>
       </header>
 
-      {/* ── Layout Maestro-Detalle ────────────────────────────────────── */}
       <main className="flex flex-col lg:flex-row gap-6">
         
-        {/* Lado Izquierdo: Selector de Catálogos */}
         <div className="w-full lg:w-[280px] shrink-0">
           <div className="card !p-0 overflow-hidden sticky top-4 border border-border shadow-sm">
             <CatalogoSelector 
@@ -192,14 +183,11 @@ export default function CatalogosPage() {
           </div>
         </div>
 
-        {/* Lado Derecho: Contenido y Datos */}
         <div className="flex-1 flex flex-col gap-6 min-w-0">
           
           <CatalogosStats items={itemsActivos} loading={loading} />
 
-          {/* Sección de Filtros: Separada con fondo sutil */}
           <div className="card p-4 bg-surface-alt/10 border border-border shadow-sm">
-            
             <CatalogosFiltros 
               filtros={filtros} 
               onFiltroChange={onFiltroChange} 
@@ -207,7 +195,6 @@ export default function CatalogosPage() {
             />
           </div>
 
-          {/* Tabla de Datos: Con espacio (gap-6) respecto a los filtros */}
           <div className="card !p-0 border border-border shadow-sm flex flex-col overflow-hidden">
             <div className="px-5 py-4 bg-surface border-b border-border flex items-center justify-between">
                <div className="flex items-center gap-3">
@@ -239,15 +226,18 @@ export default function CatalogosPage() {
         </div>
       </main>
 
-      {/* Modales */}
-      <ModalCatalogo 
-        open={modalForm} 
-        onClose={() => setModalForm(false)} 
-        item={itemEditar} 
-        catalogoKey={catalogoActivo?.key} 
-        catalogoMeta={catalogoActivo} 
-        onGuardado={() => { setModalForm(false); fetchCatalogos([catalogoActivo.key]); }} 
-      />
+      <Suspense fallback={null}>
+        {modalForm && (
+          <ModalCatalogo 
+            open={modalForm} 
+            onClose={() => setModalForm(false)} 
+            item={itemEditar} 
+            catalogoKey={catalogoActivo?.key} 
+            catalogoMeta={catalogoActivo} 
+            onGuardado={() => { setModalForm(false); fetchCatalogos([catalogoActivo.key]); }} 
+          />
+        )}
+      </Suspense>
       
       <ConfirmDialog 
         open={confirmToggle} 

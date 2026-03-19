@@ -22,10 +22,11 @@ const TABS = [
 
 const FUNC_BADGE = (n = '') => {
   const u = n.toUpperCase();
-  if (u === 'OPERATIVO')   return { bg: 'rgb(37 99 235 / 0.1)',   color: '#1d4ed8' };
-  if (u === 'AVERIADO')    return { bg: 'rgb(180 83 9 / 0.1)',    color: '#b45309' };
-  if (u === 'INOPERATIVO') return { bg: 'rgb(220 38 38 / 0.1)',   color: '#dc2626' };
-  return { bg: 'var(--color-border-light)', color: 'var(--color-text-muted)' };
+  if (u === 'OPERATIVO')   return {u:u, bg: 'rgb(37 99 235 / 0.1)',   color: '#1d4ed8' };
+  if (u === 'AVERIADO')    return {u:u, bg: 'rgb(180 83 9 / 0.1)',    color: '#b45309' };
+  if (u === 'INOPERATIVO') return {u:u, bg: 'rgb(220 38 38 / 0.1)',   color: '#dc2626' };
+  return {u:u, bg: 'rgb(37 99 235 / 0.1)',   color: '#1d4ed8' };
+  
 };
 
 function Fila({ label, value, icon, mono = false }) {
@@ -80,7 +81,7 @@ function TabGeneral({ b }) {
           </div>
           <div>
             <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Funcionamiento</p>
-            <p className="text-xs font-bold" style={{ color: fb.color }}>{b.estado_funcionamiento.nombre ?? '—'}</p>
+            <p className="text-xs font-bold" style={{ color: fb.color }}>{fb.u ?? '—'}</p>
           </div>
         </div>
         <Fila label="Estado del bien"       value={b.estado_bien_nombre}           icon="verified"        />
@@ -289,7 +290,7 @@ export default function ModalDetalleBien({ open, onClose, item, onEditar }) {
   const b = bien ?? item;
   const tieneTecnico = !!(b.detalle_cpu || b.detalle_monitor || b.detalle_impresora || b.detalle_scanner || b.detalle_switch || b.detalle_tecnico);
   const tabsVisibles = tieneTecnico ? TABS : TABS.filter(t => t.id !== 'tecnico');
-  const FUNC_B = FUNC_BADGE(b.estado_funcionamiento_nombre);
+  const fb = FUNC_BADGE(b.estado_funcionamiento_nombre ?? '');
   return (
     <Modal open={open} onClose={onClose} size="xl" closeOnOverlay>
       <ModalHeader
@@ -325,21 +326,21 @@ export default function ModalDetalleBien({ open, onClose, item, onEditar }) {
               <div className="card p-3 text-center space-y-2">
                 <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado</p>
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-xl"
-                  style={{ background: FUNC_B.bg, color: FUNC_B.color }}>
-                  {b.estado_funcionamiento.nombre?? '—'}
+                  style={{ background: fb.bg, color: fb.color }}>
+                  {b.estado_funcionamiento?.nombre }
                 </span>
                 <p className="text-[9px] font-black font-mono" style={{ color: 'var(--color-primary)' }}>
                   {b.codigo_patrimonial ?? 'Sin código'}
                 </p>
               </div>
-
+                    
               <div className="card p-3 space-y-2">
                 <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Resumen</p>
                 {[
-                  { label: 'Tipo',     value: b.tipo_bien_nombre ?? '—',       icon: 'devices'      },
-                  { label: 'Marca',    value: b.marca_nombre ?? '—',           icon: 'sell'         },
-                  { label: 'Sede',     value: b.sede_nombre ?? '—',            icon: 'domain'       },
-                  { label: 'Custodio', value: b.usuario_asignado_nombre ?? '—', icon: 'person'      },
+                  { label: 'Tipo',     value: b.tipo_tecnico ?? '—',       icon: 'devices'      },
+                  { label: 'Marca',    value: b.marca?.nombre ?? '—',           icon: 'sell'         },
+                  { label: 'Sede',     value: b.sede_nombre ?? '—',             icon: 'domain'       },
+                  { label: 'Custodio', value: b.usuario_asignado_nombre ?? '—', icon: 'person'       },
                 ].map(s => (
                   <div key={s.label} className="flex items-start gap-1.5">
                     <Icon name={s.icon} className="text-[13px] mt-0.5 shrink-0"

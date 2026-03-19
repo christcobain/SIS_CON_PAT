@@ -1,21 +1,24 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { useLocaciones }     from '../../../hooks/useLocaciones';
 import { useToast }          from '../../../hooks/useToast';
+import Can                   from '../../../components/auth/Can';
 import ConfirmDialog         from '../../../components/feedback/ConfirmDialog';
 import LocacionesStats       from '../locaciones/components/LocacionesStats';
 import LocacionesFiltros     from '../locaciones/components/LocacionesFiltros';
 import LocacionesTabla       from '../locaciones/components/LocacionesTabla';
-import ModalLocacion         from '../locaciones/modals/ModalLocacion';
-import ModalDetalleLocacion  from '../locaciones/modals/ModalDetalleLocacion';
+
+// Carga perezosa de modales
+const ModalLocacion = lazy(() => import('../locaciones/modals/ModalLocacion'));
+const ModalDetalleLocacion = lazy(() => import('../locaciones/modals/ModalDetalleLocacion'));
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
 const TABS = [
-  { id: 'sedes',       label: 'Sedes',       icon: 'domain'      },
-  { id: 'modulos',     label: 'Módulos',     icon: 'widgets'     },
-  { id: 'ubicaciones', label: 'Ubicaciones', icon: 'location_on' },
+  { id: 'sedes',       label: 'Sedes',       icon: 'domain',       permission: 'ms-usuarios:locations:add_sede' },
+  { id: 'modulos',     label: 'Módulos',     icon: 'widgets',      permission: 'ms-usuarios:locations:add_modulo' },
+  { id: 'ubicaciones', label: 'Ubicaciones', icon: 'location_on',  permission: 'ms-usuarios:locations:add_ubicacion' },
 ];
 
 const FILTROS_INICIALES = { search: '', is_active: '', empresa_id: '' };
@@ -84,7 +87,13 @@ export default function LocacionesPage() {
     }
   };
 
-  const btnLabels = { sedes: { icon: 'add_business', text: 'Nueva Sede' }, modulos: { icon: 'add', text: 'Nuevo Módulo' }, ubicaciones: { icon: 'add_location', text: 'Nueva Ubicación' } };
+  const currentTabCfg = useMemo(() => TABS.find(t => t.id === activeTab), [activeTab]);
+  
+  const btnLabels = { 
+    sedes: { icon: 'add_business', text: 'Nueva Sede' }, 
+    modulos: { icon: 'add', text: 'Nuevo Módulo' }, 
+    ubicaciones: { icon: 'add_location', text: 'Nueva Ubicación' } 
+  };
   const btn = btnLabels[activeTab];
 
   return (
@@ -105,10 +114,13 @@ export default function LocacionesPage() {
             <button onClick={refetch} disabled={loading} className="btn-icon bg-surface border border-border" title="Sincronizar">
               <Icon name="sync" className={`text-[18px] ${loading ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
-            <button onClick={handleNuevo} disabled={actualizando} className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm">
-              <Icon name={btn.icon} className="text-[18px]" />
-              <span className="font-black uppercase tracking-widest text-[10px]">{btn.text}</span>
-            </button>
+
+            <Can perform={currentTabCfg?.permission}>
+              <button onClick={handleNuevo} disabled={actualizando} className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm">
+                <Icon name={btn.icon} className="text-[18px]" />
+                <span className="font-black uppercase tracking-widest text-[10px]">{btn.text}</span>
+              </button>
+            </Can>
           </div>
         </div>
 
@@ -152,28 +164,34 @@ export default function LocacionesPage() {
           onToggleEstado={handleToggleEstado}
         />
       </div>
+  
+      <Suspense fallback={null}>
+        {modalForm && (
+          <ModalLocacion
+            open={modalForm}
+            onClose={() => { setModalForm(false); setItemEditar(null); }}
+            activeTab={activeTab}
+            item={itemEditar}
+            empresas={empresas}
+            departamentos={departamentos}
+            crearSede={crearSede}           actualizarSede={actualizarSede}
+            crearModulo={crearModulo}       actualizarModulo={actualizarModulo}
+            crearUbicacion={crearUbicacion} actualizarUbicacion={actualizarUbicacion}
+            actualizando={actualizando}
+            onGuardado={handleGuardado}
+          />
+        )}
 
-      <ModalLocacion
-        open={modalForm}
-        onClose={() => { setModalForm(false); setItemEditar(null); }}
-        activeTab={activeTab}
-        item={itemEditar}
-        empresas={empresas}
-        departamentos={departamentos}
-        crearSede={crearSede}           actualizarSede={actualizarSede}
-        crearModulo={crearModulo}       actualizarModulo={actualizarModulo}
-        crearUbicacion={crearUbicacion} actualizarUbicacion={actualizarUbicacion}
-        actualizando={actualizando}
-        onGuardado={handleGuardado}
-      />
-
-      <ModalDetalleLocacion
-        open={modalDetalle}
-        onClose={() => setModalDetalle(false)}
-        activeTab={activeTab}
-        item={itemDetalle}
-        onEditar={handleEditar}
-      />
+        {modalDetalle && (
+          <ModalDetalleLocacion
+            open={modalDetalle}
+            onClose={() => setModalDetalle(false)}
+            activeTab={activeTab}
+            item={itemDetalle}
+            onEditar={handleEditar}
+          />
+        )}
+      </Suspense>
 
       <ConfirmDialog
         open={confirmToggle}

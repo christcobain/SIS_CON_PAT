@@ -193,17 +193,26 @@ export default function ModalUsuario({ open, onClose, item = null, onGuardado })
 
   const handleBuscarDni = async () => {
     const dnilimpio = dni.trim();
-    if (!dnilimpio || dnilimpio.length < 8) { setErrorDni('El DNI debe tener al menos 8 dígitos.'); return; }
+    if (!dnilimpio || dnilimpio.length < 8) { 
+      setErrorDni('El DNI debe tener al menos 8 dígitos.'); 
+      return; 
+    }
     setErrorDni('');
     setBuscando(true);
     try {
       const data = await buscarEmpleado(dnilimpio);
-      if (!data) { setErrorDni('DNI no encontrado en la base de datos de RRHH.'); return; }
+      if (data?.success === false) {
+      setErrorDni(data?.error?.detail || 'No se encontró el empleado.');
+      return;
+    }
       setEmpleado(data);
       setForm(f => ({ ...f, dni: dnilimpio }));
       setPaso(2);
     } catch (e) {
-      setErrorDni(e?.response?.data?.error || 'Error al buscar el empleado.');
+      const msg = e?.response?.data?.error?.detail || 
+                  e?.response?.data?.detail || 
+                  'El DNI no existe en la base de datos de RRHH.';      
+      setErrorDni( msg);
     } finally {
       setBuscando(false);
     }

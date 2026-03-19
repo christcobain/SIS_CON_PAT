@@ -278,9 +278,12 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
   const tipoSel          = tiposBien.find(t => String(t.id) === String(form.tipo_bien_id));
   const tipoTecnico      = esInformatico ? detectarTipoTecnico(tipoSel?.nombre ?? '') : null;
   const tiposFiltrados   = useMemo(() => {
-    if (!form.categoria_bien_id) return tiposBien;
-    return tiposBien.filter(t => String(t.categoria_bien_id ?? '') === String(form.categoria_bien_id));
-  }, [tiposBien, form.categoria_bien_id]);
+    if (!form.categoria_bien_id) return [];
+
+  return tiposBien.filter(t => 
+    String(t.categoria_bien_id) === String(form.categoria_bien_id)
+  );
+}, [tiposBien, form.categoria_bien_id]);
   const sedeSelObj       = sedes.find(s => String(s.id) === String(form.sede_id));
   const ubicaciones      = sedeSelObj?.ubicaciones ?? [];
   const modulosActivos   = (modulos ?? []).filter(m => m.is_active !== false);
@@ -363,7 +366,10 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
                 <div>
                   <FLabel required>Categoría</FLabel>
                   <FSelect value={form.categoria_bien_id}
-                    onChange={v => { setF('categoria_bien_id', v); setF('tipo_bien_id', ''); setDetalle({}); }}>
+                    onChange={v => { 
+                      setF('categoria_bien_id', v); 
+                      setF('tipo_bien_id', '');
+                     setDetalle({}); }}>
                     <option value="">Seleccionar categoría...</option>
                     {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                     
@@ -373,7 +379,7 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
                 <div>
                   <FLabel required>Tipo de bien</FLabel>
                   <FSelect value={form.tipo_bien_id}  onChange={v => { setF('tipo_bien_id', v); setDetalle({}); }}
-                    disabled={!form.categoria_bien_id}>
+                    disabled={!form.categoria_bien_id || tiposFiltrados.length === 0}>
                     <option value="">Seleccionar tipo...</option>
                     {tiposFiltrados.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
                     {console.log(tiposFiltrados)} 

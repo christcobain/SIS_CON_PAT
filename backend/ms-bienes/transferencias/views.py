@@ -15,7 +15,7 @@ from shared.permissions import HasJWTPermission
 from .services import TransferenciaService
 from .serializers import (
     TransferenciaListSerializer,
-    TransferenciaDetailSerializer,
+    TransferenciaSegurSerializer,
     TrasladoSedeWriteSerializer,
     AsignacionInternaWriteSerializer,
     DevolucionSerializer,
@@ -72,18 +72,20 @@ _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
 class TransferenciaViewSet(ViewSet):
     def get_permissions(self):
         perms = {
-            'list':                    [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
-            'retrieve':                [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
+            'list':                    [HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')],
+            'retrieve':                [HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')],
             'mis_transferencias':      [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
             'documento':               [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
+            'pendientes_segur':        [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
+            'pendientes_aprobacion':   [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
             'crear_traslado':          [HasJWTPermission('ms-bienes:transferencias:add_transferencia')],
-            'crear_asignacion':        [HasJWTPermission('ms-bienes:transferencias:add_transferencia')],
-            'aprobar_adminsede':       [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
-            'devolver_adminsede':      [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
+            'crear_asignacion':        [HasJWTPermission('ms-bienes:transferencias:add_transferenciadetalle')],
+            'aprobar_adminsede':       [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
+            'devolver_adminsede':      [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
             'reenviar':                [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
-            'cancelar':                [HasJWTPermission('ms-bienes:transferencias:delete_transferencia')],
-            'confirmar_recepcion':     [IsAuthenticated()],
             'subir_firmado':           [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
+            'cancelar':                [HasJWTPermission('ms-bienes:transferencias:delete_transferenciadetalle')],
+            'confirmar_recepcion':     [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
             'aprobar_segur_salida':    [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
             'rechazar_segur_salida':   [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
             'aprobar_segur_entrada':   [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
@@ -241,7 +243,39 @@ class TransferenciaViewSet(ViewSet):
             self._get_role(request),
             self._get_sede(request),self._get_modulo(request),cookie=self._get_token(request),)
         return Response(result, status=status.HTTP_200_OK)
-
+    @extend_schema(
+        tags=['Transferencias'],
+        summary='Aprobar del personal de Seguridad.',
+        description=(
+            'Aprueba la transferencia según su sede.'
+            
+        ),
+        parameters=[_PK],
+        responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
+    )
+    @action(detail=False, methods=['get'], url_path='pendientes-segur')
+    def pendientes_segur(self, request):
+        sede_id = self._get_sede(request)
+        role    = self._get_role(request)
+        qs = TransferenciaService.listar_pendientes_segur(sede_id, role)
+        return Response(TransferenciaSegurSerializer(qs, many=True).data) 
+    @extend_schema(
+        tags=['Transferencias'],
+        summary='Lista de pendientes de aprobacion.',
+        description=(
+            'Aprueba la transferencia según su sede.'
+            
+        ),
+        parameters=[_PK],
+        responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
+    )
+    @action(detail=False, methods=['get'], url_path='pendientes-aprobacion')
+    def pendientes_aprobacion(self, request):
+        role    = self._get_role(request)
+        sede_id = self._get_sede(request)
+        modulo_id = self._get_modulo(request)
+        qs = TransferenciaService.listar_pendientes_aprobacion(role, sede_id, modulo_id, self._get_token(request))
+        return Response(TransferenciaListSerializer(qs, many=True).data)
     @extend_schema(
         tags=['Transferencias'],
         summary='Devolver transferencia (ADMINSEDE desaprueba)',
@@ -384,7 +418,6 @@ class TransferenciaViewSet(ViewSet):
             cookie=self._get_token(request),
         )
         return Response(result, status=status.HTTP_200_OK)
-
     @extend_schema(
         tags=['Transferencias'],
         summary='SEGURSEDE destino — Confirmar salida de retorno',
@@ -411,7 +444,6 @@ class TransferenciaViewSet(ViewSet):
             self._get_sede(request),
         )
         return Response(result, status=status.HTTP_200_OK)
-
     @extend_schema(
         tags=['Transferencias'],
         summary='SEGURSEDE origen — Confirmar entrada de retorno',
@@ -516,3 +548,5 @@ class TransferenciaViewSet(ViewSet):
             )
         result = TransferenciaService.subir_firmado(pk, archivo, request.user.id)
         return Response(result, status=status.HTTP_200_OK)
+    
+    

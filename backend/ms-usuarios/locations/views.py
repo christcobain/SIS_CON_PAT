@@ -3,7 +3,6 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from roles.permissions import IsSysAdmin
 from .services import (EmpresaService,SedeService, ModuloService,DepartamentoService,
                        ProvinciaService,DistritoService,UbicacionService)
 from drf_spectacular.utils import extend_schema,  OpenApiTypes
@@ -19,10 +18,10 @@ class EmpresaViewSet(ViewSet):
         perms = {
             'list':       [HasJWTPermission('ms-usuarios:locations:view_empresa')],
             'retrieve':   [HasJWTPermission('ms-usuarios:locations:view_empresa')],
-            'create':     [IsSysAdmin()],
-            'update':     [IsSysAdmin()],
-            'activate':   [IsSysAdmin()],
-            'deactivate': [IsSysAdmin()],
+            'create':     [HasJWTPermission('ms-usuarios:locations:add_empresa')],
+            'update':     [HasJWTPermission('ms-usuarios:locations:change_empresa')],
+            'activate':   [HasJWTPermission('ms-usuarios:locations:change_empresa')],
+            'deactivate': [HasJWTPermission('ms-usuarios:locations:change_empresa')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
@@ -117,10 +116,10 @@ class DepartamentoViewSet(ViewSet):
             'filters':           [HasJWTPermission('ms-usuarios:locations:view_departamento')],
             'list':           [HasJWTPermission('ms-usuarios:locations:view_departamento')],
             'retrieve':       [HasJWTPermission('ms-usuarios:locations:view_departamento')],
-            'create':         [IsSysAdmin()],
-            'update':           [IsSysAdmin()],
-            'activate':        [IsSysAdmin()],   
-            'deactivate':           [IsSysAdmin()],
+            'create':         [HasJWTPermission('ms-usuarios:locations:add_departamento')],
+            'update':           [HasJWTPermission('ms-usuarios:locations:change_departamento')],
+            'activate':        [HasJWTPermission('ms-usuarios:locations:change_departamento')],   
+            'deactivate':           [HasJWTPermission('ms-usuarios:locations:change_departamento')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
@@ -154,10 +153,10 @@ class ProvinciaViewSet(ViewSet):
             'filters':           [HasJWTPermission('ms-usuarios:locations:view_provincia')],
             'list':           [HasJWTPermission('ms-usuarios:locations:view_provincia')],
             'retrieve':       [HasJWTPermission('ms-usuarios:locations:view_provincia')],
-            'create':         [IsSysAdmin()],
-            'update':           [IsSysAdmin()],
-            'activate':        [IsSysAdmin()],   
-            'deactivate':           [IsSysAdmin()],
+            'create':         [HasJWTPermission('ms-usuarios:locations:add_provincia')],
+            'update':           [HasJWTPermission('ms-usuarios:locations:change_provincia')],
+            'activate':        [HasJWTPermission('ms-usuarios:locations:change_provincia')],   
+            'deactivate':           [HasJWTPermission('ms-usuarios:locations:change_provincia')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
@@ -188,10 +187,10 @@ class DistritoViewSet(ViewSet):
             'filters':           [HasJWTPermission('ms-usuarios:locations:view_distrito')],
             'list':           [HasJWTPermission('ms-usuarios:locations:view_distrito')],
             'retrieve':       [HasJWTPermission('ms-usuarios:locations:view_distrito')],
-            'create':         [IsSysAdmin()],
-            'update':           [IsSysAdmin()],
-            'activate':        [IsSysAdmin()],   
-            'deactivate':           [IsSysAdmin()],
+            'create':         [HasJWTPermission('ms-usuarios:locations:add_distrito')],
+            'update':           [HasJWTPermission('ms-usuarios:locations:change_distrito')],
+            'activate':        [HasJWTPermission('ms-usuarios:locations:change_distrito')],  
+            'deactivate':           [HasJWTPermission('ms-usuarios:locations:change_distrito')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
@@ -225,7 +224,7 @@ class SedeViewSet(ViewSet):
             'create':         [HasJWTPermission('ms-usuarios:locations:add_sede')],
             'update':           [HasJWTPermission('ms-usuarios:locations:change_sede')],
             'activate':        [HasJWTPermission('ms-usuarios:locations:change_sede')],   
-            'deactivate':           [HasJWTPermission('ms-usuarios:locations:delete_sede')],
+            'deactivate':           [HasJWTPermission('ms-usuarios:locations:change_sede')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
@@ -402,10 +401,10 @@ class UbicacionViewSet(ViewSet):
             'filters':           [HasJWTPermission('ms-usuarios:locations:view_ubicacion')],
             'list':           [HasJWTPermission('ms-usuarios:locations:view_ubicacion')],
             'retrieve':       [HasJWTPermission('ms-usuarios:locations:view_ubicacion')],
-            'create':         [IsSysAdmin()],
-            'update':           [IsSysAdmin()],
-            'activate':        [IsSysAdmin()],   
-            'deactivate':           [IsSysAdmin()],
+            'create':         [HasJWTPermission('ms-usuarios:locations:add_ubicacion')],
+            'update':           [HasJWTPermission('ms-usuarios:locations:change_ubicacion')],
+            'activate':        [HasJWTPermission('ms-usuarios:locations:change_ubicacion')],  
+            'deactivate':           [HasJWTPermission('ms-usuarios:locations:change_ubicacion')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(

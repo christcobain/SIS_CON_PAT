@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
-from shared.permissions import HasJWTPermission, IsSysAdmin
+from shared.permissions import HasJWTPermission
 from .services import CatalogoService
 from .serializers import (CatCategoriaBienSerializer, CatalogoWriteSerializer,
     CatTipoBienSerializer,catTipoTarjetaVideoSerializer, CatMarcaSerializer, CatRegimenTenenciaSerializer,
@@ -55,12 +55,12 @@ def _resolve(slug: str):
 class CatalogoViewSet(ViewSet):
     def get_permissions(self):
         perms = {
-            'list':       [HasJWTPermission('ms-bienes:catalogos:view_cattipobien')],
-            'retrieve':   [HasJWTPermission('ms-bienes:catalogos:view_cattipobien')],
-            'create':     [HasJWTPermission('ms-bienes:catalogos:add_cattipobien')],
-            'update':     [HasJWTPermission('ms-bienes:catalogos:add_cattipobien')],
-            'activate':   [IsSysAdmin()],
-            'deactivate': [IsSysAdmin()],
+            'list':       [HasJWTPermission('ms-bienes:catalogos:view_catcategoriabien')],
+            'retrieve':   [HasJWTPermission('ms-bienes:catalogos:view_catcategoriabien')],
+            'create':     [HasJWTPermission('ms-bienes:catalogos:vadd_catcategoriabien')],
+            'update':     [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
+            'activate':   [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
+            'deactivate': [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     def _get_slug(self, request, **kwargs) -> str:

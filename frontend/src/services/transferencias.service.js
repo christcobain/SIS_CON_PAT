@@ -10,13 +10,20 @@ const transferenciasService = {
     return response.data;
   },
   misTransferencias: async (usuarioI,params = {}) => {
-    // const response = await axiosBienes.get('/transferencias/mis-transferencias/', { params,usuarioId:usuarioI });
     const response = await axiosBienes.get('/transferencias/mis-transferencias/', { 
         params: { 
             ...params, 
             usuario_id: usuarioI 
         } 
     });
+    return response.data;
+  },
+  pendientesSegur: async () => {
+    const response = await axiosBienes.get('/transferencias/pendientes-segur/');
+    return response.data;
+  },
+  pendientesAprobacion: async () => {
+    const response = await axiosBienes.get('/transferencias/pendientes-aprobacion/');
     return response.data;
   },
   descargarPDF: async (id) => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import EmptyState from '../../../../components/feedback/EmptyState';
 import ErrorState  from '../../../../components/feedback/ErrorState';
+import Can from '../../../../components/auth/Can'; // Importamos Can
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
@@ -79,13 +80,17 @@ function FilaUsuario({ usuario, onVerDetalle, onEditar, onToggleEstado }) {
           <button onClick={() => onVerDetalle(usuario)} className="size-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary" title="Ver detalle">
             <Icon name="visibility" className="text-[18px]" />
           </button>
-          <button onClick={() => onEditar(usuario)} className="size-8 flex items-center justify-center rounded-lg hover:bg-amber-500/10 text-amber-600" title="Editar">
-            <Icon name="edit" className="text-[18px]" />
-          </button>
           
-          <button onClick={() => onToggleEstado(usuario)} className={`size-8 flex items-center justify-center rounded-lg transition-colors ${activo ? 'hover:bg-red-500/10 text-red-500' : 'hover:bg-emerald-500/10 text-emerald-500'}`} title={activo ? 'Desactivar' : 'Activar'}>
-            <Icon name={activo ? 'person_off' : 'person_check'} className="text-[18px]" />
-          </button>
+          {/* Solo usuarios con change_user pueden ver Editar y Toggle */}
+          <Can perform="ms-usuarios:users:change_user">
+            <button onClick={() => onEditar(usuario)} className="size-8 flex items-center justify-center rounded-lg hover:bg-amber-500/10 text-amber-600" title="Editar">
+              <Icon name="edit" className="text-[18px]" />
+            </button>
+            
+            <button onClick={() => onToggleEstado(usuario)} className={`size-8 flex items-center justify-center rounded-lg transition-colors ${activo ? 'hover:bg-red-500/10 text-red-500' : 'hover:bg-emerald-500/10 text-emerald-500'}`} title={activo ? 'Desactivar' : 'Activar'}>
+              <Icon name={activo ? 'person_off' : 'person_check'} className="text-[18px]" />
+            </button>
+          </Can>
         </div>
       </td>
     </tr>
@@ -107,7 +112,7 @@ function FilaDependencia({ dep, onVerDetalle, onEditar, onToggleEstado }) {
           </div>
         </div>
       </td>
-      <td className="px-6 py-4" colSpan={2}> {/* Ajuste para ocupar espacio del cargo */}
+      <td className="px-6 py-4" colSpan={2}>
         {dep.codigo ? (
           <span className="text-[10px] font-mono font-black px-2 py-1 rounded bg-surface-alt border border-border text-body">
             {dep.codigo}
@@ -121,9 +126,19 @@ function FilaDependencia({ dep, onVerDetalle, onEditar, onToggleEstado }) {
       </td>
       <td className="px-6 py-4 text-right">
         <div className="flex justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => onEditar(dep)} className="size-8 flex items-center justify-center rounded-lg hover:bg-amber-500/10 text-amber-600"><Icon name="edit" className="text-[18px]" /></button>
-          <button onClick={() => onVerDetalle(dep)} className="size-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary"><Icon name="visibility" className="text-[18px]" /></button>
-          <button onClick={() => onToggleEstado(dep)} className={`size-8 flex items-center justify-center rounded-lg ${dep.is_active ? 'hover:bg-red-500/10 text-red-500' : 'hover:bg-emerald-500/10 text-emerald-500'}`}><Icon name={dep.is_active ? 'toggle_off' : 'toggle_on'} className="text-[18px]" /></button>
+          <button onClick={() => onVerDetalle(dep)} className="size-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary" title="Ver detalle">
+            <Icon name="visibility" className="text-[18px]" />
+          </button>
+
+          {/* Solo usuarios con change_dependencia pueden ver Editar y Toggle */}
+          <Can perform="ms-usuarios:users:change_dependencia">
+            <button onClick={() => onEditar(dep)} className="size-8 flex items-center justify-center rounded-lg hover:bg-amber-500/10 text-amber-600" title="Editar">
+              <Icon name="edit" className="text-[18px]" />
+            </button>
+            <button onClick={() => onToggleEstado(dep)} className={`size-8 flex items-center justify-center rounded-lg ${dep.is_active ? 'hover:bg-red-500/10 text-red-500' : 'hover:bg-emerald-500/10 text-emerald-500'}`} title={dep.is_active ? 'Desactivar' : 'Activar'}>
+              <Icon name={dep.is_active ? 'toggle_off' : 'toggle_on'} className="text-[18px]" />
+            </button>
+          </Can>
         </div>
       </td>
     </tr>
@@ -193,7 +208,6 @@ export default function UsuariosTabla({
         </table>
       </div>
 
-      {/* ── Footer unificado ── */}
       <div className="table-footer px-6 py-4 bg-surface-alt/50 border-t border-border flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-6">
           <p className="text-xs text-faint">
@@ -253,7 +267,7 @@ export default function UsuariosTabla({
   );
 }
 
-// ── Badge de rol ───────────────────────────────────────────────────────────────
+// ── Badge de rol (Sin cambios) ────────────────────────────────────────────────
 function RolBadge({ rol }) {
   const rolKey = typeof rol === 'object' && rol !== null ? rol.name : rol;
   const cfg = {

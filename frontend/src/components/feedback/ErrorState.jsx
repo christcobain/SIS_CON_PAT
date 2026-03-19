@@ -1,9 +1,4 @@
-/**
- * Estado de error — cuando falla una carga de datos.
- *
- * Uso:
- *   {error && <ErrorState message={error} onRetry={refetch} />}
- */
+
 export default function ErrorState({ message = 'Ocurrió un error al cargar los datos.', onRetry }) {
   return (
     <div className="flex flex-col items-center justify-center py-14 text-center">

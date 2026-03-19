@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import Modal         from '../../../../components/modal/Modal';
-import ModalHeader   from '../../../../components/modal/ModalHeader';
-import ModalBody     from '../../../../components/modal/ModalBody';
-import ModalFooter   from '../../../../components/modal/ModalFooter';
-import ConfirmDialog from '../../../../components/feedback/ConfirmDialog';
-import { useToast }  from '../../../../hooks/useToast';
-import { useAuth }   from '../../../../hooks/useAuth';
+import Modal          from '../../../../components/modal/Modal';
+import ModalHeader    from '../../../../components/modal/ModalHeader';
+import ModalBody      from '../../../../components/modal/ModalBody';
+import ModalFooter    from '../../../../components/modal/ModalFooter';
+import ConfirmDialog  from '../../../../components/feedback/ConfirmDialog';
+import Can            from '../../../../components/auth/Can'; 
+import { useToast }   from '../../../../hooks/useToast';
+import { useAuth }    from '../../../../hooks/useAuth';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
@@ -124,7 +125,6 @@ function ModalPolitica({ open, onClose, item, onGuardado }) {
       toast.success(esEditar ? 'Política actualizada.' : 'Política creada.');
       onGuardado();
     } catch (e) {
-      console.log('ERROR=',e)
       toast.error(e?.response?.data?.detail || e?.response?.data?.error || 'Error al guardar la política.');
     } finally { setGuardando(false); }
   };
@@ -255,10 +255,13 @@ export default function PoliticasTabla({ items = [], loading, onReload }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <button onClick={() => { setItemEditar(null); setModalForm(true); }}
-          className="btn-primary flex items-center gap-2 px-4">
-          <Icon name="add" className="text-[18px]" />Nueva política
-        </button>
+        {/* Registro de nueva política protegido */}
+        <Can perform="ms-usuarios:authentication:add_passwordpolicy">
+          <button onClick={() => { setItemEditar(null); setModalForm(true); }}
+            className="btn-primary flex items-center gap-2 px-4">
+            <Icon name="add" className="text-[18px]" />Nueva política
+          </button>
+        </Can>
       </div>
 
       {items.length === 0 ? (
@@ -283,29 +286,33 @@ export default function PoliticasTabla({ items = [], loading, onReload }) {
                   </div>
                   <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>ID #{p.id}</p>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => { setItemEditar(p); setModalForm(true); }}
-                    className="size-8 flex items-center justify-center rounded-lg transition-all cursor-pointer"
-                    style={{ color: '#b45309' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgb(180 83 9 / 0.1)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-                    <Icon name="edit" className="text-[18px]" />
-                  </button>
-                  <button onClick={() => { setItemToggle(p); setConfirmToggle(true); }}
-                    className="size-8 flex items-center justify-center rounded-lg transition-all cursor-pointer"
-                    style={{ color: p.is_active ? '#dc2626' : '#16a34a' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = p.is_active ? 'rgb(220 38 38 / 0.1)' : 'rgb(22 163 74 / 0.1)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-                    <Icon name={p.is_active ? 'toggle_off' : 'toggle_on'} className="text-[18px]" />
-                  </button>
-                </div>
+                
+                {/* Botones de acción protegidos con change_passwordpolicy */}
+                <Can perform="ms-usuarios:authentication:change_passwordpolicy">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => { setItemEditar(p); setModalForm(true); }}
+                      className="size-8 flex items-center justify-center rounded-lg transition-all cursor-pointer"
+                      style={{ color: '#b45309' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgb(180 83 9 / 0.1)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                      <Icon name="edit" className="text-[18px]" />
+                    </button>
+                    <button onClick={() => { setItemToggle(p); setConfirmToggle(true); }}
+                      className="size-8 flex items-center justify-center rounded-lg transition-all cursor-pointer"
+                      style={{ color: p.is_active ? '#dc2626' : '#16a34a' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = p.is_active ? 'rgb(220 38 38 / 0.1)' : 'rgb(22 163 74 / 0.1)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                      <Icon name={p.is_active ? 'toggle_off' : 'toggle_on'} className="text-[18px]" />
+                    </button>
+                  </div>
+                </Can>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { label: 'Longitud mín.', value: `${p.min_length} chars`, icon: 'straighten' },
-                  { label: 'Expiración',    value: `${p.expiration_days} días`, icon: 'schedule' },
-                  { label: 'Alerta',        value: `${p.warning_days} días`, icon: 'warning'   },
+                  { label: 'Expiración',     value: `${p.expiration_days} días`, icon: 'schedule' },
+                  { label: 'Alerta',         value: `${p.warning_days} días`, icon: 'warning'   },
                 ].map(s => (
                   <div key={s.label} className="flex items-center gap-2 p-2.5 rounded-xl"
                     style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
@@ -339,7 +346,6 @@ export default function PoliticasTabla({ items = [], loading, onReload }) {
           ))}
         </div>
       )}
-
       <ModalPolitica open={modalForm}
         onClose={() => { setModalForm(false); setItemEditar(null); }}
         item={itemEditar}

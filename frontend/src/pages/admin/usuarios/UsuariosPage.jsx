@@ -1,28 +1,51 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react'; 
 import { useUsuarios }          from '../../../hooks/useUsuarios';
 import { useToast }             from '../../../hooks/useToast';
+import { usePermission }        from '../../../hooks/usePermission';
 import ConfirmDialog            from '../../../components/feedback/ConfirmDialog';
 import UsuariosStats            from './components/UsuariosStats';
 import UsuariosFiltros          from './components/UsuariosFiltros';
 import UsuariosTabla            from './components/UsuariosTabla';
-import ModalUsuario             from './modal/ModalUsuario ';
-import ModalDependencia         from './modal/ModalDependencia';
-import ModalDetalleUsuario      from './modal/ModalDetalleUsuario';
-import ModalDetalleDependencia  from './modal/ModalDetalleDependencia';
+import Can                      from '../../../components/auth/Can';
+
+
+const ModalUsuario            = lazy(() => import('./modal/ModalUsuario '));
+const ModalDependencia        = lazy(() => import('./modal/ModalDependencia'));
+const ModalDetalleUsuario     = lazy(() => import('./modal/ModalDetalleUsuario'));
+const ModalDetalleDependencia = lazy(() => import('./modal/ModalDetalleDependencia'));
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
-const TABS = [
-  { id: 'usuarios',     label: 'Usuarios',     icon: 'group'        },
-  { id: 'dependencias', label: 'Dependencias', icon: 'account_tree' },
+const TABS_CONFIG = [
+  { 
+    id: 'usuarios', 
+    label: 'Usuarios', 
+    icon: 'group',
+    permisoVer: 'ms-usuarios:users:view_user',
+    permisoCrear: 'ms-usuarios:users:add_user',
+    permisoEditar: 'ms-usuarios:users:change_user'
+  },
+  { 
+    id: 'dependencias', 
+    label: 'Dependencias', 
+    icon: 'account_tree',
+    permisoVer: 'ms-usuarios:users:view_dependencia',
+    permisoCrear: 'ms-usuarios:users:add_dependencia',
+    permisoEditar: 'ms-usuarios:users:change_dependencia'
+  },
 ];
 
 const FILTROS_INICIALES = { search: '', role: '', is_active: '' };
 
 export default function UsuariosPage() {
   const toast = useToast();
+  const { can } = usePermission();
+
+  const tabsDisponibles = useMemo(() => 
+    TABS_CONFIG.filter(tab => can(tab.permisoVer)), 
+  [can]);
 
   const {
     usuarios,
@@ -43,8 +66,8 @@ export default function UsuariosPage() {
   const [actualizandoDeps, setActualizandoDeps] = useState(false);
 
   const fetchDependencias = async () => {
+    if (!can('ms-usuarios:users:view_dependencia')) return;
     setLoadingDeps(true);
-    setErrorDeps(null);
     try {
       const data = await listarDependencias();
       setDependencias(Array.isArray(data) ? data : data?.results ?? []);
@@ -57,8 +80,8 @@ export default function UsuariosPage() {
 
   useEffect(() => { fetchDependencias(); }, []);
 
-  const [activeTab,     setActiveTab]     = useState('usuarios');
-  const [filtros,       setFiltros]       = useState(FILTROS_INICIALES);
+  const [activeTab, setActiveTab] = useState(() => tabsDisponibles[0]?.id || 'usuarios');
+  const [filtros,   setFiltros]   = useState(FILTROS_INICIALES);
 
   const [modalUsuario,         setModalUsuario]         = useState(false);
   const [modalDependencia,     setModalDependencia]     = useState(false);
@@ -73,6 +96,10 @@ export default function UsuariosPage() {
 
   const onFiltroChange   = (key, val) => setFiltros(prev => ({ ...prev, [key]: val }));
   const onLimpiarFiltros = () => setFiltros(FILTROS_INICIALES);
+
+  const currentTabConfig = useMemo(() => 
+    TABS_CONFIG.find(t => t.id === activeTab), 
+  [activeTab]);
 
   const itemsFiltrados = useMemo(() => {
     const lista = activeTab === 'usuarios' ? usuarios : dependencias;
@@ -128,20 +155,21 @@ export default function UsuariosPage() {
     const nombre = activeTab === 'usuarios'
       ? `${itemToggle.first_name ?? ''} ${itemToggle.last_name ?? ''}`.trim()
       : (itemToggle.nombre ?? '');
+    
     try {
       let res;
       if (activeTab === 'usuarios') {
         res = is_active ? await desactivar(id) : await activar(id);
+        refetchUsuarios();
       } else {
         setActualizandoDeps(true);
-        try {
-          res = is_active ? await desactivarDependencia(id) : await activarDependencia(id);
-          await fetchDependencias();
-        } finally { setActualizandoDeps(false); }
+        res = is_active ? await desactivarDependencia(id) : await activarDependencia(id);
+        await fetchDependencias();
+        setActualizandoDeps(false);
       }
       toast.success(res?.message ?? `"${nombre}" ${is_active ? 'desactivado' : 'activado'}.`);
-      if (activeTab === 'usuarios') refetchUsuarios();
     } catch (e) {
+      setActualizandoDeps(false);
       toast.error(e?.response?.data?.error || 'Error al cambiar el estado.');
     } finally { setItemToggle(null); }
   };
@@ -152,7 +180,6 @@ export default function UsuariosPage() {
 
   return (
     <div className="gap-1 p-4 max-w-[1600px] animate-in fade-in duration-500 h-auto pb-20">
-
       <div className="card p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-1">
           <div className="flex items-center gap-2">
@@ -168,19 +195,22 @@ export default function UsuariosPage() {
             <button onClick={refetchActivo} disabled={loadingActivo} className="btn-icon bg-surface border border-border" title="Sincronizar">
               <Icon name="sync" className={`text-[18px] ${loadingActivo ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
-            <button onClick={handleNuevo} disabled={actualizando || actualizandoDeps} className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm">
-              <Icon name={btnLabel.icon} className="text-[18px]" />
-              <span className="font-black uppercase tracking-widest text-[10px]">{btnLabel.text}</span>
-            </button>
+            
+            <Can perform={currentTabConfig?.permisoCrear}>
+              <button onClick={handleNuevo} disabled={actualizando || actualizandoDeps} className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm">
+                <Icon name={btnLabel.icon} className="text-[18px]" />
+                <span className="font-black uppercase tracking-widest text-[10px]">{btnLabel.text}</span>
+              </button>
+            </Can>
           </div>
         </div>
 
         <div className="flex gap-6 mt-4 border-t border-border pt-3">
-          {TABS.map(({ id, label, icon }) => (
+          {tabsDisponibles.map(({ id, label, icon }) => (
             <button key={id}
               onClick={() => { setActiveTab(id); onLimpiarFiltros(); }}
-              className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all ${
-                activeTab === id ? 'text-primary border-b-2 border-primary' : 'text-faint hover:text-main'
+              className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all border-b-2 ${
+                activeTab === id ? 'text-primary border-primary' : 'text-faint border-transparent hover:text-main'
               }`}
             >
               <Icon name={icon} className="text-[16px]" />
@@ -193,6 +223,7 @@ export default function UsuariosPage() {
       <div className="page-content custom-scrollbar">
         <UsuariosStats usuarios={usuarios} dependencias={dependencias} loading={loadingUsuarios || loadingDeps} />
         <UsuariosFiltros filtros={filtros} onFiltroChange={onFiltroChange} onLimpiar={onLimpiarFiltros} activeTab={activeTab} />
+        
         <UsuariosTabla
           activeTab={activeTab}
           items={itemsFiltrados}
@@ -202,36 +233,51 @@ export default function UsuariosPage() {
           onVerDetalle={handleVerDetalle}
           onEditar={handleEditar}
           onToggleEstado={handleToggle}
+          puedeEditar={can(currentTabConfig?.permisoEditar)}
         />
       </div>
 
-      <ModalUsuario
-        open={modalUsuario}
-        onClose={() => { setModalUsuario(false); setItemEditarUsuario(null); }}
-        item={itemEditarUsuario}
-        onGuardado={() => { setModalUsuario(false); setItemEditarUsuario(null); refetchUsuarios(); }}
-      />
+      {/* 3. Envolvemos los modales con Suspense */}
+      {/* El fallback puede ser null o un spinner pequeño */}
+      <Suspense fallback={null}>
+        {modalUsuario && (
+          <ModalUsuario
+            open={modalUsuario}
+            onClose={() => { setModalUsuario(false); setItemEditarUsuario(null); }}
+            item={itemEditarUsuario}
+            onGuardado={() => { setModalUsuario(false); setItemEditarUsuario(null); refetchUsuarios(); }}
+          />
+        )}
 
-      <ModalDependencia
-        open={modalDependencia}
-        onClose={() => { setModalDependencia(false); setItemEditarDep(null); }}
-        item={itemEditarDep}
-        onGuardado={() => { setModalDependencia(false); setItemEditarDep(null); fetchDependencias(); }}
-      />
+        {modalDependencia && (
+          <ModalDependencia
+            open={modalDependencia}
+            onClose={() => { setModalDependencia(false); setItemEditarDep(null); }}
+            item={itemEditarDep}
+            onGuardado={() => { setModalDependencia(false); setItemEditarDep(null); fetchDependencias(); }}
+          />
+        )}
 
-      <ModalDetalleUsuario
-        open={modalDetalleUsuario}
-        onClose={() => setModalDetalleUsuario(false)}
-        item={activeTab === 'usuarios' ? itemDetalle : null}
-        onEditar={handleEditar}
-      />
+        {modalDetalleUsuario && (
+          <ModalDetalleUsuario
+            open={modalDetalleUsuario}
+            onClose={() => setModalDetalleUsuario(false)}
+            item={activeTab === 'usuarios' ? itemDetalle : null}
+            onEditar={handleEditar}
+            puedeEditar={can('ms-usuarios:users:change_user')}
+          />
+        )}
 
-      <ModalDetalleDependencia
-        open={modalDetalleDep}
-        onClose={() => setModalDetalleDep(false)}
-        item={activeTab === 'dependencias' ? itemDetalle : null}
-        onEditar={handleEditar}
-      />
+        {modalDetalleDep && (
+          <ModalDetalleDependencia
+            open={modalDetalleDep}
+            onClose={() => setModalDetalleDep(false)}
+            item={activeTab === 'dependencias' ? itemDetalle : null}
+            onEditar={handleEditar}
+            puedeEditar={can('ms-usuarios:users:change_dependencia')}
+          />
+        )}
+      </Suspense>
 
       <ConfirmDialog
         open={confirmToggle}

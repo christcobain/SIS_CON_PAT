@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import Can from '../../../../components/auth/Can'; 
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
@@ -34,9 +35,9 @@ function TablaWrapper({ columnas, children }) {
 
 function BadgeSesion({ status }) {
   const MAP = {
-    active:  { label: 'Activa',   bg: 'rgb(22 163 74 / 0.1)',      color: '#16a34a',                   dot: 'bg-green-500' },
+    active:  { label: 'Activa',   bg: 'rgb(22 163 74 / 0.1)',      color: '#16a34a',           dot: 'bg-green-500' },
     logout:  { label: 'Cerrada',  bg: 'var(--color-border-light)',  color: 'var(--color-text-muted)',   dot: 'bg-slate-400' },
-    expired: { label: 'Expirada', bg: 'rgb(180 83 9 / 0.1)',       color: '#b45309',                   dot: 'bg-amber-500' },
+    expired: { label: 'Expirada', bg: 'rgb(180 83 9 / 0.1)',       color: '#b45309',           dot: 'bg-amber-500' },
   };
   const cfg = MAP[status] ?? MAP.logout;
   return (
@@ -104,8 +105,8 @@ function TablaIntentos({ items }) {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Total registros', value: totales.total,    icon: 'list',          color: 'var(--color-primary)' },
-          { label: 'Exitosos',        value: totales.exitosos, icon: 'check_circle',   color: '#16a34a' },
-          { label: 'Fallidos',        value: totales.fallidos, icon: 'cancel',         color: '#dc2626' },
+          { label: 'Exitosos',         value: totales.exitosos, icon: 'check_circle',   color: '#16a34a' },
+          { label: 'Fallidos',         value: totales.fallidos, icon: 'cancel',         color: '#dc2626' },
         ].map(s => (
           <div key={s.label} className="card p-3 flex items-center gap-3">
             <Icon name={s.icon} className="text-[22px]" style={{ color: s.color }} />
@@ -180,18 +181,21 @@ function TablaCredenciales({ items, onUnlock, onReset }) {
           </td>
           <td>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {c.is_locked && (
-                <button onClick={() => onUnlock(c)}
+              {/* CORRECCIÓN: Permiso requerido para desbloquear y resetear */}
+              <Can perform="ms-usuarios:authentication:add_credential">
+                {c.is_locked && (
+                  <button onClick={() => onUnlock(c)}
+                    className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-xl cursor-pointer transition-all"
+                    style={{ background: 'rgb(22 163 74 / 0.1)', color: '#16a34a', border: '1px solid rgb(22 163 74 / 0.25)' }}>
+                    <Icon name="lock_open" className="text-[13px]" />Desbloquear
+                  </button>
+                )}
+                <button onClick={() => onReset(c)}
                   className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-xl cursor-pointer transition-all"
-                  style={{ background: 'rgb(22 163 74 / 0.1)', color: '#16a34a', border: '1px solid rgb(22 163 74 / 0.25)' }}>
-                  <Icon name="lock_open" className="text-[13px]" />Desbloquear
+                  style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
+                  <Icon name="lock_reset" className="text-[13px]" />Resetear
                 </button>
-              )}
-              <button onClick={() => onReset(c)}
-                className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-xl cursor-pointer transition-all"
-                style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
-                <Icon name="lock_reset" className="text-[13px]" />Resetear
-              </button>
+              </Can>
             </div>
           </td>
         </tr>

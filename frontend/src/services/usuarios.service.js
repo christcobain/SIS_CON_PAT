@@ -19,7 +19,7 @@ const usuariosService = {
     return response.data;
   },  
   actualizar: async (id, data) => {
-    const response = await axiosUsuarios.patch(`/users/users/${id}/`, data);
+    const response = await axiosUsuarios.put(`/users/users/${id}/`, data);
     return response.data;
   },
   activar: async (id) => {
@@ -47,7 +47,7 @@ const usuariosService = {
     return response.data;
   },
   actualizarDependencia: async (id, data) => {
-    const response = await axiosUsuarios.patch(`/users/dependencies/${id}/`, data);
+    const response = await axiosUsuarios.put(`/users/dependencies/${id}/`, data);
     return response.data;
   },
   activarDependencia: async (id) => {

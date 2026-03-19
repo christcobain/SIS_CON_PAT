@@ -88,7 +88,7 @@ class LoginViewSet(ViewSet):
 class CredentialViewSet(ViewSet):
     def get_permissions(self):
         perms = {
-            'list':   [HasJWTPermission('ms-usuarios:authentication:add_credential')],
+            'list':   [HasJWTPermission('ms-usuarios:authentication:view_credential')],
             'unlock': [HasJWTPermission('ms-usuarios:authentication:add_credential')],
         }
         return perms.get(self.action, [IsAuthenticated()])
@@ -116,7 +116,7 @@ class CredentialViewSet(ViewSet):
 class LoginSessionViewSet(ViewSet): 
     def get_permissions(self):
         perms = {            
-            'list':  [HasJWTPermission('ms-usuarios:authentication:view_loginattempt')],          
+            'list':  [HasJWTPermission('ms-usuarios:authentication:view_loginsession')],          
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(
@@ -143,9 +143,7 @@ class LoginSessionViewSet(ViewSet):
 
 class LoginSessionHistorialViewSet(ViewSet):
     def get_permissions(self):
-        return [HasJWTPermission('ms-usuarios:authentication:view_loginattempt')]
-
-
+        return [HasJWTPermission('ms-usuarios:authentication:view_loginsession')]
     def list(self, request):
         dni    = request.query_params.get('dni')
         status_filter = request.query_params.get('status')
@@ -153,12 +151,9 @@ class LoginSessionHistorialViewSet(ViewSet):
         result = LoginSessionService.get_all_sessions(dni=dni, status=status_filter, limit=limit)
         return Response(LoginSessionHistorialSerializer(result, many=True).data)
 
-
 class LoginAttemptViewSet(ViewSet):
     def get_permissions(self):
         return [HasJWTPermission('ms-usuarios:authentication:view_loginattempt')]
-
-
     def list(self, request):
         dni          = request.query_params.get('dni')
         success_raw  = request.query_params.get('success')
@@ -171,9 +166,7 @@ class LoginAttemptViewSet(ViewSet):
             dni=dni, success=success, attempt_type=attempt_type, limit=limit
         )
         return Response(LoginAttemptSerializer(result, many=True).data)
-
-  
-
+ 
 class LogoutViewSet(ViewSet):    
     permission_classes = [IsAuthenticated]
     @extend_schema(
@@ -354,11 +347,11 @@ class PasswordPolicyView(ViewSet):
         perms = {            
             'list':               [ HasJWTPermission('ms-usuarios:authentication:view_passwordpolicy')],
             'retrieve':           [HasJWTPermission('ms-usuarios:authentication:view_passwordpolicy')],
-            'create':  [HasJWTPermission('ms-usuarios:authentication:add_passwordhistory')],
+            'create':  [HasJWTPermission('ms-usuarios:authentication:add_passwordpolicy')],
             'update':             [HasJWTPermission('ms-usuarios:authentication:change_passwordpolicy')],
             'activate':        [ HasJWTPermission('ms-usuarios:authentication:change_passwordpolicy')],
             'dectivate':   [HasJWTPermission('ms-usuarios:authentication:change_passwordpolicy')],
-            'active':   [HasJWTPermission('ms-usuarios:authentication:view_passwordpolicy')],            
+            'active':   [HasJWTPermission('ms-usuarios:authentication:add_passwordpolicy')],            
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(

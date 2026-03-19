@@ -1,26 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense, useMemo } from 'react';
 import { useRoles }    from '../../../hooks/useRoles';
 import { useToast }    from '../../../hooks/useToast';
+import Can             from '../../../components/auth/Can';
 import ConfirmDialog   from '../../../components/feedback/ConfirmDialog';
-import ErrorState      from '../../../components/feedback/ErrorState';
-import ModalRol        from './modals/ModalRol';
 import RolesStats      from './components/RolesStats';
 import RoleCard        from './components/RoleCard';
 import PermissionTree  from './components/PermissionTree';
+
+const ModalRol = lazy(() => import('./modals/ModalRol'));
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
-const ROLE_CFG = {
-  SYSADMIN:     { icon: 'shield_person',  iconBg: 'bg-primary/10',  iconColor: 'text-primary'    },
-  COORDSISTEMA: { icon: 'hub',            iconBg: 'bg-blue-100',    iconColor: 'text-blue-600'   },
-  ADMINSEDE:    { icon: 'corporate_fare', iconBg: 'bg-purple-100',  iconColor: 'text-purple-600' },
-  ASISTSISTEMA: { icon: 'person_edit',    iconBg: 'bg-amber-100',   iconColor: 'text-amber-600'  },
-  SEGURSEDE:    { icon: 'security',       iconBg: 'bg-orange-100',  iconColor: 'text-orange-600' },
-  USUARIOFINAL: { icon: 'person',         iconBg: 'bg-slate-100',   iconColor: 'text-slate-500'  },
+const getRoleVisuals = (roleName) => {
+  const name = roleName?.toUpperCase() || '';
+  if (name.includes('ADMIN') || name.includes('SYS')) 
+    return { icon: 'shield_person', bg: 'bg-primary/10', text: 'text-primary' };
+  if (name.includes('COORD') || name.includes('JEFE'))
+    return { icon: 'hub', bg: 'bg-blue-100', text: 'text-blue-600' };
+  if (name.includes('SEGURID'))
+    return { icon: 'security', bg: 'bg-orange-100', text: 'text-orange-600' };
+  return { icon: 'person', bg: 'bg-slate-100', text: 'text-slate-500' };
 };
-const DEFAULT_CFG = { icon: 'manage_accounts', iconBg: 'bg-slate-100', iconColor: 'text-slate-500' };
 
 const MS_LABEL = {
   'ms-bienes':   'Gestión de Bienes',
@@ -28,19 +30,16 @@ const MS_LABEL = {
   'ms-reportes': 'Analítica y Reportes',
 };
 
-// ── Panel de detalle ──────────────────────────────────────────────────────────
 function RolDetallePanel({ rol, onEditar, onToggleActivo, actualizando }) {
-  const grouped   = rol.permissions_grouped ?? {};
-  const totalPerm = rol.permissions_list?.length ?? 0;
-  const cfg       = ROLE_CFG[rol.name] ?? DEFAULT_CFG;
+  const grouped = rol.permissions_grouped ?? {};
+  const visuals = useMemo(() => getRoleVisuals(rol.name), [rol.name]);
 
   return (
     <div className="flex flex-col h-full animate-in fade-in duration-300">
-      {/* Header del detalle interno */}
       <div className="p-5 flex items-start justify-between gap-4 border-b border-border bg-surface-alt/30">
         <div className="flex items-center gap-4">
-          <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${cfg.iconBg}`}>
-            <Icon name={cfg.icon} className={`text-[28px] ${cfg.iconColor}`} />
+          <div className={`size-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${visuals.bg}`}>
+            <Icon name={visuals.icon} className={`text-[28px] ${visuals.text}`} />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -48,44 +47,39 @@ function RolDetallePanel({ rol, onEditar, onToggleActivo, actualizando }) {
               <span className={rol.is_active ? 'badge-activo' : 'badge-inactivo'}>
                 {rol.is_active ? 'Activo' : 'Inactivo'}
               </span>
-              {rol.name === 'SYSADMIN' && (
-                <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase bg-primary/10 text-primary border border-primary/20">
-                  System Level
-                </span>
-              )}
             </div>
             <p className="text-xs text-muted mt-1.5 max-w-md">{rol.description || 'Sin descripción'}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={onEditar} className="btn-secondary py-2 px-4 text-xs font-bold gap-2">
-            <Icon name="edit" className="text-[16px]" />
-            Editar Datos
-          </button>
-          {rol.name !== 'SYSADMIN' && (
-            <button
-              onClick={onToggleActivo}
-              disabled={actualizando}
-              className={`btn text-xs font-bold gap-2 px-4 py-2 rounded-xl border transition-all 
-                ${rol.is_active 
-                  ? 'border-red-100 text-red-500 hover:bg-red-50' 
-                  : 'border-emerald-100 text-emerald-600 hover:bg-emerald-50'}`}
-            >
-              <Icon name={rol.is_active ? 'block' : 'check_circle'} className="text-[16px]" />
-              {rol.is_active ? 'Desactivar' : 'Activar'}
+          <Can perform="ms-usuarios:roles:change_role">
+            <button onClick={onEditar} className="btn-secondary py-2 px-4 text-xs font-bold gap-2">
+              <Icon name="edit" className="text-[16px]" />
+              Editar Datos
             </button>
-          )}
+            {rol.name !== 'SYSADMIN' && (
+              <button
+                onClick={onToggleActivo}
+                disabled={actualizando}
+                className={`btn text-xs font-bold gap-2 px-4 py-2 rounded-xl border transition-all 
+                  ${rol.is_active 
+                    ? 'border-red-100 text-red-500 hover:bg-red-50' 
+                    : 'border-emerald-100 text-emerald-600 hover:bg-emerald-50'}`}
+              >
+                <Icon name={rol.is_active ? 'block' : 'check_circle'} className="text-[16px]" />
+                {rol.is_active ? 'Desactivar' : 'Activar'}
+              </button>
+            )}
+          </Can>
         </div>
       </div>
 
-      {/* Contenido de Permisos Agrupados */}
       <div className="flex-1 overflow-y-auto p-6 bg-surface">
         {Object.keys(grouped).length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-faint">
             <Icon name="lock_open" className="text-5xl mb-2 opacity-20" />
             <p className="text-sm font-bold text-muted">Sin permisos asignados</p>
-            <p className="text-xs">Cambia a la pestaña de "Permisos" para configurar.</p>
           </div>
         ) : (
           <div className="space-y-8">
@@ -125,27 +119,25 @@ function RolDetallePanel({ rol, onEditar, onToggleActivo, actualizando }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default function RolesPage() {
   const toast = useToast();
-
   const {
-    roles, loading: loadingRoles, error: errorRoles, actualizando,
+    roles, loading: loadingRoles, actualizando,
     refetch, obtener, crear, actualizar, activar, desactivar,
     obtenerArbolPermisos, obtenerPermisosDelRol, sincronizarPermisos,
   } = useRoles();
 
-  const [tree,            setTree]            = useState([]);
-  const [loadingTree,     setLoadingTree]     = useState(false);
+  const [tree,             setTree]             = useState([]);
+  const [loadingTree,      setLoadingTree]      = useState(false);
   const [rolSeleccionado, setRolSeleccionado] = useState(null);
-  const [loadingDetalle,  setLoadingDetalle]  = useState(false);
-  const [selectedPerms,   setSelectedPerms]   = useState([]);
-  const [loadingPerms,    setLoadingPerms]    = useState(false);
-  const [tab,             setTab]             = useState('detalle');
-  const [modalRol,        setModalRol]        = useState(false);
-  const [rolEditar,       setRolEditar]       = useState(null);
+  const [loadingDetalle,   setLoadingDetalle]   = useState(false);
+  const [selectedPerms,    setSelectedPerms]    = useState([]);
+  const [loadingPerms,     setLoadingPerms]     = useState(false);
+  const [tab,              setTab]              = useState('detalle');
+  const [modalRol,         setModalRol]         = useState(false);
+  const [rolEditar,        setRolEditar]        = useState(null);
   const [confirmPermisos, setConfirmPermisos] = useState(false);
-  const [confirmToggle,   setConfirmToggle]   = useState(false);
+  const [confirmToggle,    setConfirmToggle]    = useState(false);
 
   useEffect(() => {
     setLoadingTree(true);
@@ -153,7 +145,7 @@ export default function RolesPage() {
       .then((d) => setTree(Array.isArray(d) ? d : []))
       .catch(() => toast.error('Error al cargar árbol de permisos.'))
       .finally(() => setLoadingTree(false));
-  }, []);
+  }, [ toast]);
 
   const handleSelectRol = useCallback(async (rolBasico) => {
     setTab('detalle');
@@ -226,8 +218,6 @@ export default function RolesPage() {
 
   return (
     <div className="gap-1 p-4 max-w-[1600px] animate-in fade-in duration-500 h-auto pb-20">
-      
-      {/* ── CABECERA Y TABS ────────────────────────────────────────── */}
       <div className="card p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -250,13 +240,16 @@ export default function RolesPage() {
               <Icon name="sync" className={`text-[18px] ${loadingRoles ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
             
-            <button
-              onClick={() => { setRolEditar(null); setModalRol(true); }}
-              className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
-            >
-              <Icon name="add_circle" className="text-[18px]" />
-              <span className="font-black uppercase tracking-widest text-[10px]">Nuevo Rol</span>
-            </button>
+
+            <Can perform="ms-usuarios:roles:add_role">
+              <button
+                onClick={() => { setRolEditar(null); setModalRol(true); }}
+                className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
+              >
+                <Icon name="add_circle" className="text-[18px]" />
+                <span className="font-black uppercase tracking-widest text-[10px]">Nuevo Rol</span>
+              </button>
+            </Can>
           </div>
         </div>
 
@@ -270,32 +263,31 @@ export default function RolesPage() {
             <Icon name="info" className="text-[16px]" />
             Detalle del Rol
           </button>
-          <button 
-            disabled={!rolSeleccionado}
-            onClick={handleTabPermisos}
-            className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all ${
-              tab === 'permisos' ? 'text-primary border-b-2 border-primary' : 'text-faint hover:text-main'
-            } disabled:opacity-30 disabled:cursor-not-allowed`}
-          >
-            <Icon name="lock_person" className="text-[16px]" />
-            Configurar Permisos
-          </button>
+          
+    
+          <Can perform="ms-usuarios:roles:add_rolepermission">
+            <button 
+              disabled={!rolSeleccionado}
+              onClick={handleTabPermisos}
+              className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all ${
+                tab === 'permisos' ? 'text-primary border-b-2 border-primary' : 'text-faint hover:text-main'
+              } disabled:opacity-30 disabled:cursor-not-allowed`}
+            >
+              <Icon name="lock_person" className="text-[16px]" />
+              Configurar Permisos
+            </button>
+          </Can>
         </div>
       </div>
 
       <div className="page-content">
-        {/* KPI Stats */}
         <RolesStats roles={roles} loading={loadingRoles} />
 
-        {/* Panel de dos columnas */}
         <div className="flex gap-4 h-[calc(100vh-320px)] min-h-[500px]">
-          
-          {/* Sidebar de Roles */}
-          <aside className="w-80 shrink-0 flex flex-col  rounded-2xl overflow-hidden shadow-sm" 
-          style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+          <aside className="w-80 shrink-0 flex flex-col rounded-2xl overflow-hidden shadow-sm bg-surface border border-border">
             <div className="px-4 py-3 bg-surface-alt/50 border-b border-border flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-widest text-muted">Roles Registrados</span>
-              <span className="text-[10px] font-bold bg-primary/10 dark:bg-slate-700 text-primary dark:text-red-400 px-2 py-0.5 rounded-full">{roles.length}</span>
+              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">{roles.length}</span>
             </div>
 
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -314,9 +306,7 @@ export default function RolesPage() {
             </div>
           </aside>
 
-          {/* Área Principal de Trabajo */}
-          <main className="flex-1 min-w-0 bg-surface border border-border rounded-2xl overflow-hidden shadow-sm" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-
+          <main className="flex-1 min-w-0 bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
             {!rolSeleccionado && !loadingDetalle ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-10">
                 <div className="size-20 rounded-full flex items-center justify-center mb-4 border-2 border-dashed border-border">
@@ -361,16 +351,19 @@ export default function RolesPage() {
         </div>
       </div>
 
-      {/* Modales */}
-      <ModalRol
-        open={modalRol}
-        onClose={() => { setModalRol(false); setRolEditar(null); }}
-        onGuardado={handleRolGuardado}
-        crear={crear}
-        actualizar={actualizar}
-        actualizando={actualizando}
-        rolEditar={rolEditar}
-      />
+      <Suspense fallback={null}>
+        {modalRol && (
+          <ModalRol
+            open={modalRol}
+            onClose={() => { setModalRol(false); setRolEditar(null); }}
+            onGuardado={handleRolGuardado}
+            crear={crear}
+            actualizar={actualizar}
+            actualizando={actualizando}
+            rolEditar={rolEditar}
+          />
+        )}
+      </Suspense>
 
       <ConfirmDialog
         open={confirmPermisos}

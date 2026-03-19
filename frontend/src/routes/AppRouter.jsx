@@ -46,7 +46,7 @@ export default function AppRouter() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="alertas"   element={<Alertas />} />
 
-              <Route element={<PermissionRoute perm="ms-usuarios:users:add_user" />}>
+              <Route element={<PermissionRoute perm="ms-usuarios:users:view_user" />}>
                 <Route path="admin/usuarios" element={<UsuariosPage />} />
               </Route>
               <Route element={<PermissionRoute perm="ms-usuarios:roles:view_role" />}>
@@ -65,7 +65,9 @@ export default function AppRouter() {
               <Route element={<PermissionRoute perm="ms-bienes:bienes:view_bien" />}>
                 <Route path="bienes" element={<BienesPage />} />
               </Route>
-              <Route element={<PermissionRoute perm="ms-bienes:transferencias:view_transferencia" />}>
+              <Route element={<PermissionRoute perm={['ms-bienes:transferencias:view_transferencia',
+                                                      'ms-bienes:transferencias:change_transferenciadetalle']} />
+              }>
                 <Route path="transferencias" element={<TransferenciasPage />} />
               </Route>
               <Route element={<PermissionRoute perm="ms-bienes:mantenimientos:view_mantenimiento" />}>

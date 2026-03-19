@@ -82,10 +82,10 @@ class MantenimientoViewSet(ViewSet):
             'subir_imagen':         [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
             'aprobar':              [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
             'devolver':             [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
-            'subir_firmado':        [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
+            'subir_firmado':        [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
             'cancelar':             [HasJWTPermission('ms-bienes:mantenimientos:delete_mantenimiento')],
-            'confirmar_conformidad':[IsAuthenticated()],
-            'documento':            [HasJWTPermission('ms-bienes:mantenimientos:view_mantenimiento')],
+            'confirmar_conformidad':[HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
+            'documento':            [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     def _get_token(self, request) -> str:

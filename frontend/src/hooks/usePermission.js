@@ -1,16 +1,21 @@
+import { useMemo } from 'react';
 import { useAuthStore } from '../store/authStore';
 
 export function usePermission() {
-  const role            = useAuthStore((s) => s.role);
+  const role = useAuthStore((s) => s.role);
   const permissionsFlat = useAuthStore((s) => s.permissionsFlat);
-
-  const can = (perm) => {
-    if (!perm) return true;
-    if (role === 'SYSADMIN') return true;
-    return Array.isArray(permissionsFlat) && permissionsFlat.includes(perm);
-  };
-
-  const canAll = (...perms) => perms.every(can);
-  const canAny = (...perms) => perms.some(can);
-  return { can, canAll, canAny };
+  return useMemo(() => {
+    const permsSet = new Set(Array.isArray(permissionsFlat) ? permissionsFlat : []);
+    const isSysAdmin = role === 'SYSADMIN';
+    const can = (perm) => {
+      if (!perm || isSysAdmin) return true;
+      return permsSet.has(perm); 
+    };
+    return {
+      can,
+      hasPermission: can,
+      canAll: (...perms) => perms.every(can),
+      canAny: (...perms) => perms.some(can),
+    };
+  }, [role, permissionsFlat]); 
 }

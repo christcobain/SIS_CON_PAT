@@ -48,22 +48,18 @@ function StyledInput({ value, onChange, placeholder, disabled, mono, maxLength }
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-// Body crear/editar: { "nombre": "string", "codigo": "string" }
-const FORM_INICIAL = { nombre: '', codigo: '' };
 
+const FORM_INICIAL = { nombre: '', codigo: '' };
 export default function ModalDependencia({ open, onClose, item = null, onGuardado }) {
   const toast      = useToast();
   const modoEditar = Boolean(item);
-
-  // Usa useUsuarios para crear/actualizar dependencias
   const { crearDependencia, actualizarDependencia } = useUsuarios();
-
   const [form,           setForm]           = useState(FORM_INICIAL);
   const [errors,         setErrors]         = useState({});
   const [confirmGuardar, setConfirmGuardar] = useState(false);
   const [guardando,      setGuardando]      = useState(false);
 
-  // Pre-llena al abrir
+
   useEffect(() => {
     if (!open) return;
     setForm(modoEditar && item
@@ -87,19 +83,18 @@ export default function ModalDependencia({ open, onClose, item = null, onGuardad
 
   const handleGuardarConfirmado = async () => {
     setGuardando(true);
-    // Payload: { nombre, codigo } — codigo puede ser vacío
     const payload = {
       nombre: form.nombre.trim(),
       codigo: form.codigo.trim() || undefined,
     };
     try {
-      if (modoEditar) {
-        await actualizarDependencia(item.id, payload);
-        toast.success(`Dependencia "${payload.nombre}" actualizada.`);
+      let res;
+      if (modoEditar) {        
+        res=await actualizarDependencia(item.id, payload);
       } else {
-        await crearDependencia(payload);
-        toast.success(`Dependencia "${payload.nombre}" creada.`);
+        res=await crearDependencia(payload);
       }
+      toast.success(res?.message);
       onGuardado?.();
       onClose();
     } catch (e) {

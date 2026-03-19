@@ -79,6 +79,7 @@ export default function LocacionesFiltros({
                 onChange={(e) => onFiltroChange('empresa_id', e.target.value)}
                 className="form-select text-xs font-bold py-2.5 cursor-pointer hover:bg-surface-alt/50 transition-colors"
               >
+                {console.log(filtros.empresa_id)}
                 <option value="">Todas las empresas</option>
                 {empresas.map((e) => (
                   <option key={e.id} value={e.id}>{e.nombre}</option>

@@ -173,18 +173,20 @@ class CredentialService:
         if not result:
             raise ValidationError('Credencial no encontrada.')
         if result.is_active:
-            raise ValidationError('Credencial ya se encuentra activa.')
+            raise ValidationError('Usuario cuenta con Credencial de accesos activada.')
         CredentialRepository.activate(result)
-        return {"success": True, "message": "Credencial Activada exitosamente."}
+        # return {"success": True, "message": "Credencial Activada exitosamente."}
+        return
     @staticmethod
     def deactivate_user(user_id: int) -> Dict[str, Any]:
         result = CredentialRepository.get_by_id(user_id)
         if not result:
             raise ValidationError('Credencial no encontrada.')
         if not result.is_active:
-            raise ValidationError('Credencial ya se encuentra desactivada.')
+            raise ValidationError('Usuario cuenta con Credencial de accesos desactivada.')
         CredentialRepository.deactivate(result)
-        return {"success": True, "message": "Credencial desactivada exitosamente."}
+        # return {"success": True, "message": "Credencial desactivada exitosamente."}
+        return
     @staticmethod
     def is_password_expired(user) -> bool:
         return CredentialRepository.is_password_expired(user)

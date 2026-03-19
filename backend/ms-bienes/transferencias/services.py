@@ -700,3 +700,62 @@ class TransferenciaService:
         ruta_relativa = os.path.join('transferencias', 'pdfs', 'firmados', nombre_archivo)
         TransferenciaRepository.update_fields(t, {'pdf_firmado_path': ruta_relativa})
         return {"success": True, "message": "Documento firmado cargado exitosamente."}
+    @staticmethod
+    def listar_pendientes_segur(sede_id: int, role: str):
+        from django.db.models import Q
+        from .repositories import TransferenciaRepository
+        qs = TransferenciaRepository.filter({})
+        qs = qs.filter(tipo='TRASLADO_SEDE')
+        qs = qs.filter(
+            Q(
+                aprobado_por_adminsede_id__isnull=False,
+                aprobado_segur_salida_id__isnull=True,
+                sede_origen_id=sede_id,
+            ) |
+            Q(
+                aprobado_segur_salida_id__isnull=False,
+                aprobado_segur_entrada_id__isnull=True,
+                sede_destino_id=sede_id,
+            ) |
+            Q(
+                estado_transferencia='EN_RETORNO',
+                aprobado_retorno_salida_id__isnull=True,
+                sede_destino_id=sede_id,
+            ) |
+            Q(
+                estado_transferencia='EN_RETORNO',
+                aprobado_retorno_salida_id__isnull=False,
+                aprobado_retorno_entrada_id__isnull=True,
+                sede_origen_id=sede_id,
+            )
+        )
+        return qs 
+    @staticmethod
+    def listar_pendientes_aprobacion(role: str, sede_id: int, modulo_id: int, token: str):
+        from django.db.models import Q
+        from .repositories import TransferenciaRepository
+        qs = TransferenciaRepository.filter({'estado_transferencia': 'PENDIENTE_APROBACION'}) 
+        if role == 'SYSADMIN':
+            return qs 
+        if role == 'coordSistema':
+            qs = qs.filter(
+                Q(aprobado_por_adminsede_id__isnull=True) & Q(sede_origen_id=sede_id)
+            )
+        elif role == 'adminSede':
+            qs = qs.filter(
+                aprobado_por_adminsede_id__isnull=True,
+                sede_origen_id=sede_id,
+            )
+        elif role == 'asistSistema':
+            qs = qs.filter(
+                estado_transferencia='EN_ESPERA_CONFORMIDAD',
+                usuario_destino_id__isnull=False,
+                sede_destino_id=sede_id,
+            )
+        else:
+            return qs.none() 
+        for tr in qs:
+            TransferenciaService._enriquecer_transferencia(tr, token)
+            _ = list(tr.detalles.all())
+        return qs
+    

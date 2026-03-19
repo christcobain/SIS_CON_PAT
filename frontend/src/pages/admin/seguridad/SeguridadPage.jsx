@@ -1,22 +1,24 @@
 import { useState, useEffect } from 'react';
-import { useAuth }        from '../../../hooks/useAuth';
-import { useToast }       from '../../../hooks/useToast';
-import ConfirmDialog      from '../../../components/feedback/ConfirmDialog';
-import SeguridadStats     from './components/SeguridadStats';
-import SeguridadFiltros   from './components/SeguridadFiltros';
-import SeguridadTabla     from './components/SeguridadTabla';
-import PoliticasTabla     from './components/PoliticasTabla';
+import { useAuth } from '../../../hooks/useAuth';
+import { useToast } from '../../../hooks/useToast';
+import ConfirmDialog from '../../../components/feedback/ConfirmDialog';
+import Can from '../../../components/auth/Can';
+import SeguridadStats from './components/SeguridadStats';
+import SeguridadFiltros from './components/SeguridadFiltros';
+import SeguridadTabla from './components/SeguridadTabla';
+import PoliticasTabla from './components/PoliticasTabla';
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
+
 const TABS = [
-  { id: 'sesiones',     label: 'Sesiones activas',  icon: 'wifi'           },
-  { id: 'historial',    label: 'Historial Sesiones',          icon: 'manage_history' },
-  { id: 'intentos',     label: 'Registro de Intentos',           icon: 'login'          },
-  { id: 'credenciales', label: 'Credenciales',       icon: 'key'            },
-  { id: 'politicas',    label: 'Políticas',          icon: 'policy'         },
+  { id: 'sesiones', label: 'Sesiones activas', icon: 'wifi', permission: 'ms-usuarios:authentication:view_loginsession' },
+  { id: 'historial', label: 'Historial Sesiones', icon: 'manage_history', permission: 'ms-usuarios:authentication:view_loginsession' },
+  { id: 'intentos', label: 'Registro de Intentos', icon: 'login', permission: 'ms-usuarios:authentication:view_loginattempt' },
+  { id: 'credenciales', label: 'Credenciales', icon: 'key', permission: 'ms-usuarios:authentication:view_credential' },
+  { id: 'politicas', label: 'Políticas', icon: 'policy', permission: 'ms-usuarios:authentication:view_passwordpolicy' },
 ];
 
 const FILTROS_INICIALES = { dni: '', status: '', exitoso: '', tipo: '', bloqueado: '' };
@@ -34,22 +36,22 @@ export default function SeguridadPage() {
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState('sesiones');
-  const [filtros,   setFiltros]   = useState(FILTROS_INICIALES);
-  const [items,     setItems]     = useState([]);
-  const [loading,   setLoading]   = useState(false);
+  const [filtros, setFiltros] = useState(FILTROS_INICIALES);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [politicas, setPoliticas] = useState([]);
 
-  const [sesionesStats,     setSesionesStats]     = useState([]);
-  const [intentosStats,     setIntentosStats]     = useState([]);
+  const [sesionesStats, setSesionesStats] = useState([]);
+  const [intentosStats, setIntentosStats] = useState([]);
   const [credencialesStats, setCredencialesStats] = useState([]);
-  const [loadingStats,      setLoadingStats]      = useState(false);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   const [confirmUnlock, setConfirmUnlock] = useState(false);
-  const [itemUnlock,    setItemUnlock]    = useState(null);
-  const [unlocking,     setUnlocking]     = useState(false);
-  const [confirmReset,  setConfirmReset]  = useState(false);
-  const [itemReset,     setItemReset]     = useState(null);
-  const [resetting,     setResetting]     = useState(false);
+  const [itemUnlock, setItemUnlock] = useState(null);
+  const [unlocking, setUnlocking] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [itemReset, setItemReset] = useState(null);
+  const [resetting, setResetting] = useState(false);
 
   const onFiltroChange = (key, val) => setFiltros(f => ({ ...f, [key]: val }));
 
@@ -79,13 +81,18 @@ export default function SeguridadPage() {
       promesa = obtenerHistorialSesiones(params);
     } else if (activeTab === 'intentos') {
       if (filtros.exitoso !== '') params.success = filtros.exitoso;
-      if (filtros.tipo)           params.attempt_type = filtros.tipo;
+      if (filtros.tipo) params.attempt_type = filtros.tipo;
       promesa = obtenerIntentos(params);
     } else if (activeTab === 'credenciales') {
       if (filtros.bloqueado !== '') params.is_locked = filtros.bloqueado;
       promesa = obtenerCredenciales(params);
     } else if (activeTab === 'politicas') {
       promesa = listarPoliticas();
+    }
+
+    if (!promesa) {
+        setLoading(false);
+        return;
     }
 
     promesa
@@ -107,7 +114,7 @@ export default function SeguridadPage() {
   useEffect(() => { cargarStats(); }, []);
 
   const handleUnlock = item => { setItemUnlock(item); setConfirmUnlock(true); };
-  const handleReset  = item => { setItemReset(item);  setConfirmReset(true);  };
+  const handleReset = item => { setItemReset(item); setConfirmReset(true); };
 
   const confirmarUnlock = async () => {
     setConfirmUnlock(false);
@@ -158,15 +165,17 @@ export default function SeguridadPage() {
           </div>
         </div>
         <div className="flex gap-6 border-t overflow-x-auto pt-3" style={{ borderColor: 'var(--color-border)' }}>
-          {TABS.map(({ id, label, icon }) => (
-            <button key={id} onClick={() => setActiveTab(id)}
-              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all whitespace-nowrap shrink-0"
-              style={{
-                color: activeTab === id ? 'var(--color-primary)' : 'var(--color-text-faint)',
-                borderBottom: activeTab === id ? '2px solid var(--color-primary)' : '2px solid transparent',
-              }}>
-              <Icon name={icon} className="text-[16px]" />{label}
-            </button>
+          {TABS.map(({ id, label, icon, permission }) => (
+            <Can key={id} perform={permission}>
+              <button onClick={() => setActiveTab(id)}
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all whitespace-nowrap shrink-0"
+                style={{
+                  color: activeTab === id ? 'var(--color-primary)' : 'var(--color-text-faint)',
+                  borderBottom: activeTab === id ? '2px solid var(--color-primary)' : '2px solid transparent',
+                }}>
+                <Icon name={icon} className="text-[16px]" />{label}
+              </button>
+            </Can>
           ))}
         </div>
       </div>
@@ -178,6 +187,7 @@ export default function SeguridadPage() {
         loading={loadingStats}
       />
 
+      {/* Solo mostrar filtros si el tab activo no es politicas y se tiene permiso para ver lo que se está filtrando */}
       {activeTab !== 'politicas' && (
         <SeguridadFiltros
           activeTab={activeTab}
@@ -190,15 +200,19 @@ export default function SeguridadPage() {
 
       <div className="card p-5">
         {activeTab === 'politicas' ? (
-          <PoliticasTabla items={politicas} loading={loading} onReload={handleReloadPoliticas} />
+          <Can perform="ms-usuarios:authentication:view_passwordpolicy">
+            <PoliticasTabla items={politicas} loading={loading} onReload={handleReloadPoliticas} />
+          </Can>
         ) : (
-          <SeguridadTabla
-            activeTab={activeTab}
-            items={items}
-            loading={loading}
-            onUnlock={handleUnlock}
-            onReset={handleReset}
-          />
+          <Can perform={TABS.find(t => t.id === activeTab)?.permission}>
+            <SeguridadTabla
+              activeTab={activeTab}
+              items={items}
+              loading={loading}
+              onUnlock={handleUnlock}
+              onReset={handleReset}
+            />
+          </Can>
         )}
       </div>
 

@@ -18,7 +18,7 @@ const DEFAULT_CFG = {
 
 export default function RoleCard({ role, isSelected, onClick }) {
   const cfg        = ROLE_CFG[role.name] ?? DEFAULT_CFG;
-  const permCount  = role.permissions?.length ?? 0;
+  
 
   return (
     <button
@@ -51,7 +51,7 @@ export default function RoleCard({ role, isSelected, onClick }) {
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md"
             style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
-            {permCount} perm.
+            {role.total_permissions} perm.
           </span>
           <span className="inline-flex items-center gap-1 text-[10px] font-bold"
             style={{ color: role.is_active ? '#16a34a' : 'var(--color-text-muted)' }}>

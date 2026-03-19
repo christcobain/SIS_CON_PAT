@@ -108,7 +108,7 @@ class DependencyService:
         DependenciaRepository.update(dependencia, data)
         return {
             "success": True,
-            "message": "Dependencia actualizada exitosamente."
+            "message": "Dependencia: "+str(new_name)+", actualizada exitosamente."
         }
     @staticmethod
     def activate_dependency(dependency_id:int) -> Dict[str, Any]:
@@ -239,7 +239,7 @@ class UserService:
         user = UserRepository.create(data=data, sede_ids=sede_ids)
         if data.get("es_usuario_sistema"):
             CredentialService.create(user)
-        return {"success": True, "message": "Usuario creado exitosamente."}
+        return {"success": True, "message": "Usuario  con Dni: "+str(user.dni)+" creado exitosamente."}
     @staticmethod
     @transaction.atomic
     def update_user(user_id: int, data: Dict[str, Any], sede_ids=None) -> Dict[str, Any]:
@@ -249,9 +249,8 @@ class UserService:
         UserRepository.update(user, data, sede_ids)
         if not data.get("es_usuario_sistema"):
             CredentialService.deactivate_user(user)
-        else: 
-            CredentialService.activate(user)
-        return {"success": True, "message": "Usuario actualizado exitosamente."}
+        
+        return {"success": True, "message": "Usuario con Dni: "+str(user.dni)+" actualizado exitosamente."}
     @staticmethod
     def activate_user(user_id: int) -> Dict[str, Any]:
         result = UserRepository.get_by_id(user_id)
@@ -262,7 +261,7 @@ class UserService:
         if result.es_usuario_sistema:
             CredentialService.activate(result)
         UserRepository.activate(result)
-        return {"success": True, "message": "Usuario activado exitosamente."}
+        return {"success": True, "message": "Usuario con Dni: "+str(result.dni)+" activado exitosamente."}
     @staticmethod
     def deactivate_user(user_id: int) -> Dict[str, Any]:
         result = UserRepository.get_by_id(user_id)
@@ -273,4 +272,4 @@ class UserService:
         UserRepository.deactivate(result)
         if result.es_usuario_sistema:
             CredentialService.deactivate_user(result)
-        return {"success": True, "message": "Usuario desactivado exitosamente."}
+        return {"success": True, "message": "Usuario con Dni: "+str(result.dni)+" desactivado exitosamente."}

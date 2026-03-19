@@ -1,28 +1,3 @@
-"""
-shared/clients.py
-
-Cliente HTTP hacia ms-usuarios con caché LRU por proceso.
-
-──────────────────────────────────────────────────────────────────────────────
-PROBLEMA RESUELTO
-─────────────────
-Sin caché: listar 100 bienes → _enriquecer() × 100 → 500 llamadas HTTP a
-ms-usuarios (empresa, sede, módulo, ubicación, usuario × bien).
-
-Con lru_cache: la primera llamada a validar_sede(1, token) hace el HTTP.
-La segunda llamada con los mismos argumentos devuelve el resultado en
-microsegundos desde la memoria del proceso. Si 80 bienes están en la sede 1,
-sólo se hace UNA llamada HTTP real para esa sede.
-
-LÍMITE: maxsize=512 → se mantienen 512 combinaciones distintas (id, token).
-En producción con muchas sedes/usuarios, es suficiente para un inventario
-de miles de bienes donde la diversidad de sedes/usuarios es << 512.
-
-NOTA: lru_cache vive en memoria del proceso Django. Si usas gunicorn con
-múltiples workers, cada worker tiene su propia caché (correcto y seguro).
-No hay riesgo de datos compartidos entre requests concurrentes.
-──────────────────────────────────────────────────────────────────────────────
-"""
 import requests
 import logging
 from functools import lru_cache

@@ -10,7 +10,6 @@ from .serializers import (PermissionSerializer, RoleListSerializer, RoleDetailSe
                           CreateRoleSerializer, UpdateRoleSerializer,MultiplePermissionSerializer, 
                           RolePermissionDetailSerializer)
 from .services import PermissionService, RoleService
-from .permissions import IsSysAdmin
 from roles.permissions import HasJWTPermission
 
 
@@ -97,12 +96,12 @@ class RoleViewSet(ViewSet):
             'filters':           [HasJWTPermission('ms-usuarios:roles:view_role')],
             'list':           [HasJWTPermission('ms-usuarios:roles:view_role')],
             'retrieve':       [HasJWTPermission('ms-usuarios:roles:view_role')],
-            'create':         [IsSysAdmin()],
-            'partial_update':           [IsSysAdmin()],
-            'activate':        [IsSysAdmin()],   
-            'deactivate':           [IsSysAdmin()],
-            'role_permissions':           [IsSysAdmin()],
-            'sync_permissions':           [IsSysAdmin()],
+            'create':         [HasJWTPermission('ms-usuarios:roles:add_role')],
+            'partial_update':           [HasJWTPermission('ms-usuarios:roles:change_role')],
+            'activate':        [HasJWTPermission('ms-usuarios:roles:change_role')],  
+            'deactivate':           [HasJWTPermission('ms-usuarios:roles:change_role')],
+            'role_permissions':           [HasJWTPermission('ms-usuarios:roles:change_role')],
+            'sync_permissions':           [HasJWTPermission('ms-usuarios:roles:add_rolepermission')],
         }
         return perms.get(self.action, [IsAuthenticated()])
     lookup_field = "id"

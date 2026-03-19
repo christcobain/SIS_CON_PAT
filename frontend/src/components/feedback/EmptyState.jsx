@@ -1,14 +1,4 @@
-/**
- * Estado vacío — "No hay registros".
- *
- * Usoejemplo:
- *   <EmptyState
- *     icon="inventory_2"
- *     title="Sin bienes registrados"
- *     description="Aún no hay bienes en el inventario para esta sede."
- *     action={{ label: 'Registrar bien', onClick: handleNuevo }}
- *   />
- */
+
 export default function EmptyState({ icon = 'inbox', title = 'Sin resultados', description, action }) {
   return (
     <div className="flex flex-col items-center justify-center py-14 text-center">

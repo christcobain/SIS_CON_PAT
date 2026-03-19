@@ -1,118 +1,75 @@
 from rest_framework import serializers
 from .models import Transferencia, TransferenciaDetalle, TransferenciaAprobacion
 
+
 class AprobacionSerializer(serializers.ModelSerializer):
-    rol_aprobador_nombre= serializers.CharField(read_only=True)  
+    rol_aprobador_nombre = serializers.CharField(read_only=True)
     class Meta:
         model  = TransferenciaAprobacion
-        fields = ['id', 'rol_aprobador', 'accion',
-                  'usuario_id', 'rol_aprobador_nombre','detalle', 'fecha']
+        fields = ['id', 'rol_aprobador', 'accion', 'usuario_id',
+                  'rol_aprobador_nombre', 'detalle', 'fecha']
+
+
 class TransferenciaDetalleSerializer(serializers.ModelSerializer):
     class Meta:
         model  = TransferenciaDetalle
-        fields = [
-            'id','categoria_bien_nombre', 
-            'bien_id','tipo_bien_nombre',
-            'marca_nombre', 'modelo', 
-            'numero_serie','codigo_patrimonial',             
-        ]
+        fields = ['id', 'categoria_bien_nombre', 'bien_id', 'tipo_bien_nombre',
+                  'marca_nombre', 'modelo', 'numero_serie', 'codigo_patrimonial']
+
+
 class TransferenciaListSerializer(serializers.ModelSerializer):
-    usuario_origen_nombre= serializers.CharField(read_only=True)   
-    sede_origen_nombre = serializers.CharField(read_only=True)
-    modulo_origen_nombre = serializers.CharField(read_only=True)
-    ubicacion_origen_nombre = serializers.CharField(read_only=True)
-    
-    usuario_destino_nombre = serializers.CharField(read_only=True)
-    sede_destino_nombre = serializers.CharField(read_only=True)    
-    modulo_destino_nombre = serializers.CharField(read_only=True)
-    ubicacion_destino_nombre = serializers.CharField(read_only=True)   
-    
-    confirmado_por_usuario_destino_id=serializers.IntegerField(read_only=True)
-    fecha_confirmacion_destino=serializers.DateTimeField(read_only=True)
-      
-    motivo_transferencia_nombre     = serializers.CharField(source='motivo_transferencia.nombre',read_only=True)
-    cancelacion_nombre = serializers.SerializerMethodField()
-    ultima_aprobacion = serializers.SerializerMethodField()
-    tiene_pdf_firmado = serializers.SerializerMethodField()
-    aprobado_por_adminsede_nombre=serializers.CharField(read_only=True)
-    aprobado_segur_salida_nombre=serializers.CharField(read_only=True)
-    aprobado_segur_entrada_nombre=serializers.CharField(read_only=True)
-    confirmado_por_usuario_destino_nombre=serializers.CharField(read_only=True)
-    aprobado_retorno_salida_nombre=serializers.CharField(read_only=True)
-    aprobado_retorno_entrada_nombre=serializers.CharField(read_only=True)
-    
-    bienes=TransferenciaDetalleSerializer(source='detalles',many=True,read_only=True)
-    aprobaciones=AprobacionSerializer(many=True,read_only=True)
+    usuario_origen_nombre                  = serializers.CharField(read_only=True)
+    sede_origen_nombre                     = serializers.CharField(read_only=True)
+    modulo_origen_nombre                   = serializers.CharField(read_only=True)
+    ubicacion_origen_nombre                = serializers.CharField(read_only=True)
+    usuario_destino_nombre                 = serializers.CharField(read_only=True)
+    sede_destino_nombre                    = serializers.CharField(read_only=True)
+    modulo_destino_nombre                  = serializers.CharField(read_only=True)
+    ubicacion_destino_nombre               = serializers.CharField(read_only=True)
+    confirmado_por_usuario_destino_id      = serializers.IntegerField(read_only=True)
+    fecha_confirmacion_destino             = serializers.DateTimeField(read_only=True)
+    motivo_transferencia_nombre            = serializers.CharField(source='motivo_transferencia.nombre', read_only=True)
+    cancelacion_nombre                     = serializers.SerializerMethodField()
+    ultima_aprobacion                      = serializers.SerializerMethodField()
+    tiene_pdf_firmado                      = serializers.SerializerMethodField()
+    aprobado_por_adminsede_nombre          = serializers.CharField(read_only=True)
+    aprobado_segur_salida_nombre           = serializers.CharField(read_only=True)
+    aprobado_segur_entrada_nombre          = serializers.CharField(read_only=True)
+    confirmado_por_usuario_destino_nombre  = serializers.CharField(read_only=True)
+    aprobado_retorno_salida_nombre         = serializers.CharField(read_only=True)
+    aprobado_retorno_entrada_nombre        = serializers.CharField(read_only=True)
+    bienes                                 = TransferenciaDetalleSerializer(source='detalles', many=True, read_only=True)
+    aprobaciones                           = AprobacionSerializer(many=True, read_only=True)
+
     class Meta:
         model  = Transferencia
         fields = [
-            'id', 
-            'numero_orden', 
-            'tipo', 
-            'estado_transferencia',
-            'usuario_origen_id', 
-            "usuario_origen_nombre",
-            'sede_origen_id', 
-            "sede_origen_nombre",
-            'modulo_origen_id',
-            "modulo_origen_nombre",
-            "ubicacion_origen_id",
-            "ubicacion_origen_nombre",  
+            'id', 'numero_orden', 'tipo', 'estado_transferencia',
+            'usuario_origen_id', 'usuario_origen_nombre',
+            'sede_origen_id', 'sede_origen_nombre',
+            'modulo_origen_id', 'modulo_origen_nombre',
+            'ubicacion_origen_id', 'ubicacion_origen_nombre',
             'piso_origen',
-            
-            "usuario_destino_id",
-            "usuario_destino_nombre",
-            'sede_destino_id', 
-            "sede_destino_nombre",
-            'modulo_destino_id',
-            "modulo_destino_nombre",
-            "ubicacion_destino_id",
-            "ubicacion_destino_nombre",    
+            'usuario_destino_id', 'usuario_destino_nombre',
+            'sede_destino_id', 'sede_destino_nombre',
+            'modulo_destino_id', 'modulo_destino_nombre',
+            'ubicacion_destino_id', 'ubicacion_destino_nombre',
             'piso_destino',
-            
-            'motivo_transferencia_nombre',            
-            'descripcion',  
-            
-            'estado_transferencia',
-            'fecha_registro',   
-            
-            'aprobado_por_adminsede_id',
-            'aprobado_por_adminsede_nombre',
-            'fecha_aprobacion_adminsede',
-            'aprobado_segur_salida_id',
-            'aprobado_segur_salida_nombre',
-            'fecha_aprobacion_segur_salida',
-            
-            'aprobado_segur_entrada_id',
-            'aprobado_segur_entrada_nombre',
-            'fecha_aprobacion_segur_entrada',
+            'motivo_transferencia_nombre', 'descripcion',
+            'fecha_registro',
+            'aprobado_por_adminsede_id', 'aprobado_por_adminsede_nombre', 'fecha_aprobacion_adminsede',
+            'aprobado_segur_salida_id', 'aprobado_segur_salida_nombre', 'fecha_aprobacion_segur_salida',
+            'aprobado_segur_entrada_id', 'aprobado_segur_entrada_nombre', 'fecha_aprobacion_segur_entrada',
             'observacion_segursede',
-            'confirmado_por_usuario_destino_id',
-            'confirmado_por_usuario_destino_nombre',
-            'fecha_confirmacion_destino',
-            
-            'aprobado_retorno_salida_id',
-            'aprobado_retorno_salida_nombre',
-            'fecha_aprobacion_retorno_salida',
-            'aprobado_retorno_entrada_id',
-            'aprobado_retorno_entrada_nombre',
-            'fecha_aprobacion_retorno_entrada',                     
-
-            'pdf_path', 
-            'tiene_pdf_firmado', 
-            'fecha_pdf',
-            
-            'motivo_devolucion', 
-            
-            'fecha_cancelacion',
-            'motivo_cancelacion',
-            'cancelacion_nombre',
-            'detalle_cancelacion',
-            
-            'bienes',
-            'ultima_aprobacion',
-            'aprobaciones'
+            'confirmado_por_usuario_destino_id', 'confirmado_por_usuario_destino_nombre', 'fecha_confirmacion_destino',
+            'aprobado_retorno_salida_id', 'aprobado_retorno_salida_nombre', 'fecha_aprobacion_retorno_salida',
+            'aprobado_retorno_entrada_id', 'aprobado_retorno_entrada_nombre', 'fecha_aprobacion_retorno_entrada',
+            'pdf_path', 'tiene_pdf_firmado', 'fecha_pdf',
+            'motivo_devolucion',
+            'fecha_cancelacion', 'motivo_cancelacion', 'cancelacion_nombre', 'detalle_cancelacion',
+            'bienes', 'ultima_aprobacion', 'aprobaciones',
         ]
+
     def get_ultima_aprobacion(self, obj):
         ultima = obj.aprobaciones.last()
         if not ultima:
@@ -121,27 +78,50 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
             'rol_aprobador': ultima.rol_aprobador,
             'accion':        ultima.accion,
             'usuario_id':    ultima.usuario_id,
-            'usuario_nombre': getattr(ultima, 'usuario_nombre', 'Cargando...'), 
+            'usuario_nombre': getattr(ultima, 'usuario_nombre', None),
             'detalle':       ultima.detalle,
             'fecha':         ultima.fecha,
         }
+
     def get_tiene_pdf_firmado(self, obj):
         return bool(obj.pdf_firmado_path)
+
     def get_cancelacion_nombre(self, obj):
-        if obj.motivo_cancelacion:
-            return obj.motivo_cancelacion.nombre
-        return None
+        return obj.motivo_cancelacion.nombre if obj.motivo_cancelacion else None
+
+
+class TransferenciaSegurSerializer(serializers.ModelSerializer):
+    bienes = TransferenciaDetalleSerializer(source='detalles', many=True, read_only=True)
+
+    class Meta:
+        model  = Transferencia
+        fields = [
+            'id', 'numero_orden', 'tipo', 'estado_transferencia',
+            'sede_origen_id', 'sede_destino_id',
+            'piso_origen', 'piso_destino',
+            'aprobado_por_adminsede_id',
+            'aprobado_segur_salida_id', 'fecha_aprobacion_segur_salida',
+            'aprobado_segur_entrada_id', 'fecha_aprobacion_segur_entrada',
+            'confirmado_por_usuario_destino_id',
+            'descripcion', 'fecha_registro',
+            'motivo_devolucion',
+            'bienes',
+        ]
+
 
 class TransferenciaDetailSerializer(serializers.ModelSerializer):
-    sede_origen_nombre = serializers.CharField(read_only=True)
-    sede_destino_nombre = serializers.CharField(read_only=True)
-    modulo_destino_nombre = serializers.CharField(read_only=True)
+    sede_origen_nombre       = serializers.CharField(read_only=True)
+    sede_destino_nombre      = serializers.CharField(read_only=True)
+    modulo_destino_nombre    = serializers.CharField(read_only=True)
     ubicacion_destino_nombre = serializers.CharField(read_only=True)
-    usuario_destino_nombre = serializers.CharField(read_only=True)
-    bienes = TransferenciaDetalleSerializer(source='detalles',many=True,read_only=True)
+    usuario_destino_nombre   = serializers.CharField(read_only=True)
+    bienes                   = TransferenciaDetalleSerializer(source='detalles', many=True, read_only=True)
+    tiene_pdf_firmado        = serializers.SerializerMethodField()
+
     class Meta:
-        model = Transferencia
-        fields = "__all__"
+        model  = Transferencia
+        fields = '__all__'
+
     def get_tiene_pdf_firmado(self, obj):
         return bool(obj.pdf_firmado_path)
 
@@ -153,7 +133,7 @@ class TrasladoSedeWriteSerializer(serializers.Serializer):
     modulo_destino_id    = serializers.IntegerField(required=False, allow_null=True)
     ubicacion_destino_id = serializers.IntegerField(required=False, allow_null=True)
     piso_destino         = serializers.IntegerField(required=False, allow_null=True)
-    motivo_transferencia_id            = serializers.IntegerField(required=False, allow_null=True)
+    motivo_transferencia_id = serializers.IntegerField(required=False, allow_null=True)
     descripcion          = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -164,20 +144,26 @@ class AsignacionInternaWriteSerializer(serializers.Serializer):
     modulo_destino_id    = serializers.IntegerField(required=False, allow_null=True)
     ubicacion_destino_id = serializers.IntegerField(required=False, allow_null=True)
     piso_destino         = serializers.IntegerField(required=False, allow_null=True)
-    motivo_transferencia_id            = serializers.IntegerField(required=False, allow_null=True)
+    motivo_transferencia_id = serializers.IntegerField(required=False, allow_null=True)
     descripcion          = serializers.CharField(required=False, allow_blank=True)
 
 
 class DevolucionSerializer(serializers.Serializer):
     motivo_devolucion = serializers.CharField(min_length=5)
+
+
 class AprobacionSegurSerializer(serializers.Serializer):
     observacion = serializers.CharField(required=False, allow_blank=True)
+
+
 class CancelacionSerializer(serializers.Serializer):
     motivo_cancelacion_id = serializers.IntegerField()
     detalle_cancelacion   = serializers.CharField(required=False, allow_blank=True)
+
+
 class ReenvioSerializer(serializers.Serializer):
-    bien_ids             = serializers.ListField(child=serializers.IntegerField(), min_length=1, required=False,)
-    motivo_transferencia_id            = serializers.IntegerField(required=False, allow_null=True)
+    bien_ids             = serializers.ListField(child=serializers.IntegerField(), min_length=1, required=False)
+    motivo_transferencia_id = serializers.IntegerField(required=False, allow_null=True)
     descripcion          = serializers.CharField(required=False, allow_blank=True)
     usuario_destino_id   = serializers.IntegerField(required=False)
     sede_destino_id      = serializers.IntegerField(required=False)
@@ -188,6 +174,7 @@ class ReenvioSerializer(serializers.Serializer):
 
 class RetornoSalidaSerializer(serializers.Serializer):
     motivo_retorno = serializers.CharField(required=False, allow_blank=True)
+
 
 class RetornoEntradaSerializer(serializers.Serializer):
     observacion = serializers.CharField(required=False, allow_blank=True)
