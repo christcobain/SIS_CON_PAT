@@ -1,41 +1,40 @@
 import { useState, useEffect, useCallback } from 'react';
 import mantenimientosService from '../services/mantenimientos.service';
+import { useAuthStore } from '../store/authStore';
 
 export function useMantenimientos(filtrosIniciales = {}) {
+  const { user } = useAuthStore();
   const [mantenimientos, setMantenimientos] = useState([]);
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState(null);
   const [actualizando,   setActualizando]   = useState(false);
   const [filtros,        setFiltros]        = useState(filtrosIniciales);
 
-  // ── CORRECCIÓN: destructuring DENTRO del callback, no fuera ──────────────
-  // Si se hace fuera, `filtrosRest` es un objeto nuevo en cada render y
-  // provoca que useCallback recree la función → useEffect re-ejecuta → bucle.
+
   const fetchMantenimientos = useCallback(async () => {
-    const { misMantenimientos, ...filtrosRest } = filtros;   // ← dentro
     setLoading(true);
     setError(null);
     try {
-      const data = misMantenimientos
+      const soloMios = filtros.misMantenimientos || (user?.role !== 'SYSADMIN');
+      
+      const {  ...filtrosRest } = filtros;
+      
+      const data = soloMios
         ? await mantenimientosService.misMantenimientos(filtrosRest)
         : await mantenimientosService.listar(filtrosRest);
+
       setMantenimientos(Array.isArray(data) ? data : (data?.results ?? []));
     } catch (e) {
-      setError(
-        e?.response?.data?.error ||
-        e?.response?.data?.detail ||
-        'Error al cargar mantenimientos'
-      );
+      setError(e?.response?.data?.error || 'Error al cargar mantenimientos');
     } finally {
       setLoading(false);
     }
-  }, [filtros]); // ← solo `filtros` (referencia estable al estado)
+  }, [filtros, user]); 
 
   useEffect(() => {
-    fetchMantenimientos();
-  }, [fetchMantenimientos]);
+    if (user) fetchMantenimientos();
+  }, [fetchMantenimientos, user]);
 
-  // ── Helper para operaciones de escritura ──────────────────────────────────
   const ejecutarYRefrescar = async (fn, ...args) => {
     setActualizando(true);
     setError(null);

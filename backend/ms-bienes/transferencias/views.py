@@ -86,6 +86,7 @@ class TransferenciaViewSet(ViewSet):
             'devolver_adminsede':      [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
             'reenviar':                [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
             'subir_firmado':           [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
+            'cerrar_con_firma': [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
             'cancelar':                [HasJWTPermission('ms-bienes:transferencias:delete_transferenciadetalle')],
             'confirmar_recepcion':     [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
             'aprobar_segur_salida':    [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
@@ -527,28 +528,30 @@ class TransferenciaViewSet(ViewSet):
         return Response(result, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Transferencias'],
-        summary='Subir documento físicamente firmado (ASIGNACION_INTERNA)',
+        summary='Cerrar proceso con acta firmada (paso final obligatorio)',
         description=(
-            'ASISTSISTEMA sube el scan o foto del acta firmada físicamente '
-            'por el usuario destinatario.\n\n'
-            '**Solo aplica a:** `ASIGNACION_INTERNA` en estado `ATENDIDO`.\n\n'
-            '**Formato de la petición:** `multipart/form-data`\n\n'
-            '**Campo requerido:** `archivo` (PDF, JPG o PNG)\n\n'
-            'Una vez subido, el endpoint `GET /{id}/documento/` retornará '
-            'este archivo firmado en lugar del PDF generado automáticamente.'
+            'Sube el acta escaneada con firma física del destinatario.\n\n'
+            '**Requiere:** estado `EN_ESPERA_FIRMA`.\n\n'
+            'Al subir el archivo:\n'
+            '- Estado → `ATENDIDO`\n'
+            '- `pdf_firmado_path` guardado en el servidor\n'
+            '- `fecha_cierre_documental` registrada\n\n'
+            '**Roles:** registrador original, asistSistema, coordSistema, SYSADMIN\n\n'
+            '**Formato:** `multipart/form-data`, campo `archivo` (PDF, JPG, PNG)'
         ),
         parameters=[_PK],
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
-    @action(detail=True, methods=['post'], url_path='subir-firmado',parser_classes=[MultiPartParser, FormParser],)
-    def subir_firmado(self, request, pk=None):
+    @action(detail=True, methods=['post'], url_path='cerrar-con-firma',
+            parser_classes=[MultiPartParser, FormParser])
+    def cerrar_con_firma(self, request, pk=None):
         archivo = request.FILES.get('archivo')
         if not archivo:
             return Response(
-                {"success": False, "error": "Se requiere el archivo."},
+                {"success": False, "error": "Se requiere el campo archivo (PDF o imagen escaneada)."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        result = TransferenciaService.subir_firmado(pk, archivo, request.user.id)
+        result = TransferenciaService.cerrar_con_firma(pk, archivo, request.user.id)
         return Response(result, status=status.HTTP_200_OK)
     
     

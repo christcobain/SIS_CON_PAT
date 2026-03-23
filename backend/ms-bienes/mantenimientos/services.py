@@ -1,31 +1,74 @@
 import os
-from typing import Dict, Any, List
-from .pdf_generator import generar_pdf_mantenimiento
+from typing import Dict, Any, List, Optional
+from django.db.models.query import QuerySet
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError, NotFound
-from .repositories import (MantenimientoRepository,MantenimientoDetalleRepository,MantenimientoAprobacionRepository,
-    MantenimientoImagenRepository)
+from rest_framework.exceptions import ValidationError, NotFound, PermissionDenied
+
+from .models import Mantenimiento
+from .repositories import (
+    MantenimientoRepository,
+    MantenimientoDetalleRepository,
+    MantenimientoAprobacionRepository,
+    MantenimientoImagenRepository,
+)
+from .pdf_generator import generar_pdf_mantenimiento
 from bienes.repositories import BienRepository
 from catalogos.models import CatEstadoFuncionamiento
 from shared.clients import MsUsuariosClient
 
+
+ROLES_APROBADOR = {'adminSede', 'coordSistema', 'SYSADMIN'}
+
+
 class MantenimientoService:
     @staticmethod
-    def _get_or_404(pk: int):
+    def _get_or_404(pk: int) -> Mantenimiento:
         m = MantenimientoRepository.get_by_id(pk)
         if not m:
             raise NotFound(f'Mantenimiento id={pk} no encontrado.')
         return m
     @staticmethod
-    def _guardar_pdf(m, cookie: str = '') -> None:
+    def _get_user_name(user_id: Optional[int], token: str) -> Optional[str]:
+        if not user_id:
+            return None
+        try:
+            usuario = MsUsuariosClient.validar_usuario(user_id, token)
+            if usuario and isinstance(usuario, dict):
+                return f"{usuario.get('first_name', '')} {usuario.get('last_name', '')}".strip() or None
+        except Exception:
+            pass
+        return None
+    @staticmethod
+    def _enriquecer(m: Mantenimiento, token: str) -> Mantenimiento:
+        try:
+            sede = MsUsuariosClient.validar_sede(m.sede_id, token)
+            m.sede_nombre = sede.get('nombre') if sede else None
+        except Exception:
+            m.sede_nombre = None
+
+        if m.modulo_id:
+            try:
+                modulo = MsUsuariosClient.validar_modulo(m.modulo_id, token)
+                m.modulo_nombre = modulo.get('nombre') if modulo else None
+            except Exception:
+                m.modulo_nombre = None
+        else:
+            m.modulo_nombre = None
+
+        m.usuario_propietario_nombre     = MantenimientoService._get_user_name(m.usuario_propietario_id, token)
+        m.aprobado_por_adminsede_nombre  = MantenimientoService._get_user_name(m.aprobado_por_adminsede_id, token)
+        m.subido_por_nombre              = MantenimientoService._get_user_name(m.subido_por_id, token)
+        return m
+    @staticmethod
+    def _guardar_pdf(m: Mantenimiento, cookie: str = '') -> None:
         try:
             pdf_bytes = generar_pdf_mantenimiento(m, cookie=cookie)
-            carpeta = os.path.join(settings.MEDIA_ROOT, 'mantenimientos', 'pdfs')
+            carpeta   = os.path.join(settings.MEDIA_ROOT, 'mantenimientos', 'pdfs')
             os.makedirs(carpeta, exist_ok=True)
-            nombre   = f'MNT-{m.pk}-{timezone.now().strftime("%Y%m%d%H%M%S")}.pdf'
-            ruta     = os.path.join(carpeta, nombre)
+            nombre = f'MNT-{m.pk}-{timezone.now().strftime("%Y%m%d%H%M%S")}.pdf'
+            ruta   = os.path.join(carpeta, nombre)
             with open(ruta, 'wb') as f:
                 f.write(pdf_bytes)
             MantenimientoRepository.update_fields(m, {
@@ -33,10 +76,32 @@ class MantenimientoService:
                 'fecha_pdf': timezone.now(),
             })
         except Exception:
-            pass  
+            pass
+    @staticmethod
+    def listar(filters: Dict[str, Any], token: str) -> QuerySet:
+        real_filters = dict(filters)
+        if real_filters.get('estado'):
+            real_filters['estado_mantenimiento'] = real_filters.pop('estado')
+
+        qs = MantenimientoRepository.filter(real_filters)
+        for m in qs:
+            MantenimientoService._enriquecer(m, token)
+        return qs
+    @staticmethod
+    def mis_mantenimientos(usuario_id: int,role: str,sede_id: int,filters: Dict[str, Any],token: str,) -> QuerySet:
+        qs = MantenimientoRepository.filter_mis_mantenimientos(usuario_id, role, sede_id)
+        if filters.get('estado'):
+            qs = qs.filter(estado_mantenimiento=filters['estado'])
+        for m in qs:
+            MantenimientoService._enriquecer(m, token)
+        return qs
+    @staticmethod
+    def obtener(pk: int, token: str) -> Mantenimiento:
+        m = MantenimientoService._get_or_404(pk)
+        return MantenimientoService._enriquecer(m, token)
     @staticmethod
     @transaction.atomic
-    def crear(data: Dict[str, Any],usuario_realiza_id: int,sede_id: int,modulo_id:int) -> Dict[str, Any]:
+    def crear(data: Dict[str, Any],usuario_realiza_id: int,sede_id: int,modulo_id: Optional[int],) -> Mantenimiento:
         bien_ids = data.pop('bien_ids', [])
         if not bien_ids:
             raise ValidationError('Debe incluir al menos un bien.')
@@ -62,224 +127,216 @@ class MantenimientoService:
         mantenimiento = MantenimientoRepository.create({
             **data,
             'numero_orden':           MantenimientoRepository.generate_numero_orden(),
-            'estado':                 'EN_PROCESO',
+            'estado_mantenimiento':   'EN_PROCESO',
             'usuario_realiza_id':     usuario_realiza_id,
             'sede_id':                sede_id,
-            'modulo_id':              modulo_id,            
+            'modulo_id':              modulo_id,
             'usuario_propietario_id': usuario_propietario_id,
+            'fecha_inicio_mant':      timezone.now().date(),
         })
         MantenimientoDetalleRepository.bulk_create(mantenimiento, bienes)
-        return {
-            'success': True,
-            'message': f'Mantenimiento {mantenimiento.numero_orden} registrado.',
-            'data': mantenimiento,
-        }
-    @staticmethod
-    def get_user_name(user_id,token):
-            if not user_id:
-                return None
-            try:
-                usuario = MsUsuariosClient.validar_usuario(user_id, token)
-                if usuario and isinstance(usuario, dict):
-                    return f"{usuario.get('first_name', '')} {usuario.get('last_name', '')}".strip()
-                return "Usuario no encontrado"
-            except Exception:
-                return "Error en consulta"
-    @staticmethod
-    def _enriquecer_transferencia(tr, token):        
-        sede_origen = MsUsuariosClient.validar_sede(tr.sede_id, token)
-        tr.sede_nombre = sede_origen.get('nombre') if sede_origen else None        
-        if tr.modulo_id:
-            modulo = MsUsuariosClient.validar_modulo(tr.modulo_id, token)
-            tr.modulo_nombre = modulo.get('nombre') if modulo else None
-        else:
-            tr.modulo_nombre = None      
-        tr.usuario_propietario_nombre = MantenimientoService.get_user_name(tr.usuario_propietario_id,token)           
-        tr.aprobado_por_adminsede_nombre = MantenimientoService.get_user_name(tr.aprobado_por_adminsede_id, token)
-        tr.confirmado_por_propietario_nombre  = MantenimientoService.get_user_name(tr.confirmado_por_propietario_id, token)
-        return tr  
-    @staticmethod
-    def listar(filters: Dict[str, Any],token) -> Dict[str, Any]:
-        qs=MantenimientoRepository.filter(filters)
-        for tr in qs:
-            MantenimientoService._enriquecer_transferencia(tr, token)
-            _ = list(tr.detalles.all())
-        return qs
-    @staticmethod
-    def mis_mantenimientos(usuario_id: int,role: str,sede_id: int,filters: Dict[str, Any],) -> Dict[str, Any]:
-        qs = MantenimientoRepository.filter_mis_mantenimientos(usuario_id, role, sede_id)
-        if filters.get('estado'):
-            qs = qs.filter(estado=filters['estado'])
-        return {'success': True, 'data': qs}
-    @staticmethod
-    def obtener(pk: int,token) -> Dict[str, Any]:
-        mant=MantenimientoRepository.get_by_id(pk)
-        if not mant:
-            raise ValidationError("Mantenimiento no existe")
-        MantenimientoService._enriquecer_transferencia(mant, token)
-        _ = list(mant.detalles.all())
-        return mant
+        MantenimientoAprobacionRepository.registrar(
+            mantenimiento, 'asistSistema', 'ENVIADO', usuario_realiza_id,
+            observacion='Mantenimiento registrado.',
+        )
+        return mantenimiento
     @staticmethod
     @transaction.atomic
-    def enviar_a_aprobacion(pk: int,usuario_id: int,trabajos_realizados: str,diagnostico: str,detalles_estado: List[Dict],) -> Dict[str, Any]:
+    def enviar_a_aprobacion(
+        pk: int,
+        usuario_id: int,
+        detalles_tecnicos: List[Dict],) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
-        if m.estado not in ('EN_PROCESO', 'DEVUELTO'):
+        if m.estado_mantenimiento not in ('EN_PROCESO', 'DEVUELTO'):
             raise ValidationError(
-                f'No se puede enviar a aprobación desde el estado "{m.estado}".'
+                f'No se puede enviar a aprobación desde el estado '
+                f'"{m.estado_mantenimiento}".'
             )
-        detalle_map = {d.bien_id: d for d in MantenimientoDetalleRepository.get_by_mantenimiento(m)}
-        for item in detalles_estado:
-            det = detalle_map.get(item.get('bien_id'))
-            if det and item.get('estado_funcionamiento_id'):
-                if not CatEstadoFuncionamiento.objects.filter(pk=item['estado_funcionamiento_id']).exists():
-                    raise ValidationError(
-                        f'Estado de funcionamiento id={item["estado_funcionamiento_id"]} no existe.'
-                    )
-                MantenimientoDetalleRepository.update_estado_despues(
-                    det,
-                    item['estado_funcionamiento_id'],
-                    item.get('observacion', ''),
+        detalle_map = {
+            d.bien_id: d
+            for d in MantenimientoDetalleRepository.get_by_mantenimiento(m)
+        }
+
+        for item in detalles_tecnicos:
+            bien_id = item.get('bien_id')
+            det = detalle_map.get(bien_id)
+            if not det:
+                raise ValidationError(
+                    f'El bien id={bien_id} no pertenece a este mantenimiento.'
                 )
+            ef_id = item.get('estado_funcionamiento_final_id')
+            if not ef_id:
+                raise ValidationError(
+                    f'Debe indicar el estado de funcionamiento final '
+                    f'para el bien id={bien_id}.'
+                )
+            if not CatEstadoFuncionamiento.objects.filter(pk=ef_id).exists():
+                raise ValidationError(
+                    f'Estado de funcionamiento id={ef_id} no existe.'
+                )
+            MantenimientoDetalleRepository.update_detalle(
+                detalle=det,
+                estado_funcionamiento_final_id=ef_id,
+                diagnostico_inicial=item.get('diagnostico_inicial', ''),
+                trabajo_realizado=item.get('trabajo_realizado', ''),
+                diagnostico_final=item.get('diagnostico_final', ''),
+                observacion_detalle=item.get('observacion_detalle', ''),
+            )
+
         MantenimientoRepository.update_fields(m, {
-            'trabajos_realizados': trabajos_realizados,
-            'diagnostico_final':   diagnostico,
-            'fecha_termino':       timezone.now().date(),
-            'estado':              'PENDIENTE_APROBACION',
-            'motivo_devolucion':   None,
+            'estado_mantenimiento': 'PENDIENTE_APROBACION',
+            'fecha_termino_mant':   timezone.now().date(),
         })
         MantenimientoAprobacionRepository.registrar(
-            m, 'ASISTSISTEMA', 'APROBADO', usuario_id,
-            observacion='Enviado a aprobación por ASISTSISTEMA.',
+            m, 'asistSistema', 'ENVIADO', usuario_id,
+            observacion='Informe técnico completado. Enviado a aprobación.',
         )
         return {'success': True, 'message': 'Mantenimiento enviado a aprobación.'}
     @staticmethod
     @transaction.atomic
-    def aprobar(pk: int,adminsede_id: int,role: str,sede_id: int,observacion: str = '') -> Dict[str, Any]:
+    def aprobar(pk: int,aprobador_id: int,role: str,sede_id: int,observacion: str = '',cookie: str = '',) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
-        if m.estado != 'PENDIENTE_APROBACION':
+        if m.estado_mantenimiento != 'PENDIENTE_APROBACION':
             raise ValidationError(
-                f'Solo se puede aprobar desde PENDIENTE_APROBACION. Estado actual: "{m.estado}".'
+                f'Solo se puede aprobar desde PENDIENTE_APROBACION. '
+                f'Estado actual: "{m.estado_mantenimiento}".'
             )
-        if role not in ('adminSede', 'coordSistema', 'SYSADMIN'):
-            raise ValidationError('Solo ADMINSEDE, COORDSISTEMA o SYSADMIN pueden aprobar.')
+        if role not in ROLES_APROBADOR:
+            raise PermissionDenied(
+                'Solo adminSede, coordSistema o SYSADMIN pueden aprobar.'
+            )
         if role == 'adminSede' and m.sede_id != sede_id:
-            raise ValidationError('Solo puede aprobar mantenimientos de su propia sede.')
-        MantenimientoRepository.update_fields(m, {
-            'aprobado_por_adminsede_id': adminsede_id,
-            'fecha_aprobacion':          timezone.now(),
-            'estado':                    'EN_ESPERA_CONFORMIDAD',
-        })
-        MantenimientoAprobacionRepository.registrar(
-            m, 'ADMINSEDE', 'APROBADO', adminsede_id, observacion=observacion,
-        )
-        return {'success': True, 'message': 'Mantenimiento aprobado. En espera de conformidad del propietario.'}
-    @staticmethod
-    @transaction.atomic
-    def confirmar_conformidad(pk: int,usuario_id: int,cookie: str = '') -> Dict[str, Any]:
-        m = MantenimientoService._get_or_404(pk)
-        if m.estado != 'EN_ESPERA_CONFORMIDAD':
-            raise ValidationError(
-                f'Solo se puede confirmar desde EN_ESPERA_CONFORMIDAD. Estado actual: "{m.estado}".'
-            )
-        if m.usuario_propietario_id != usuario_id:
-            raise ValidationError(
-                'Solo el propietario de los bienes puede dar conformidad al mantenimiento.'
+            raise PermissionDenied(
+                'Solo puede aprobar mantenimientos de su propia sede.'
             )
         now = timezone.now()
-        for det in MantenimientoDetalleRepository.get_by_mantenimiento(m):
-            bien    = det.bien
-            updates = {'fecha_ultimo_mantenimiento': now.date()}
-            if det.estado_funcionamiento_despues_id:
-                updates['estado_funcionamiento_id'] = det.estado_funcionamiento_despues_id
-            BienRepository.update_fields(bien, updates)
         MantenimientoRepository.update_fields(m, {
-            'confirmado_por_propietario_id': usuario_id,
-            'fecha_conformidad':             now,
-            'estado':                        'ATENDIDO',
+            'aprobado_por_adminsede_id':  aprobador_id,
+            'fecha_aprobacion_adminsede': now,
+            'estado_mantenimiento':       'APROBADO',
         })
         MantenimientoAprobacionRepository.registrar(
-            m, 'PROPIETARIO', 'CONFIRMADO', usuario_id,
-            observacion='Conformidad confirmada por el propietario del bien.',
+            m, role, 'APROBADO', aprobador_id, observacion=observacion,
         )
         MantenimientoService._guardar_pdf(m, cookie=cookie)
-        return {'success': True, 'message': 'Conformidad registrada. Mantenimiento ATENDIDO.'}
+        return {
+            'success': True,
+            'message': (
+                'Mantenimiento aprobado. '
+                'PDF del acta generado. '
+                'Proceda a imprimir, obtener la firma del propietario '
+                'y subir el documento firmado para cerrar el proceso.'
+            ),
+        }
     @staticmethod
     @transaction.atomic
-    def devolver(pk: int,adminsede_id: int,role: str,sede_id: int,motivo: str,) -> Dict[str, Any]:
+    def devolver(pk: int,aprobador_id: int,role: str,sede_id: int,motivo: str,) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
-        if m.estado != 'PENDIENTE_APROBACION':
-            raise ValidationError('Solo se puede devolver desde PENDIENTE_APROBACION.')
-        if role not in ('adminSede', 'coordSistema', 'SYSADMIN'):
-            raise ValidationError('Solo ADMINSEDE o COORDSISTEMA pueden devolver.')
+        if m.estado_mantenimiento != 'PENDIENTE_APROBACION':
+            raise ValidationError(
+                'Solo se puede devolver desde PENDIENTE_APROBACION.'
+            )
+        if role not in ROLES_APROBADOR:
+            raise PermissionDenied(
+                'Solo adminSede, coordSistema o SYSADMIN pueden devolver.'
+            )
         if role == 'adminSede' and m.sede_id != sede_id:
-            raise ValidationError('Solo puede devolver mantenimientos de su propia sede.')
+            raise PermissionDenied(
+                'Solo puede devolver mantenimientos de su propia sede.'
+            )
         MantenimientoRepository.update_fields(m, {
-            'estado':            'DEVUELTO',
-            'motivo_devolucion': motivo,
+            'estado_mantenimiento':      'DEVUELTO',
+            'aprobado_por_adminsede_id': None,
+            'fecha_aprobacion_adminsede': None,
+            'pdf_path':                  None,
+            'fecha_pdf':                 None,
         })
         MantenimientoAprobacionRepository.registrar(
-            m, 'ADMINSEDE', 'DEVUELTO', adminsede_id, observacion=motivo,
+            m, role, 'DEVUELTO', aprobador_id, observacion=motivo,
         )
         return {'success': True, 'message': 'Mantenimiento devuelto para corrección.'}
     @staticmethod
     @transaction.atomic
-    def cancelar(pk: int,usuario_id: int,motivo_cancelacion_id: int,detalle: str) -> Dict[str, Any]:
+    def subir_pdf_firmado(pk: int,archivo,usuario_id: int,role: str, ) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
-        if m.estado in ('ATENDIDO', 'CANCELADO'):
+        if m.estado_mantenimiento != 'APROBADO':
             raise ValidationError(
-                f'No se puede cancelar un mantenimiento en estado "{m.estado}".'
+                'Solo se puede subir el documento firmado cuando '
+                'el estado es APROBADO.'
+            )
+        media_root = getattr(settings, 'MEDIA_ROOT', 'media')
+        carpeta    = os.path.join(media_root, 'mantenimientos', 'pdfs', 'firmados')
+        os.makedirs(carpeta, exist_ok=True)
+        ext    = os.path.splitext(getattr(archivo, 'name', '.pdf'))[-1].lower() or '.pdf'
+        nombre = f'MNT-{m.pk}-FIRMADO-{timezone.now().strftime("%Y%m%d%H%M%S")}{ext}'
+        ruta   = os.path.join(carpeta, nombre)
+        with open(ruta, 'wb') as f:
+            for chunk in archivo.chunks():
+                f.write(chunk)
+        now = timezone.now()
+        for det in MantenimientoDetalleRepository.get_by_mantenimiento(m):
+            bien    = det.bien
+            updates = {'fecha_ultimo_mantenimiento': now.date()}
+            if det.estado_funcionamiento_final_id:
+                updates['estado_funcionamiento_id'] = det.estado_funcionamiento_final_id
+            BienRepository.update_fields(bien, updates)
+        MantenimientoRepository.update_fields(m, {
+            'pdf_firmado_path':   os.path.join('mantenimientos', 'pdfs', 'firmados', nombre),
+            'fecha_pdf_firmado':  now,
+            'subido_por_id':      usuario_id,
+            'estado_mantenimiento': 'ATENDIDO',
+        })
+        MantenimientoAprobacionRepository.registrar(
+            m, role, 'PDF_SUBIDO', usuario_id,
+            observacion='Documento firmado subido. Proceso cerrado.',
+        )
+        return {
+            'success': True,
+            'message': 'Documento firmado subido. Mantenimiento ATENDIDO.',
+        }
+    @staticmethod
+    @transaction.atomic
+    def cancelar(pk: int,usuario_id: int,role: str,motivo_cancelacion_id: int,detalle: str,) -> Dict[str, Any]:
+        m = MantenimientoService._get_or_404(pk)
+        if m.estado_mantenimiento in ('ATENDIDO', 'CANCELADO'):
+            raise ValidationError(
+                f'No se puede cancelar un mantenimiento en estado '
+                f'"{m.estado_mantenimiento}".'
             )
         MantenimientoRepository.update_fields(m, {
-            'estado':                'CANCELADO',
+            'estado_mantenimiento':  'CANCELADO',
             'motivo_cancelacion_id': motivo_cancelacion_id,
             'detalle_cancelacion':   detalle,
             'fecha_cancelacion':     timezone.now(),
         })
         MantenimientoAprobacionRepository.registrar(
-            m, 'ASISTSISTEMA', 'CANCELADO', usuario_id, observacion=detalle,
+            m, role, 'CANCELADO', usuario_id, observacion=detalle,
         )
         return {'success': True, 'message': 'Mantenimiento cancelado.'}
     @staticmethod
-    def subir_imagen(
-        pk: int,
-        imagen,
-        descripcion: str,
-        usuario_id: int,
-    ) -> Dict[str, Any]:
+    def subir_imagen(pk: int,imagen,descripcion: str,usuario_id: int,) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
-        if m.estado not in ('EN_PROCESO', 'DEVUELTO'):
+        if m.estado_mantenimiento not in ('EN_PROCESO', 'DEVUELTO'):
             raise ValidationError(
-                f'Solo se pueden subir imágenes cuando el mantenimiento está EN_PROCESO o DEVUELTO. '
-                f'Estado actual: "{m.estado}".'
+                f'Solo se pueden subir imágenes cuando el mantenimiento '
+                f'está EN_PROCESO o DEVUELTO. '
+                f'Estado actual: "{m.estado_mantenimiento}".'
             )
         MantenimientoImagenRepository.create(m, imagen, descripcion)
         if not m.tiene_imagenes:
             MantenimientoRepository.update_fields(m, {'tiene_imagenes': True})
         return {'success': True, 'message': 'Imagen subida exitosamente.'}
     @staticmethod
-    def subir_firmado(pk: int, archivo, usuario_id: int) -> Dict[str, Any]:
-        m = MantenimientoService._get_or_404(pk)
-        if m.estado != 'ATENDIDO':
-            raise ValidationError('Solo se puede subir el firmado cuando estado = ATENDIDO.')
-        carpeta = os.path.join(settings.MEDIA_ROOT, 'mantenimientos', 'pdfs', 'firmados')
-        os.makedirs(carpeta, exist_ok=True)
-        ext    = os.path.splitext(archivo.name)[-1].lower() or '.pdf'
-        nombre = f'MNT-{m.pk}-FIRMADO-{timezone.now().strftime("%Y%m%d%H%M%S")}{ext}'
-        ruta   = os.path.join(carpeta, nombre)
-        with open(ruta, 'wb') as f:
-            for chunk in archivo.chunks():
-                f.write(chunk)
-        MantenimientoRepository.update_fields(m, {
-            'pdf_firmado_path': os.path.join('mantenimientos', 'pdfs', 'firmados', nombre),
-        })
-        return {'success': True, 'message': 'Documento firmado guardado exitosamente.'}
-    @staticmethod
     def obtener_documento(pk: int, cookie: str = '') -> bytes:
         m = MantenimientoService._get_or_404(pk)
-        if m.estado != 'ATENDIDO':
-            raise ValidationError('El documento solo está disponible cuando estado = ATENDIDO.')
+        if m.estado_mantenimiento not in ('APROBADO', 'ATENDIDO'):
+            raise ValidationError(
+                'El documento solo está disponible cuando el estado '
+                'es APROBADO o ATENDIDO.'
+            )
+        media_root = getattr(settings, 'MEDIA_ROOT', 'media')
         def _leer(rel_path: str) -> bytes:
-            full = os.path.join(settings.MEDIA_ROOT, rel_path)
+            full = os.path.join(media_root, rel_path)
             if os.path.exists(full):
                 with open(full, 'rb') as f:
                     return f.read()
@@ -288,10 +345,9 @@ class MantenimientoService:
             data = _leer(m.pdf_firmado_path)
             if data:
                 return data
-
         if m.pdf_path:
             data = _leer(m.pdf_path)
             if data:
-                return data        
+                return data
         return generar_pdf_mantenimiento(m, cookie=cookie)
     

@@ -91,7 +91,7 @@ export default function TransferenciasPage() {
         try {
             await descargarPDF(id);
         } catch (e) {
-            toast.error('No se pudo generar el documento');
+            toast.error(e.response?.data?.error||'No se pudo generar el documento');
         }
     };
 

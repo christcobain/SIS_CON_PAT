@@ -117,8 +117,8 @@ export default function MantenimientosPage() {
               <Icon name="engineering" className="text-[24px]" style={{ color: 'var(--color-primary)' }} />
             </div>
             <div>
-              <h1 className="page-title">Mantenimiento de Activos</h1>
-              <p className="page-subtitle">Gestión de órdenes de servicio técnico patrimonial</p>
+              <h1 className="page-title">Mantenimiento de Bienes</h1>
+              <p className="page-subtitle">Gestión de reparaciones, informes técnicos y servicios preventivos.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

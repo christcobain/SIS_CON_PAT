@@ -1,6 +1,6 @@
 from typing import Dict, Any
 from django.db import transaction
-from rest_framework.exceptions import ValidationError, NotFound, PermissionDenied
+from rest_framework.exceptions import ValidationError, NotFound
 from shared.clients import MsUsuariosClient
 from .repositories import (
     BienRepository,

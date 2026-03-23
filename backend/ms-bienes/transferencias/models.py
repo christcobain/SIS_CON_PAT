@@ -11,6 +11,7 @@ class Transferencia(models.Model):
         ('PENDIENTE_APROBACION',   'Pendiente de Aprobación'),
         ('EN_ESPERA_CONFORMIDAD',  'En Espera de Conformidad del Destinatario'),
         ('EN_RETORNO',             'En Retorno a Sede Origen'),
+        ('EN_ESPERA_FIRMA', 'En Espera de Firma del Documento'),
         ('ATENDIDO',               'Atendido'),
         ('DEVUELTO',               'Devuelto'),
         ('CANCELADO',              'Cancelado'),

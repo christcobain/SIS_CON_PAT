@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { useAuthStore } from '../../../../store/authStore';
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
@@ -8,166 +7,129 @@ const Icon = ({ name, className = '' }) => (
 const fmtT = iso => !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
 const BADGE = {
-  EN_PROCESO:            { label: 'En proceso',         color: '#1d4ed8', bg: 'rgb(37 99 235 / 0.1)'  },
-  PENDIENTE_APROBACION:  { label: 'Pend. aprobación',   color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
-  EN_ESPERA_CONFORMIDAD: { label: 'Espera conformidad', color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)' },
-  ATENDIDO:              { label: 'Atendido',           color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
-  DEVUELTO:              { label: 'Devuelto',           color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
-  CANCELADO:             { label: 'Cancelado',          color: '#64748b', bg: 'var(--color-border-light)' },
+  EN_PROCESO:           { label: 'En proceso',         color: '#1d4ed8', bg: 'rgb(37 99 235 / 0.1)'  },
+  PENDIENTE_APROBACION: { label: 'Pend. aprobación',   color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
+  APROBADO:             { label: 'Aprobado/Firma',     color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)' },
+  ATENDIDO:             { label: 'Atendido',           color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
+  DEVUELTO:             { label: 'Devuelto',           color: '#e11d48', bg: 'rgb(225 29 72 / 0.1)'  },
+  CANCELADO:            { label: 'Cancelado',          color: '#64748b', bg: 'rgb(100 116 139 / 0.1)' },
 };
 
-function filtrar(items, filtros) {
-  if (!filtros?.search) return items;
-  const q = filtros.search.toLowerCase();
-  return items.filter(m =>
-    m.numero_orden?.toLowerCase().includes(q) ||
-    m.sede_nombre?.toLowerCase().includes(q) ||
-    m.usuario_propietario_nombre?.toLowerCase().includes(q)
-  );
-}
-
-function AccionesFila({ item, role, onVerDetalle, onAprobar, onDevolver, onEnviar, onCancelar }) {
-  const estado = item.estado_mantenimiento;
-  const puedeAprobar  = ['SYSADMIN', 'coordSistema', 'adminSede'].includes(role);
-  const puedeEnviar   = ['SYSADMIN', 'coordSistema', 'asistSistema'].includes(role);
-  const puedeCancelar = !['ATENDIDO', 'CANCELADO'].includes(estado);
+function AccionesFila({ item, role, onVerDetalle, onEnviarAprobacion, onGestionar, onCancelar, onDescargarPDF }) {
+  const isOwner = true; 
+  const canApprove = ['adminSede', 'coordSistema', 'SYSADMIN'].includes(role);
 
   return (
-    <div className="flex justify-end gap-1">
-      <button onClick={() => onVerDetalle(item)} title="Ver detalle"
-        className="size-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors cursor-pointer">
-        <Icon name="visibility" className="text-[19px]" />
+    <div className="flex items-center justify-end gap-1">
+      <button onClick={() => onVerDetalle(item)} className="p-2 hover:bg-surface-alt rounded-lg transition-colors text-muted hover:text-primary" title="Ver Detalle">
+        <Icon name="visibility" className="text-[18px]" />
       </button>
-      {(estado === 'EN_PROCESO' || estado === 'DEVUELTO') && puedeEnviar && (
-        <button onClick={() => onEnviar(item)} title="Enviar a aprobación"
-          className="size-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors"
-          style={{ color: '#1d4ed8' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgb(37 99 235 / 0.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-          <Icon name="send" className="text-[19px]" />
+
+      {item.estado_mantenimiento === 'EN_PROCESO' && isOwner && (
+        <button onClick={() => onEnviarAprobacion(item)} className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-blue-600" title="Enviar a Aprobación">
+          <Icon name="send" className="text-[18px]" />
         </button>
       )}
-      {estado === 'PENDIENTE_APROBACION' && puedeAprobar && (
-        <>
-          <button onClick={() => onAprobar(item)} title="Aprobar"
-            className="size-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors"
-            style={{ color: '#16a34a' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgb(22 163 74 / 0.1)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-            <Icon name="check_circle" className="text-[19px]" />
-          </button>
-          <button onClick={() => onDevolver(item)} title="Devolver"
-            className="size-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors"
-            style={{ color: '#b45309' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgb(180 83 9 / 0.1)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-            <Icon name="reply" className="text-[19px]" />
-          </button>
-        </>
+
+      {item.estado_mantenimiento === 'PENDIENTE_APROBACION' && canApprove && (
+        <button onClick={() => onGestionar(item, 'aprobar')} className="p-2 hover:bg-amber-50 rounded-lg transition-colors text-amber-600" title="Gestionar Aprobación">
+          <Icon name="fact_check" className="text-[18px]" />
+        </button>
       )}
-      {puedeCancelar && puedeEnviar && (
-        <button onClick={() => onCancelar(item)} title="Cancelar"
-          className="size-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors"
-          style={{ color: '#dc2626' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgb(220 38 38 / 0.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-          <Icon name="cancel" className="text-[19px]" />
+
+      {(item.estado_mantenimiento === 'APROBADO' || item.estado_mantenimiento === 'ATENDIDO') && (
+        <button onClick={() => onDescargarPDF(item.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600" title="Descargar Documento">
+          <Icon name="picture_as_pdf" className="text-[18px]" />
+        </button>
+      )}
+
+      {!['ATENDIDO', 'CANCELADO'].includes(item.estado_mantenimiento) && (
+        <button onClick={() => onCancelar(item)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-faint hover:text-red-500" title="Cancelar Orden">
+          <Icon name="cancel" className="text-[18px]" />
         </button>
       )}
     </div>
   );
-}
+} 
 
-export default function MantenimientosTabla({
-  items = [], filtros = {}, loading,
-  onVerDetalle, onAprobar, onDevolver, onEnviar, onCancelar,
-}) {
-  const role     = useAuthStore(s => s.role);
-  const filtrados = useMemo(() => filtrar(items, filtros), [items, filtros]);
-
-  const COLS = ['N° Orden', 'Sede', 'Propietario', 'Bienes', 'Estado', 'Registro', 'Inicio', 'Aprobado por', 'Acciones'];
-
+export default function MantenimientosTabla({ items, loading, error, onVerDetalle, onEnviarAprobacion, onGestionar, onCancelar, onDescargarPDF, role }) {
   if (loading) return (
-    <div className="table-wrapper rounded-2xl overflow-hidden">
-      <table className="table w-full">
-        <thead><tr>{COLS.map(c => <th key={c}>{c}</th>)}</tr></thead>
-        <tbody>
-          {Array.from({ length: 5 }, (_, i) => (
-            <tr key={i} className="border-b border-border">
-              {COLS.map((_, j) => <td key={j}><div className="skeleton h-4 rounded" /></td>)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="card p-12 flex flex-col items-center justify-center gap-4">
+      <div className="size-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      <p className="text-xs font-bold text-faint uppercase tracking-widest">Cargando mantenimientos...</p>
     </div>
   );
 
-  if (!filtrados.length) return (
-    <div className="text-center py-16 card rounded-xl">
-      <Icon name="engineering" className="text-[48px] text-faint" />
-      <p className="text-sm font-semibold mt-3 text-muted">No se encontraron mantenimientos</p>
-      <p className="text-xs text-faint mt-1">Ajusta los filtros o registra una nueva orden</p>
+  if (error) return (
+    <div className="card p-12 text-center">
+      <Icon name="error" className="text-red-500 text-4xl mb-2" />
+      <p className="text-sm font-bold text-body">{error}</p>
     </div>
   );
 
   return (
-    <div className="table-wrapper shadow-sm border rounded-2xl overflow-hidden">
+    <div className="table-wrapper shadow-sm border rounded-2xl overflow-hidden bg-surface">
       <div className="overflow-x-auto">
         <table className="table w-full">
           <thead>
-            <tr>
-              {COLS.map(c => (
-                <th key={c} className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-faint">{c}</th>
-              ))}
+            <tr className="bg-surface-alt/50 border-b border-border">
+              <th className="px-4 py-4 text-[10px] uppercase font-black tracking-widest text-faint text-left">Orden</th>
+              <th className="px-4 py-4 text-[10px] uppercase font-black tracking-widest text-faint text-left">Sede / Ubicación</th>
+              <th className="px-4 py-4 text-[10px] uppercase font-black tracking-widest text-faint text-left">Estado</th>
+              <th className="px-4 py-4 text-[10px] uppercase font-black tracking-widest text-faint text-left">Registro</th>
+              <th className="px-4 py-4 text-[10px] uppercase font-black tracking-widest text-faint text-left">Inicio</th>
+              <th className="px-4 py-4 text-[10px] uppercase font-black tracking-widest text-faint text-left">Aprobación</th>
+              <th className="px-4 py-4 text-[10px] uppercase font-black tracking-widest text-faint text-right">Acciones</th>
             </tr>
           </thead>
-          <tbody>
-            {filtrados.map(m => {
-              const badge  = BADGE[m.estado_mantenimiento] ?? { label: m.estado_mantenimiento, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
-              const detalles = m.detalles_mantenimiento ?? [];
-              const totalBienes = m.total_bienes ?? detalles.length;
+          <tbody className="divide-y divide-border">
+            {items.map((m) => {
+              const badge = BADGE[m.estado_mantenimiento] || BADGE.EN_PROCESO;
               return (
-                <tr key={m.id} className="hover:bg-surface-alt/70 transition-colors border-b border-border group">
+                <tr key={m.id} className="hover:bg-surface-alt/30 transition-colors group">
                   <td className="px-4 py-3">
-                    <p className="font-black text-xs font-mono" style={{ color: 'var(--color-primary)' }}>{m.numero_orden}</p>
-                    {m.pdf_path && (
-                      <span className="text-[9px] font-bold" style={{ color: '#1d4ed8' }}>📄 PDF</span>
-                    )}
+                    <p className="text-xs font-bold text-primary group-hover:underline cursor-pointer" onClick={() => onVerDetalle(m)}>
+                      {m.numero_orden}
+                    </p>
+                    <p className="text-[10px] text-faint font-medium">Realiza: {m.usuario_realiza_nombre || `ID: ${m.usuario_realiza_id}`}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>{m.sede_nombre ?? '—'}</p>
-                    <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{m.modulo_nombre ?? ''}</p>
+                    <p className="text-xs text-body font-medium">{m.sede_nombre || `Sede ${m.sede_id}`}</p>
+                    <p className="text-[10px] text-faint">Resp: {m.usuario_propietario_nombre || 'No asignado'}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-xs" style={{ color: 'var(--color-text-body)' }}>{m.usuario_propietario_nombre ?? '—'}</p>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center justify-center size-6 rounded-lg text-[11px] font-black"
-                      style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)' }}>
-                      {totalBienes}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-xl"
+                    <span className="inline-flex items-center text-[10px] font-bold px-2.5 py-1 rounded-xl"
                       style={{ background: badge.bg, color: badge.color }}>
                       {badge.label}
                     </span>
                     {m.tiene_imagenes && (
-                      <span className="text-[9px] block mt-1" style={{ color: '#7c3aed' }}>📷 Con imágenes</span>
+                      <span className="flex items-center gap-0.5 text-[9px] font-bold mt-1 text-purple-600">
+                        <Icon name="image" className="text-[12px]" /> Multimedia
+                      </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>{fmtT(m.fecha_registro)}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-text-muted)' }}>{fmtT(m.fecha_inicio_mant)}</td>
+                  <td className="px-4 py-3 text-[11px] text-muted">{fmtT(m.fecha_registro)}</td>
+                  <td className="px-4 py-3 text-[11px] text-muted">{m.fecha_inicio_mant ? new Date(m.fecha_inicio_mant).toLocaleDateString() : '—'}</td>
                   <td className="px-4 py-3">
-                    <p className="text-xs" style={{ color: 'var(--color-text-body)' }}>{m.aprobado_por_adminsede_nombre ?? '—'}</p>
-                    {m.fecha_aprobacion_adminsede && (
-                      <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{fmtT(m.fecha_aprobacion_adminsede)}</p>
+                    {m.fecha_aprobacion_adminsede ? (
+                      <div>
+                        <p className="text-[10px] font-bold text-body">{m.aprobado_por_adminsede_nombre || 'Admin'}</p>
+                        <p className="text-[9px] text-faint">{fmtT(m.fecha_aprobacion_adminsede)}</p>
+                      </div>
+                    ) : (
+                      <span className="text-faint text-[10px]">Pendiente</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <AccionesFila item={m} role={role}
-                      onVerDetalle={onVerDetalle} onAprobar={onAprobar}
-                      onDevolver={onDevolver} onEnviar={onEnviar} onCancelar={onCancelar} />
+                    <AccionesFila 
+                      item={m} 
+                      role={role}
+                      onVerDetalle={onVerDetalle} 
+                      onEnviarAprobacion={onEnviarAprobacion}
+                      onGestionar={onGestionar} 
+                      onCancelar={onCancelar}
+                      onDescargarPDF={onDescargarPDF}
+                    />
                   </td>
                 </tr>
               );

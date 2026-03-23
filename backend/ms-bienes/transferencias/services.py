@@ -348,11 +348,11 @@ class TransferenciaService:
             TransferenciaRepository.update_fields(t, {
                 'aprobado_por_adminsede_id':  aprobador_id,
                 'fecha_aprobacion_adminsede': now,
-                'estado':                     'ATENDIDO',
+                'estado': 'EN_ESPERA_FIRMA',
             })
             TransferenciaService._registrar_aprobacion(
                 t, rol_historial, 'APROBADO', aprobador_id,
-                detalle='Asignación interna aprobada y ejecutada.',
+                detalle='Asignación aprobada. Pendiente subir acta firmada.',
             )
             TransferenciaService._guardar_pdf(t, cookie=cookie)
         else:
@@ -501,14 +501,14 @@ class TransferenciaService:
         TransferenciaRepository.update_fields(t, {
             'confirmado_por_usuario_destino_id': usuario_destino_id,
             'fecha_confirmacion_destino':        now,
-            'estado':                            'ATENDIDO',
+            'estado':                            'EN_ESPERA_FIRMA',  
         })
         TransferenciaService._registrar_aprobacion(
             t, 'USUARIO_DESTINO', 'APROBADO', usuario_destino_id,
-            detalle='Recepción confirmada por el usuario destinatario. Traslado completado.',
+            detalle='Recepción confirmada. Pendiente subir acta firmada.',
         )
-        TransferenciaService._guardar_pdf(t, cookie=cookie)
-        return {"success": True, "message": "Recepción confirmada. Traslado completado exitosamente."}
+        TransferenciaService._guardar_pdf(t, cookie=cookie) 
+        return {"success": True, "message": "Recepción confirmada. Imprima, firme y suba el acta escaneada."}
     @staticmethod
     @transaction.atomic
     def aprobar_retorno_salida(pk, segursede_id, motivo, role, sede_segur_id):
@@ -563,6 +563,40 @@ class TransferenciaService:
             detalle=observacion or 'Bien recibido en sede origen. Retorno completado.',
         )
         return {"success": True, "message": "Retorno completado. Bien disponible en sede origen."}
+    @staticmethod
+    @transaction.atomic
+    def cerrar_con_firma(pk: int, archivo, usuario_id: int) -> Dict[str, Any]:
+        t = TransferenciaService._get_or_404(pk)
+        if t.estado != 'EN_ESPERA_FIRMA':
+            raise ValidationError(
+                f'Solo se puede cerrar con firma en estado EN_ESPERA_FIRMA. '
+                f'Estado actual: {t.estado}.'
+            )
+        media_root  = getattr(settings, 'MEDIA_ROOT', 'media')
+        directorio  = os.path.join(media_root, 'transferencias', 'pdfs', 'firmados')
+        os.makedirs(directorio, exist_ok=True)
+        ext            = os.path.splitext(archivo.name)[1] if hasattr(archivo, 'name') else '.pdf'
+        nombre_archivo = f'{t.numero_orden}_firmado{ext}'
+        ruta_absoluta  = os.path.join(directorio, nombre_archivo)
+        with open(ruta_absoluta, 'wb') as f:
+            for chunk in archivo.chunks():
+                f.write(chunk)
+        ruta_relativa = os.path.join('transferencias', 'pdfs', 'firmados', nombre_archivo)
+        now = timezone.now()
+        TransferenciaRepository.update_fields(t, {
+            'pdf_firmado_path':       ruta_relativa,
+            'estado':                 'ATENDIDO',
+            'fecha_cierre_documental': now,
+        })
+        TransferenciaService._registrar_aprobacion(
+            t, 'REGISTRADOR', 'APROBADO', usuario_id,
+            detalle='Acta firmada recibida. Proceso ATENDIDO.',
+        )
+        tipo_msg = 'Traslado' if t.tipo == 'TRASLADO_SEDE' else 'Asignación'
+        return {
+            "success": True,
+            "message": f"{tipo_msg} completado. Acta firmada registrada en el sistema."
+        }
     @staticmethod
     @transaction.atomic
     def cancelar(pk, usuario_id, motivo_cancelacion_id, detalle):
@@ -678,28 +712,6 @@ class TransferenciaService:
                     return f.read()
         
         return generar_pdf_transferencia(t, cookie=cookie)
-    @staticmethod
-    @transaction.atomic
-    def subir_firmado(pk: int, archivo, usuario_id: int) -> Dict[str, Any]:
-        t = TransferenciaService._get_or_404(pk)
-        if t.tipo != 'ASIGNACION_INTERNA':
-            raise ValidationError('Solo aplica a asignaciones internas.')
-        if t.estado_transferencia != 'ATENDIDO':
-            raise ValidationError(
-                'Solo se puede subir el documento firmado cuando la asignación está ATENDIDA.'
-            )
-        media_root = getattr(settings, 'MEDIA_ROOT', 'media')
-        directorio = os.path.join(media_root, 'transferencias', 'pdfs', 'firmados')
-        os.makedirs(directorio, exist_ok=True)
-        ext = os.path.splitext(archivo.name)[1] if hasattr(archivo, 'name') else '.pdf'
-        nombre_archivo = f'{t.numero_orden}_firmado{ext}'
-        ruta_absoluta  = os.path.join(directorio, nombre_archivo)
-        with open(ruta_absoluta, 'wb') as f:
-            for chunk in archivo.chunks():
-                f.write(chunk)
-        ruta_relativa = os.path.join('transferencias', 'pdfs', 'firmados', nombre_archivo)
-        TransferenciaRepository.update_fields(t, {'pdf_firmado_path': ruta_relativa})
-        return {"success": True, "message": "Documento firmado cargado exitosamente."}
     @staticmethod
     def listar_pendientes_segur(sede_id: int, role: str):
         from django.db.models import Q

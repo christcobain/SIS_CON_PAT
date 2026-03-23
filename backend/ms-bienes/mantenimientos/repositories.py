@@ -1,9 +1,14 @@
 from typing import Optional, Dict, Any, List
 from django.db.models import QuerySet, Q
 from django.utils import timezone
-from .models import (Mantenimiento, MantenimientoDetalle,
-    MantenimientoAprobacion, MantenimientoImagen)
+from .models import (
+    Mantenimiento,
+    MantenimientoDetalle,
+    MantenimientoAprobacion,
+    MantenimientoImagen,
+)
 from bienes.models import Bien
+
 
 class MantenimientoRepository:
     @staticmethod
@@ -13,17 +18,28 @@ class MantenimientoRepository:
             .filter(pk=pk)
             .select_related('motivo_cancelacion')
             .prefetch_related(
-                'detalles__bien',
-                'detalles__estado_funcionamiento_antes',
-                'detalles__estado_funcionamiento_despues',
+                'detalles__bien__tipo_bien',
+                'detalles__bien__marca',
+                'detalles__bien__estado_funcionamiento',
+                'detalles__estado_funcionamiento_inicial',
+                'detalles__estado_funcionamiento_final',
                 'aprobaciones',
                 'imagenes',
             )
             .first()
         )
+
     @staticmethod
     def filter(filters: Dict[str, Any]) -> QuerySet:
-        qs = Mantenimiento.objects.prefetch_related('detalles').select_related('motivo_cancelacion')
+        qs = (
+            Mantenimiento.objects
+            .prefetch_related(
+                'detalles__bien__tipo_bien',
+                'detalles__estado_funcionamiento_inicial',
+                'detalles__estado_funcionamiento_final',
+            )
+            .select_related('motivo_cancelacion')
+        )
         if filters.get('estado_mantenimiento'):
             qs = qs.filter(estado_mantenimiento=filters['estado_mantenimiento'])
         if filters.get('sede_id'):
@@ -33,11 +49,19 @@ class MantenimientoRepository:
         if filters.get('usuario_propietario_id'):
             qs = qs.filter(usuario_propietario_id=filters['usuario_propietario_id'])
         return qs.order_by('-fecha_registro')
+
     @staticmethod
-    def filter_mis_mantenimientos(usuario_id: int, role: str, sede_id: int) -> QuerySet:
-        qs = Mantenimiento.objects.prefetch_related('detalles').select_related('motivo_cancelacion')
-        ROLES_GLOBAL = {'SYSADMIN', 'coordSistema'}
-        if role in ROLES_GLOBAL:
+    def filter_mis_mantenimientos(
+        usuario_id: int,
+        role: str,
+        sede_id: int,
+    ) -> QuerySet:
+        qs = (
+            Mantenimiento.objects
+            .prefetch_related('detalles')
+            .select_related('motivo_cancelacion')
+        )
+        if role in ('SYSADMIN', 'coordSistema'):
             return qs.all()
         if role == 'adminSede':
             return qs.filter(sede_id=sede_id)
@@ -67,23 +91,22 @@ class MantenimientoRepository:
         )
         seq = int(last[-4:]) + 1 if last else 1
         return f'{prefix}{seq:04d}'
+
+
+
 class MantenimientoDetalleRepository:
     @staticmethod
     def bulk_create(mantenimiento: Mantenimiento, bienes: List[Bien]) -> None:
         detalles = [
             MantenimientoDetalle(
                 mantenimiento=mantenimiento,
-                tipo_bien_nombre=bien.tipo_bien.nombre,
                 bien=bien,
-                marca=bien.marca,
-                modelo=bien.modelo,
-                serie=bien.numero_serie,
-                codigo_patrimonial=bien.codigo_patrimonial or 'S/N',                
-                estado_funcionamiento_antes=bien.estado_funcionamiento,
+                estado_funcionamiento_inicial=bien.estado_funcionamiento,
             )
             for bien in bienes
         ]
         MantenimientoDetalle.objects.bulk_create(detalles)
+
     @staticmethod
     def get_by_mantenimiento(m: Mantenimiento) -> QuerySet:
         return (
@@ -91,28 +114,57 @@ class MantenimientoDetalleRepository:
             .filter(mantenimiento=m)
             .select_related(
                 'bien',
-                'estado_funcionamiento_antes',
-                'estado_funcionamiento_despues',
+                'bien__tipo_bien',
+                'bien__marca',
+                'estado_funcionamiento_inicial',
+                'estado_funcionamiento_final',
             )
         )
+
     @staticmethod
-    def update_estado_despues(
+    def get_by_id(pk: int) -> Optional[MantenimientoDetalle]:
+        return (
+            MantenimientoDetalle.objects
+            .filter(pk=pk)
+            .select_related(
+                'bien',
+                'estado_funcionamiento_inicial',
+                'estado_funcionamiento_final',
+            )
+            .first()
+        )
+
+    @staticmethod
+    def update_detalle(
         detalle: MantenimientoDetalle,
-        estado_funcionamiento_id: int,
-        observacion: str = '',
+        estado_funcionamiento_final_id: Optional[int],
+        diagnostico_inicial: str = '',
+        trabajo_realizado: str = '',
+        diagnostico_final: str = '',
+        observacion_detalle: str = '',
     ) -> None:
-        detalle.estado_funcionamiento_despues_id = estado_funcionamiento_id
-        detalle.observacion_detalle = observacion
-        detalle.save(update_fields=['estado_funcionamiento_despues_id', 'observacion_detalle'])
+        if estado_funcionamiento_final_id:
+            detalle.estado_funcionamiento_final_id = estado_funcionamiento_final_id
+        if diagnostico_inicial:
+            detalle.diagnostico_inicial = diagnostico_inicial
+        if trabajo_realizado:
+            detalle.trabajo_realizado = trabajo_realizado
+        if diagnostico_final:
+            detalle.diagnostico_final = diagnostico_final
+        if observacion_detalle:
+            detalle.observacion_detalle = observacion_detalle
+        detalle.save(update_fields=[
+            'estado_funcionamiento_final_id',
+            'diagnostico_inicial',
+            'trabajo_realizado',
+            'diagnostico_final',
+            'observacion_detalle',
+        ])
+
 
 class MantenimientoAprobacionRepository:
     @staticmethod
-    def registrar(
-        mantenimiento: Mantenimiento,
-        rol: str,
-        accion: str,
-        usuario_id: int,
-        observacion: str = '',
+    def registrar(mantenimiento: Mantenimiento,rol: str,accion: str,usuario_id: int, observacion: str = '',
     ) -> MantenimientoAprobacion:
         return MantenimientoAprobacion.objects.create(
             mantenimiento=mantenimiento,
@@ -121,6 +173,8 @@ class MantenimientoAprobacionRepository:
             usuario_id=usuario_id,
             observacion=observacion,
         )
+
+
 class MantenimientoImagenRepository:
     @staticmethod
     def create(
@@ -135,4 +189,6 @@ class MantenimientoImagenRepository:
         )
     @staticmethod
     def get_by_mantenimiento(m: Mantenimiento) -> QuerySet:
-        return MantenimientoImagen.objects.filter(mantenimiento=m).order_by('fecha_subida')
+        return MantenimientoImagen.objects.filter(
+            mantenimiento=m
+        ).order_by('fecha_subida')
