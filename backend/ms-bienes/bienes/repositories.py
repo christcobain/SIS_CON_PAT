@@ -5,11 +5,13 @@ from .models import (
     BienDetalleImpresora, BienDetalleScanner, BienDetalleSwitch,
 )
 
+
 _DETALLE_PREFETCH = (
     'detalle_cpu',
     'detalle_cpu__tipo_computadora',
     'detalle_cpu__tipo_disco',
     'detalle_cpu__arquitectura_bits',
+    'detalle_cpu__tipo_tarjeta_video',     
     'detalle_monitor',
     'detalle_monitor__tipo_monitor',
     'detalle_impresora',
@@ -22,14 +24,22 @@ _DETALLE_PREFETCH = (
     'detalle_switch',
 )
 
-
 class BienRepository:
+
     @staticmethod
     def get_all_activos() -> QuerySet:
         return (
             Bien.objects
             .filter(is_active=True)
-            .select_related('tipo_bien', 'marca', 'regimen_tenencia', 'estado_bien', 'estado_funcionamiento')
+            .select_related(
+                'tipo_bien',
+                'marca',
+                'regimen_tenencia',
+                'estado_bien',
+                'estado_funcionamiento',
+                'categoria_bien',   
+                'motivo_baja',     
+            )
             .prefetch_related(*_DETALLE_PREFETCH)
             .order_by('id')
         )
@@ -40,8 +50,13 @@ class BienRepository:
             Bien.objects
             .filter(pk=pk)
             .select_related(
-                'tipo_bien', 'marca', 'regimen_tenencia',
-                'estado_bien', 'estado_funcionamiento', 'motivo_baja', 'categoria_bien',
+                'tipo_bien',
+                'marca',
+                'regimen_tenencia',
+                'estado_bien',
+                'estado_funcionamiento',
+                'categoria_bien',
+                'motivo_baja',
             )
             .prefetch_related(*_DETALLE_PREFETCH)
             .first()
@@ -52,18 +67,19 @@ class BienRepository:
         qs = (
             Bien.objects
             .select_related(
-                'tipo_bien', 'marca', 'estado_bien', 'estado_funcionamiento',
-                'regimen_tenencia', 'categoria_bien', 'motivo_baja',
+                'tipo_bien',
+                'marca',
+                'estado_bien',
+                'estado_funcionamiento',
+                'regimen_tenencia',
+                'categoria_bien',
+                'motivo_baja',
             )
             .prefetch_related(*_DETALLE_PREFETCH)
             .order_by('id')
         )
-
         if filters.get('is_active') is not None:
             qs = qs.filter(is_active=filters['is_active'])
-        else:
-            qs = qs.filter(is_active=True)
-
         if filters.get('sede_id'):
             qs = qs.filter(sede_id=filters['sede_id'])
         if filters.get('modulo_id'):
@@ -76,8 +92,16 @@ class BienRepository:
             qs = qs.filter(usuario_asignado_id=filters['usuario_asignado_id'])
         if filters.get('tipo_bien_id'):
             qs = qs.filter(tipo_bien_id=filters['tipo_bien_id'])
+        if filters.get('categoria_bien_id'):     
+            qs = qs.filter(categoria_bien_id=filters['categoria_bien_id'])
+        if filters.get('estado_bien_id'):     
+            qs = qs.filter(estado_bien_id=filters['estado_bien_id'])
         if filters.get('estado_funcionamiento_id'):
             qs = qs.filter(estado_funcionamiento_id=filters['estado_funcionamiento_id'])
+        if filters.get('numero_serie'):
+            qs = qs.filter(numero_serie=filters['numero_serie'])        
+        if filters.get('codigo_patrimonial'):
+            qs = qs.filter(codigo_patrimonial=filters['codigo_patrimonial'])
         if filters.get('search'):
             q = filters['search']
             qs = qs.filter(
@@ -86,6 +110,10 @@ class BienRepository:
                 Q(modelo__icontains=q)
             )
         return qs
+
+    @staticmethod
+    def create(data: Dict[str, Any]) -> Bien:
+        return Bien.objects.create(**data)
 
     @staticmethod
     def update(bien: Bien, data: Dict[str, Any]) -> Bien:
@@ -101,15 +129,18 @@ class BienRepository:
         bien.save(update_fields=list(data.keys()))
 
     @staticmethod
-    def create(data: Dict[str, Any]) -> Bien:
-        return Bien.objects.create(**data)
-
-    @staticmethod
     def get_bienes_by_usuario(usuario_id: int) -> QuerySet:
         return (
             Bien.objects
             .filter(usuario_asignado_id=usuario_id, is_active=True)
-            .select_related('tipo_bien', 'marca', 'estado_funcionamiento', 'estado_bien', 'categoria_bien', 'regimen_tenencia')
+            .select_related(
+                'tipo_bien',
+                'marca',
+                'estado_funcionamiento',
+                'estado_bien',
+                'categoria_bien',
+                'regimen_tenencia',
+            )
             .prefetch_related(*_DETALLE_PREFETCH)
             .order_by('id')
         )
@@ -119,7 +150,13 @@ class BienRepository:
         return (
             Bien.objects
             .filter(sede_id=sede_id, is_active=True, usuario_asignado_id__isnull=True)
-            .select_related('tipo_bien', 'marca', 'estado_funcionamiento', 'estado_bien', 'categoria_bien')
+            .select_related(
+                'tipo_bien',
+                'marca',
+                'estado_funcionamiento',
+                'estado_bien',
+                'categoria_bien',
+            )
             .prefetch_related(*_DETALLE_PREFETCH)
             .order_by('id')
         )

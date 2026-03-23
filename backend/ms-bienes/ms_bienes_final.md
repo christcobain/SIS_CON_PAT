@@ -118,27 +118,27 @@ SYSADMIN o perfil con add_bienes registra el bien
   → Otros tipos         → bien + detalle_tecnico libre
 ```
 
-### Fase 2 — Traslado entre sedes (analistaSistema/COORDSISTEMA/SYSADMIN → ASISTSISTEMA destino)
+### Fase 2 — Traslado entre sedes (analistaSistema/coordSistema/SYSADMIN → asistSistema destino)
 
 ```
-analistaSistema/COORDSISTEMA crea transferencia tipo TRASLADO_SEDE
-  ├── usuario_destino_id = ASISTSISTEMA de la sede destino
+analistaSistema/coordSistema crea transferencia tipo TRASLADO_SEDE
+  ├── usuario_destino_id = asistSistema de la sede destino
   ├── sede_destino_id    = sede destino
   ├── modulo_destino_id  = módulo destino
   ├── ubicacion_destino_id = ubicación destino
   └── piso_destino       = piso destino
 
-Notificación → ASISTSISTEMA + ADMINSEDE de sede origen
-ADMINSEDE sede origen aprueba salida lógica
-SEGURSEDE sede origen aprueba salida física
-SEGURSEDE sede destino aprueba entrada física
+Notificación → asistSistema + ADMINSEDE de sede origen
+adminSede/coordSistema sede origen aprueba/rechaza salida lógica
+segurSede sede origen aprueba/rechaza salida física
+segurSede sede destino aprueba/rechaza entrada física
 → estado = ATENDIDO :
-  ├── bien.usuario_asignado_id  = ASISTSISTEMA destino
+  ├── bien.usuario_asignado_id  = asistSistema destino
   ├── bien.sede_id              = sede destino
   ├── bien.modulo_id            = módulo destino
   ├── bien.ubicacion_id         = ubicación destino
   └── bien.piso                 = piso destino
-  └──usuario_asignado_id        = usuario asignado
+  └──usuario_asignado_id        = usuario asignado(asistSismeta)
 ```
 
 ### Fase 3 — Asignación interna a usuario final (ASISTSISTEMA → usuario de su sede)

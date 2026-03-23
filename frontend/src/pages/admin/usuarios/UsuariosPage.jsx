@@ -236,9 +236,6 @@ export default function UsuariosPage() {
           puedeEditar={can(currentTabConfig?.permisoEditar)}
         />
       </div>
-
-      {/* 3. Envolvemos los modales con Suspense */}
-      {/* El fallback puede ser null o un spinner pequeño */}
       <Suspense fallback={null}>
         {modalUsuario && (
           <ModalUsuario

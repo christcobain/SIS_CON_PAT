@@ -8,7 +8,6 @@ from .models import (CatCategoriaBien,  CatTipoBien,CatTipoTarjetaVideo, CatMarc
 
 
 class CatalogoBaseSerializer(serializers.ModelSerializer):
-    """Serializador de lectura genérico para todos los catálogos."""
     class Meta:
         fields = ['id', 'nombre', 'descripcion', 'is_active']
 class CatCategoriaBienSerializer(serializers.ModelSerializer):
@@ -16,18 +15,15 @@ class CatCategoriaBienSerializer(serializers.ModelSerializer):
         model  = CatCategoriaBien
         fields = ['id', 'nombre', 'descripcion', 'is_active']
 class CatalogoWriteSerializer(serializers.Serializer):
-    """Serializador de escritura genérico para crear / actualizar catálogos."""
     nombre      = serializers.CharField(max_length=100)
     descripcion = serializers.CharField(required=False, allow_blank=True, default='')
 
     def validate_nombre(self, value):
         return value.strip().upper()
 
-
 class CatTipoBienSerializer(CatalogoBaseSerializer):
     class Meta(CatalogoBaseSerializer.Meta):
         model = CatTipoBien
-        fields = CatalogoBaseSerializer.Meta.fields + ['categoria_bien_id']
 class catTipoTarjetaVideoSerializer(CatalogoBaseSerializer):
     class Meta(CatalogoBaseSerializer.Meta):
         model = CatTipoTarjetaVideo

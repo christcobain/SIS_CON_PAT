@@ -4,19 +4,19 @@ import ModalHeader   from '../../../../components/modal/ModalHeader';
 import ModalBody     from '../../../../components/modal/ModalBody';
 import ModalFooter   from '../../../../components/modal/ModalFooter';
 import ConfirmDialog from '../../../../components/feedback/ConfirmDialog';
-import { useBienes }      from '../../../../hooks/useBienes';
-import { useLocaciones }  from '../../../../hooks/useLocaciones';
-import { useCatalogos }   from '../../../../hooks/useCatalogos';
-import { useAuthStore }   from '../../../../store/authStore';
-import { useToast }       from '../../../../hooks/useToast';
+import { useBienes }     from '../../../../hooks/useBienes';
+import { useLocaciones } from '../../../../hooks/useLocaciones';
+import { useCatalogos }  from '../../../../hooks/useCatalogos';
+import { useAuthStore }  from '../../../../store/authStore';
+import { useToast }      from '../../../../hooks/useToast';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
 );
 
 const S = {
-  input: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', outline: 'none' },
-  disabled: { background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)', outline: 'none' },
+  input:    { background: 'var(--color-surface)',     border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', outline: 'none' },
+  disabled: { background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)',   outline: 'none' },
 };
 const onF  = e => { e.currentTarget.style.border = '1px solid var(--color-primary)'; };
 const offF = e => { e.currentTarget.style.border = '1px solid var(--color-border)'; };
@@ -28,29 +28,87 @@ function FLabel({ children, required }) {
     </p>
   );
 }
+
 function FError({ msg }) {
   if (!msg) return null;
-  return <p className="text-[10px] text-red-500 mt-1 font-semibold flex items-center gap-1"><Icon name="error" className="text-[11px]" />{msg}</p>;
+  return (
+    <p className="text-[10px] text-red-500 mt-1 font-semibold flex items-center gap-1">
+      <Icon name="error" className="text-[11px]" />{msg}
+    </p>
+  );
 }
+
 function FInput({ value, onChange, placeholder, type = 'text', disabled = false, mono = false }) {
   return (
-    <input type={type} value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+    <input
+      type={type}
+      value={value ?? ''}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
       disabled={disabled}
       className={`w-full text-sm rounded-xl px-3 py-2.5 transition-all ${mono ? 'font-mono' : ''}`}
       style={disabled ? S.disabled : S.input}
-      onFocus={disabled ? undefined : onF} onBlur={offF} />
+      onFocus={disabled ? undefined : onF}
+      onBlur={offF}
+    />
   );
 }
+
 function FSelect({ value, onChange, children, disabled = false }) {
   return (
-    <select value={value ?? ''} onChange={e => onChange(e.target.value)} disabled={disabled}
+    <select
+      value={value ?? ''}
+      onChange={e => onChange(e.target.value)}
+      disabled={disabled}
       className="w-full text-sm rounded-xl px-3 py-2.5 transition-all cursor-pointer"
       style={disabled ? S.disabled : S.input}
-      onFocus={disabled ? undefined : onF} onBlur={offF}>
+      onFocus={disabled ? undefined : onF}
+      onBlur={offF}
+    >
       {children}
     </select>
   );
 }
+
+// Toggle booleano tipo switch
+function FToggle({ label, value, onChange, disabled = false }) {
+  const checked = value === true || value === 'true';
+  return (
+    <div
+      className="flex items-center justify-between px-3 py-2.5 rounded-xl transition-all"
+      style={{
+        background: checked ? 'rgb(127 29 29 / 0.06)' : 'var(--color-surface-alt)',
+        border: `1px solid ${checked ? 'rgb(127 29 29 / 0.25)' : 'var(--color-border)'}`,
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <span className="text-xs font-semibold" style={{ color: 'var(--color-text-body)' }}>{label}</span>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={checked ? 'toggle-on' : 'toggle-off'}
+      >
+        <span className={checked ? 'toggle-thumb-on' : 'toggle-thumb-off'} />
+      </button>
+    </div>
+  );
+}
+
+// Divisor de subsección dentro del bloque técnico
+function SubSeccion({ title, color = 'var(--color-primary)' }) {
+  return (
+    <div className="col-span-full flex items-center gap-2 pt-2">
+      <div className="h-px w-3 rounded-full" style={{ background: color }} />
+      <p className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap" style={{ color }}>
+        {title}
+      </p>
+      <div className="h-px flex-1 rounded-full" style={{ background: `${color}30` }} />
+    </div>
+  );
+}
+
+// Sección principal con título e ícono
 function Seccion({ title, icon, children }) {
   return (
     <div className="space-y-3">
@@ -70,22 +128,38 @@ function detectarTipoTecnico(nombre = '') {
   return TIPOS_TECNICOS.find(t => n.includes(t)) ?? null;
 }
 
+// ── Bloque de detalle técnico completo ────────────────────────────────────────
 function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
   if (!tipoTecnico) return null;
   const setD = (k, v) => setDetalle(p => ({ ...p, [k]: v }));
 
-  const TITULOS = {
-    CPU: 'Especificaciones CPU / Computadora',
-    MONITOR: 'Especificaciones Monitor',
-    IMPRESORA: 'Especificaciones Impresora',
-    SCANNER: 'Especificaciones Escáner',
-    SWITCH: 'Especificaciones Switch / Hub',
+  const META = {
+    CPU:       { label: 'Especificaciones CPU / Computadora', color: '#1d4ed8', icon: 'computer'         },
+    MONITOR:   { label: 'Especificaciones Monitor',           color: '#7c3aed', icon: 'desktop_windows'  },
+    IMPRESORA: { label: 'Especificaciones Impresora',         color: '#b45309', icon: 'print'            },
+    SCANNER:   { label: 'Especificaciones Escáner',           color: '#0f766e', icon: 'document_scanner' },
+    SWITCH:    { label: 'Especificaciones Switch / Hub',      color: '#be185d', icon: 'device_hub'       },
   };
+  const meta = META[tipoTecnico];
 
   return (
-    <Seccion title={TITULOS[tipoTecnico]} icon="settings">
+    <div className="space-y-3">
+      {/* Cabecera de sección técnica */}
+      <div className="flex items-center gap-2 pb-2" style={{ borderBottom: `2px solid ${meta.color}30` }}>
+        <div className="size-7 rounded-lg flex items-center justify-center" style={{ background: `${meta.color}15` }}>
+          <Icon name={meta.icon} className="text-[16px]" style={{ color: meta.color }} />
+        </div>
+        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: meta.color }}>{meta.label}</p>
+        <span className="ml-1 text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${meta.color}15`, color: meta.color }}>
+          Detalle técnico
+        </span>
+      </div>
+
+      {/* ── CPU ──────────────────────────────────────────────────────────── */}
       {tipoTecnico === 'CPU' && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
+
+          <SubSeccion title="Identificación y Red" color="#1d4ed8" />
           <div>
             <FLabel>Tipo de computadora</FLabel>
             <FSelect value={detalle.tipo_computadora_id} onChange={v => setD('tipo_computadora_id', v)}>
@@ -93,11 +167,56 @@ function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
               {(catalogos.tiposComputadora ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </FSelect>
           </div>
-          <div><FLabel>Hostname</FLabel><FInput value={detalle.hostname} onChange={v => setD('hostname', v)} placeholder="Ej: PC-JUZGADO01" mono /></div>
-          <div><FLabel>IP</FLabel><FInput value={detalle.direccion_ip} onChange={v => setD('direccion_ip', v)} placeholder="192.168.1.100" mono /></div>
-          <div><FLabel>MAC</FLabel><FInput value={detalle.direccion_mac} onChange={v => setD('direccion_mac', v)} placeholder="AA:BB:CC:DD:EE:FF" mono /></div>
-          <div><FLabel>Procesador</FLabel><FInput value={detalle.procesador_tipo} onChange={v => setD('procesador_tipo', v)} placeholder="Ej: Intel Core i7-12700" /></div>
-          <div><FLabel>Velocidad procesador</FLabel><FInput value={detalle.procesador_velocidad} onChange={v => setD('procesador_velocidad', v)} placeholder="Ej: 3.6 GHz" /></div>
+          <div>
+            <FLabel>Función / Uso</FLabel>
+            <FInput value={detalle.funcion_cpu} onChange={v => setD('funcion_cpu', v)} placeholder="Ej: Escritorio, Servidor" />
+          </div>
+          <div>
+            <FLabel>Hostname</FLabel>
+            <FInput value={detalle.hostname} onChange={v => setD('hostname', v)} placeholder="Ej: PC-JUZ01" mono />
+          </div>
+          <div>
+            <FLabel>Dirección IP</FLabel>
+            <FInput value={detalle.direccion_ip} onChange={v => setD('direccion_ip', v)} placeholder="192.168.1.100" mono />
+          </div>
+          <div>
+            <FLabel>Dirección MAC</FLabel>
+            <FInput value={detalle.direccion_mac} onChange={v => setD('direccion_mac', v)} placeholder="AA:BB:CC:DD:EE:FF" mono />
+          </div>
+          <div>
+            <FLabel>Dominio del equipo</FLabel>
+            <FInput value={detalle.dominio_equipo} onChange={v => setD('dominio_equipo', v)} placeholder="Ej: CSJLN.gob.pe" />
+          </div>
+
+          <SubSeccion title="Procesador" color="#1d4ed8" />
+          <div>
+            <FLabel>Tipo / Modelo</FLabel>
+            <FInput value={detalle.procesador_tipo} onChange={v => setD('procesador_tipo', v)} placeholder="Ej: Intel Core i7-12700" />
+          </div>
+          <div>
+            <FLabel>Velocidad</FLabel>
+            <FInput value={detalle.procesador_velocidad} onChange={v => setD('procesador_velocidad', v)} placeholder="Ej: 3.6 GHz" />
+          </div>
+          <div>
+            <FLabel>Cantidad de procesadores</FLabel>
+            <FInput type="number" value={detalle.procesador_cantidad} onChange={v => setD('procesador_cantidad', v)} placeholder="Ej: 1" />
+          </div>
+          <div>
+            <FLabel>Núcleos por procesador</FLabel>
+            <FInput type="number" value={detalle.procesador_nucleos} onChange={v => setD('procesador_nucleos', v)} placeholder="Ej: 8" />
+          </div>
+
+          <SubSeccion title="Memoria RAM" color="#1d4ed8" />
+          <div>
+            <FLabel>Capacidad RAM</FLabel>
+            <FInput value={detalle.capacidad_ram_gb} onChange={v => setD('capacidad_ram_gb', v)} placeholder="Ej: 16 GB" />
+          </div>
+          <div>
+            <FLabel>Cantidad de módulos</FLabel>
+            <FInput type="number" value={detalle.cantidad_modulos_ram} onChange={v => setD('cantidad_modulos_ram', v)} placeholder="Ej: 2" />
+          </div>
+
+          <SubSeccion title="Almacenamiento" color="#1d4ed8" />
           <div>
             <FLabel>Tipo de disco</FLabel>
             <FSelect value={detalle.tipo_disco_id} onChange={v => setD('tipo_disco_id', v)}>
@@ -105,8 +224,16 @@ function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
               {(catalogos.tiposDisco ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </FSelect>
           </div>
-          <div><FLabel>Capacidad disco</FLabel><FInput value={detalle.capacidad_disco} onChange={v => setD('capacidad_disco', v)} placeholder="Ej: 512 GB" /></div>
-          <div><FLabel>RAM (GB)</FLabel><FInput value={detalle.capacidad_ram_gb} onChange={v => setD('capacidad_ram_gb', v)} placeholder="Ej: 16 GB" /></div>
+          <div>
+            <FLabel>Capacidad del disco</FLabel>
+            <FInput value={detalle.capacidad_disco} onChange={v => setD('capacidad_disco', v)} placeholder="Ej: 512 GB" />
+          </div>
+          <div>
+            <FLabel>Cantidad de discos</FLabel>
+            <FInput type="number" value={detalle.cantidad_discos} onChange={v => setD('cantidad_discos', v)} placeholder="Ej: 1" />
+          </div>
+
+          <SubSeccion title="Sistema Operativo" color="#1d4ed8" />
           <div>
             <FLabel>Arquitectura</FLabel>
             <FSelect value={detalle.arquitectura_bits_id} onChange={v => setD('arquitectura_bits_id', v)}>
@@ -114,12 +241,45 @@ function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
               {(catalogos.arquitecturasBits ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </FSelect>
           </div>
-          <div><FLabel>Sistema operativo</FLabel><FInput value={detalle.sistema_operativo} onChange={v => setD('sistema_operativo', v)} placeholder="Ej: Windows 11 Pro" /></div>
-          <div><FLabel>Licencia SO</FLabel><FInput value={detalle.licencia_so} onChange={v => setD('licencia_so', v)} placeholder="Ej: MAK-XXXXX" mono /></div>
-          <div><FLabel>Office versión</FLabel><FInput value={detalle.version_office} onChange={v => setD('version_office', v)} placeholder="Ej: Microsoft 365" /></div>
-          <div><FLabel>Licencia Office</FLabel><FInput value={detalle.licencia_office} onChange={v => setD('licencia_office', v)} placeholder="Ej: PKY-XXXXX" mono /></div>
+          <div>
+            <FLabel>Sistema operativo</FLabel>
+            <FInput value={detalle.sistema_operativo} onChange={v => setD('sistema_operativo', v)} placeholder="Ej: Windows 11 Pro" />
+          </div>
+          <div>
+            <FLabel>Licencia SO</FLabel>
+            <FInput value={detalle.licencia_so} onChange={v => setD('licencia_so', v)} placeholder="Ej: MAK-XXXXX" mono />
+          </div>
+          <div>
+            <FLabel>Office versión</FLabel>
+            <FInput value={detalle.version_office} onChange={v => setD('version_office', v)} placeholder="Ej: Microsoft 365" />
+          </div>
+          <div>
+            <FLabel>Licencia Office</FLabel>
+            <FInput value={detalle.licencia_office} onChange={v => setD('licencia_office', v)} placeholder="Ej: PKY-XXXXX" mono />
+          </div>
+
+          <SubSeccion title="Adicionales" color="#1d4ed8" />
+          <div>
+            <FLabel>Tipo tarjeta de video</FLabel>
+            <FSelect value={detalle.tipo_tarjeta_video_id} onChange={v => setD('tipo_tarjeta_video_id', v)}>
+              <option value="">Seleccionar...</option>
+              {(catalogos.tiposTarjetaVideo ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </FSelect>
+          </div>
+          <div>
+            <FLabel>Multimedia</FLabel>
+            <FInput value={detalle.multimedia} onChange={v => setD('multimedia', v)} placeholder="Ej: DVD-RW, Webcam" />
+          </div>
+
+          <div className="col-span-full">
+            <div className="grid grid-cols-2 gap-2">
+              <FToggle label="Conectado a red" value={detalle.conectado_red} onChange={v => setD('conectado_red', v)} />
+            </div>
+          </div>
         </div>
       )}
+
+      {/* ── MONITOR ──────────────────────────────────────────────────────── */}
       {tipoTecnico === 'MONITOR' && (
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -129,11 +289,18 @@ function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
               {(catalogos.tiposMonitor ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </FSelect>
           </div>
-          <div><FLabel>Tamaño (pulgadas)</FLabel><FInput type="number" value={detalle.tamano_pulgadas} onChange={v => setD('tamano_pulgadas', v)} placeholder="Ej: 24" /></div>
+          <div>
+            <FLabel>Tamaño (pulgadas)</FLabel>
+            <FInput type="number" value={detalle.tamano_pulgadas} onChange={v => setD('tamano_pulgadas', v)} placeholder="Ej: 24" />
+          </div>
         </div>
       )}
+
+      {/* ── IMPRESORA ────────────────────────────────────────────────────── */}
       {tipoTecnico === 'IMPRESORA' && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
+
+          <SubSeccion title="Tipo e Interfaz" color="#b45309" />
           <div>
             <FLabel>Tipo de impresión</FLabel>
             <FSelect value={detalle.tipo_impresion_id} onChange={v => setD('tipo_impresion_id', v)}>
@@ -142,7 +309,7 @@ function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
             </FSelect>
           </div>
           <div>
-            <FLabel>Interfaz conexión</FLabel>
+            <FLabel>Interfaz de conexión</FLabel>
             <FSelect value={detalle.interfaz_conexion_id} onChange={v => setD('interfaz_conexion_id', v)}>
               <option value="">Seleccionar...</option>
               {(catalogos.interfacesConexion ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -155,11 +322,50 @@ function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
               {(catalogos.tamanosCarro ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </FSelect>
           </div>
-          <div><FLabel>Velocidad (ppm)</FLabel><FInput type="number" value={detalle.velocidad_impresion_ppm} onChange={v => setD('velocidad_impresion_ppm', v)} placeholder="Ej: 40" /></div>
+
+          <SubSeccion title="Capacidades y Rendimiento" color="#b45309" />
+          <div>
+            <FLabel>Velocidad impresión (ppm)</FLabel>
+            <FInput type="number" value={detalle.velocidad_impresion_ppm} onChange={v => setD('velocidad_impresion_ppm', v)} placeholder="Ej: 40" />
+          </div>
+          <div>
+            <FLabel>Memoria RAM (MB)</FLabel>
+            <FInput type="number" value={detalle.memoria_ram_mb} onChange={v => setD('memoria_ram_mb', v)} placeholder="Ej: 256" />
+          </div>
+          <div>
+            <FLabel>Resolución máxima (ppp)</FLabel>
+            <FInput value={detalle.resolucion_maxima_ppp} onChange={v => setD('resolucion_maxima_ppp', v)} placeholder="Ej: 1200x1200" />
+          </div>
+          <div>
+            <FLabel>Tamaño hojas soportadas</FLabel>
+            <FInput value={detalle.tamano_hojas_soportadas} onChange={v => setD('tamano_hojas_soportadas', v)} placeholder="Ej: A4, Oficio" />
+          </div>
+          <div>
+            <FLabel>Alimentación AC</FLabel>
+            <FInput value={detalle.alimentacion_ac} onChange={v => setD('alimentacion_ac', v)} placeholder="Ej: 220V" />
+          </div>
+
+          <SubSeccion title="Red" color="#b45309" />
+          <div>
+            <FLabel>Dirección IP</FLabel>
+            <FInput value={detalle.direccion_ip} onChange={v => setD('direccion_ip', v)} placeholder="192.168.1.100" mono />
+          </div>
+
+          <div className="col-span-full">
+            <div className="grid grid-cols-3 gap-2">
+              <FToggle label="Impresión a color" value={detalle.impresion_color} onChange={v => setD('impresion_color', v)} />
+              <FToggle label="Unidad dúplex"     value={detalle.unidad_duplex}   onChange={v => setD('unidad_duplex', v)} />
+              <FToggle label="Conexión a red"    value={detalle.conexion_red}    onChange={v => setD('conexion_red', v)} />
+            </div>
+          </div>
         </div>
       )}
+
+      {/* ── SCANNER ──────────────────────────────────────────────────────── */}
       {tipoTecnico === 'SCANNER' && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
+
+          <SubSeccion title="Tipo e Interfaz" color="#0f766e" />
           <div>
             <FLabel>Tipo de escáner</FLabel>
             <FSelect value={detalle.tipo_escaner_id} onChange={v => setD('tipo_escaner_id', v)}>
@@ -168,28 +374,105 @@ function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
             </FSelect>
           </div>
           <div>
-            <FLabel>Interfaz conexión</FLabel>
+            <FLabel>Interfaz de conexión</FLabel>
             <FSelect value={detalle.interfaz_conexion_id} onChange={v => setD('interfaz_conexion_id', v)}>
               <option value="">Seleccionar...</option>
               {(catalogos.interfacesConexion ?? []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
             </FSelect>
           </div>
-          <div><FLabel>Tamaño documentos</FLabel><FInput value={detalle.tamano_documentos} onChange={v => setD('tamano_documentos', v)} placeholder="Ej: A4" /></div>
-          <div><FLabel>Resolución exploración</FLabel><FInput value={detalle.resolucion_exploracion} onChange={v => setD('resolucion_exploracion', v)} placeholder="Ej: 600 dpi" /></div>
+          <div>
+            <FLabel>Tamaño documentos</FLabel>
+            <FInput value={detalle.tamano_documentos} onChange={v => setD('tamano_documentos', v)} placeholder="Ej: A4, Oficio" />
+          </div>
+
+          <SubSeccion title="Resolución y Alimentación" color="#0f766e" />
+          <div>
+            <FLabel>Resolución exploración</FLabel>
+            <FInput value={detalle.resolucion_exploracion} onChange={v => setD('resolucion_exploracion', v)} placeholder="Ej: 600 dpi" />
+          </div>
+          <div>
+            <FLabel>Resolución salida</FLabel>
+            <FInput value={detalle.resolucion_salida} onChange={v => setD('resolucion_salida', v)} placeholder="Ej: 1200 dpi" />
+          </div>
+          <div>
+            <FLabel>Alimentación AC</FLabel>
+            <FInput value={detalle.alimentacion_ac} onChange={v => setD('alimentacion_ac', v)} placeholder="Ej: 220V" />
+          </div>
+
+          <div className="col-span-full">
+            <div className="grid grid-cols-2 gap-2">
+              <FToggle label="Alimentador automático (ADF)" value={detalle.alimentador_automatico} onChange={v => setD('alimentador_automatico', v)} />
+              <FToggle label="Soporte de metadata"          value={detalle.metadata}               onChange={v => setD('metadata', v)} />
+            </div>
+          </div>
         </div>
       )}
+
+      {/* ── SWITCH / HUB ─────────────────────────────────────────────────── */}
       {tipoTecnico === 'SWITCH' && (
-        <div className="grid grid-cols-2 gap-3">
-          <div><FLabel>IP</FLabel><FInput value={detalle.direccion_ip} onChange={v => setD('direccion_ip', v)} placeholder="192.168.1.1" mono /></div>
-          <div><FLabel>MAC</FLabel><FInput value={detalle.direccion_mac} onChange={v => setD('direccion_mac', v)} placeholder="AA:BB:CC:DD:EE:FF" mono /></div>
-          <div><FLabel>Puertos UTP</FLabel><FInput type="number" value={detalle.cantidad_puertos_utp} onChange={v => setD('cantidad_puertos_utp', v)} placeholder="Ej: 24" /></div>
-          <div><FLabel>Velocidad (Mbps)</FLabel><FInput type="number" value={detalle.velocidad_mbps} onChange={v => setD('velocidad_mbps', v)} placeholder="Ej: 1000" /></div>
+        <div className="grid grid-cols-3 gap-3">
+
+          <SubSeccion title="Identificación de Red" color="#be185d" />
+          <div>
+            <FLabel>Dirección IP</FLabel>
+            <FInput value={detalle.direccion_ip} onChange={v => setD('direccion_ip', v)} placeholder="192.168.1.1" mono />
+          </div>
+          <div>
+            <FLabel>Dirección MAC</FLabel>
+            <FInput value={detalle.direccion_mac} onChange={v => setD('direccion_mac', v)} placeholder="AA:BB:CC:DD:EE:FF" mono />
+          </div>
+          <div>
+            <FLabel>Velocidad (Mbps)</FLabel>
+            <FInput type="number" value={detalle.velocidad_mbps} onChange={v => setD('velocidad_mbps', v)} placeholder="Ej: 1000" />
+          </div>
+
+          <SubSeccion title="Puertos" color="#be185d" />
+          <div>
+            <FLabel>Puertos UTP</FLabel>
+            <FInput type="number" value={detalle.cantidad_puertos_utp} onChange={v => setD('cantidad_puertos_utp', v)} placeholder="Ej: 24" />
+          </div>
+          <div>
+            <FLabel>Puertos FTP</FLabel>
+            <FInput type="number" value={detalle.cantidad_puertos_ftp} onChange={v => setD('cantidad_puertos_ftp', v)} placeholder="Ej: 0" />
+          </div>
+          <div>
+            <FLabel>Puertos FO (Fibra)</FLabel>
+            <FInput type="number" value={detalle.cantidad_puertos_fo} onChange={v => setD('cantidad_puertos_fo', v)} placeholder="Ej: 2" />
+          </div>
+          <div>
+            <FLabel>Puertos WAN</FLabel>
+            <FInput type="number" value={detalle.cantidad_puertos_wan} onChange={v => setD('cantidad_puertos_wan', v)} placeholder="Ej: 1" />
+          </div>
+
+          <SubSeccion title="Hardware" color="#be185d" />
+          <div>
+            <FLabel>Chasis / Slots</FLabel>
+            <FInput type="number" value={detalle.chasis_slots} onChange={v => setD('chasis_slots', v)} placeholder="Ej: 1" />
+          </div>
+          <div>
+            <FLabel>Fuente de poder</FLabel>
+            <FInput value={detalle.fuente_poder} onChange={v => setD('fuente_poder', v)} placeholder="Ej: 60W, Redundante" />
+          </div>
+          <div>
+            <FLabel>Alimentación AC</FLabel>
+            <FInput value={detalle.alimentacion_ac} onChange={v => setD('alimentacion_ac', v)} placeholder="Ej: 220V" />
+          </div>
+
+          <div className="col-span-full">
+            <div className="grid grid-cols-2 gap-2">
+              <FToggle label="Administrable por software" value={detalle.admin_software}  onChange={v => setD('admin_software', v)} />
+              <FToggle label="Soporta VLAN"              value={detalle.soporta_vlan}    onChange={v => setD('soporta_vlan', v)} />
+              <FToggle label="Migración ATM"             value={detalle.migracion_atm}   onChange={v => setD('migracion_atm', v)} />
+              <FToggle label="Manual incluido"           value={detalle.manual_incluido} onChange={v => setD('manual_incluido', v)} />
+            </div>
+          </div>
         </div>
       )}
-    </Seccion>
+    </div>
   );
 }
 
+// ── Formulario vacío inicial ──────────────────────────────────────────────────
 const FORM_VACIO = {
   tipo_bien_id: '', categoria_bien_id: '', marca_id: '', modelo: '',
   numero_serie: '', codigo_patrimonial: '', regimen_tenencia_id: '',
@@ -202,34 +485,37 @@ const FORM_VACIO = {
 export default function ModalBienForm({ open, onClose, item = null, onGuardado }) {
   const toast      = useToast();
   const modoEditar = !!item;
-  const { crear, actualizar }          = useBienes();
-  const { ubicaciones }   = useLocaciones();
-  const { fetchCatalogos, ...catalogos } = useCatalogos();
-  
-  const empresaId    = useAuthStore(s => s.empresaId);
-  const empresaNombre = useAuthStore(s => s.empresaNombre);
-  const sedes_auth   = useAuthStore(s => s.sedes);
-  const modulo_id_auth = useAuthStore(s => s.modulo_id);
+
+  const { crear, actualizar }              = useBienes();
+  const { ubicaciones }                    = useLocaciones();
+  const { fetchCatalogos, ...catalogos }   = useCatalogos();
+
+  const empresaId          = useAuthStore(s => s.empresaId);
+  const empresaNombre      = useAuthStore(s => s.empresaNombre);
+  const sedes_auth         = useAuthStore(s => s.sedes);
+  const modulo_id_auth     = useAuthStore(s => s.modulo_id);
   const modulo_nombre_auth = useAuthStore(s => s.modulo_nombre);
-  const sedeDefault  = sedes_auth?.[0];
-  const [form,     setForm]     = useState({ ...FORM_VACIO });
-  const [detalle,  setDetalle]  = useState({});
-  const [errors,   setErrors]   = useState({});
-  const [confirm,  setConfirm]  = useState(false);
+  const sedeDefault        = sedes_auth?.[0];
+
+  const [form,      setForm]      = useState({ ...FORM_VACIO });
+  const [detalle,   setDetalle]   = useState({});
+  const [errors,    setErrors]    = useState({});
+  const [confirm,   setConfirm]   = useState(false);
   const [guardando, setGuardando] = useState(false);
 
+  // Cargar catálogos — incluye tiposTarjetaVideo que faltaba antes
   useEffect(() => {
     if (!open) return;
     fetchCatalogos([
       'categoriasBien', 'tiposBien', 'marcas', 'regimenTenencia',
       'estadosBien', 'estadosFuncionamiento',
-      'tiposComputadora', 'tiposDisco', 'arquitecturasBits',
+      'tiposComputadora', 'tiposDisco', 'arquitecturasBits', 'tiposTarjetaVideo',
       'tiposMonitor', 'tiposEscaner', 'tiposImpresion',
       'interfacesConexion', 'tamanosCarro',
     ]);
   }, [open, fetchCatalogos]);
-  
 
+  // Inicializar al abrir
   useEffect(() => {
     if (!open) return;
     if (modoEditar && item) {
@@ -248,18 +534,22 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
         fecha_compra:             item.fecha_compra ?? '',
         numero_orden_compra:      item.numero_orden_compra ?? '',
         fecha_vencimiento_garantia: item.fecha_vencimiento_garantia ?? '',
-        modulo_id:                String(item.modulo_id ?? ''),
         ubicacion_id:             String(item.ubicacion_id ?? ''),
         piso:                     item.piso ?? '',
       });
-      const d = item.detalle_cpu ?? item.detalle_monitor ?? item.detalle_impresora ?? item.detalle_scanner ?? item.detalle_switch ?? {};
+      const d = item.detalle_cpu
+        ?? item.detalle_monitor
+        ?? item.detalle_impresora
+        ?? item.detalle_scanner
+        ?? item.detalle_switch
+        ?? {};
       setDetalle(d);
     } else {
       setForm({ ...FORM_VACIO });
       setDetalle({});
     }
     setErrors({});
-  }, [modoEditar,open]);
+  }, [modoEditar, open]);
 
   const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -269,30 +559,27 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
   const regimenes      = catalogos.regimenTenencia ?? [];
   const estadosBien    = catalogos.estadosBien ?? [];
   const estadosFuncion = catalogos.estadosFuncionamiento ?? [];
-  {console.log(categorias)}
 
-  const categoriaSel = categorias.find(c => String(c.id) === String(form.categoria_bien_id));
-  const esInformatico = categoriaSel?.nombre?.toUpperCase().includes('INFORM');
+  // Normalización sin tildes para comparación robusta
+  const norm = (str = '') => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 
-  const tipoSel    = tiposBien.find(t => String(t.id) === String(form.tipo_bien_id));
+  const categoriaSel  = categorias.find(c => String(c.id) === String(form.categoria_bien_id));
+  const esInformatico = norm(categoriaSel?.nombre ?? '').includes('INFORMATICO');
+
+  const tipoSel     = tiposBien.find(t => String(t.id) === String(form.tipo_bien_id));
   const tipoTecnico = esInformatico ? detectarTipoTecnico(tipoSel?.nombre ?? '') : null;
-  const tiposFiltrados = useMemo(() => {
-    if (!form.categoria_bien_id) return [];
-    const apiIncluyeCategoria = tiposBien.some(
-      t => t.categoria_bien_id != null || t.categoria_id != null
-    );
-    if (apiIncluyeCategoria) {
-      return tiposBien.filter(t =>
-        String(t.categoria_bien_id ?? t.categoria_id ?? '') === String(form.categoria_bien_id)
-      );
-    }
-    return tiposBien.filter(t => t.is_active !== false);
-  }, [tiposBien, form.categoria_bien_id]);
+
+  // CatTipoBien no tiene FK a CatCategoriaBien — se muestran todos al elegir cualquier categoría
+  const tiposFiltrados = useMemo(
+    () => form.categoria_bien_id ? tiposBien.filter(t => t.is_active !== false) : [],
+    [tiposBien, form.categoria_bien_id]
+  );
 
   const ubicacionesActivos = (ubicaciones ?? []).filter(m => m.is_active !== false);
 
-  const idBueno     = estadosBien.find(e => e.nombre?.toUpperCase().includes('BUENO') || e.nombre?.toUpperCase().includes('ACTIVO'))?.id;
-  const idOperativo = estadosFuncion.find(e => e.nombre?.toUpperCase().includes('OPERATIVO'))?.id;
+  // Auto-asignar estados al crear nuevo bien
+  const idBueno     = estadosBien.find(e => norm(e.nombre).includes('BUENO') || norm(e.nombre).includes('ACTIVO'))?.id;
+  const idOperativo = estadosFuncion.find(e => norm(e.nombre).includes('OPERATIVO'))?.id;
 
   useEffect(() => {
     if (!modoEditar && idBueno)     setF('estado_bien_id',           String(idBueno));
@@ -315,6 +602,7 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
       const detallePayload = tipoTecnico
         ? Object.fromEntries(Object.entries(detalle).filter(([, v]) => v !== '' && v != null))
         : {};
+
       const payload = {
         empresa_id:               Number(empresaId),
         sede_id:                  sedeDefault?.id ? Number(sedeDefault.id) : undefined,
@@ -338,13 +626,13 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
         fecha_instalacion:        null,
         detalle:                  detallePayload,
       };
-      let result;
+
       if (modoEditar) {
-        result=await actualizar(item.id, payload);
-        toast.success(result.response?.data?.mensaje  ||'Bien actualizado correctamente.');
+        await actualizar(item.id, payload);
+        toast.success('Bien actualizado correctamente.');
       } else {
-        result=await crear(payload);
-        toast.success(result.response?.data?.mensaje  ||'Bien registrado correctamente.');
+        await crear(payload);
+        toast.success('Bien registrado correctamente.');
       }
       onGuardado?.();
       onClose();
@@ -353,7 +641,10 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
         ?? Object.values(e?.response?.data ?? {})?.[0]?.[0]
         ?? 'Error al guardar.';
       toast.error(msg);
-    } finally { setGuardando(false); setConfirm(false); }
+    } finally {
+      setGuardando(false);
+      setConfirm(false);
+    }
   };
 
   const handleValidar = () => {
@@ -368,43 +659,42 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
         <ModalHeader
           icon="inventory_2"
           title={modoEditar ? `Editar bien #${item?.id}` : 'Registrar nuevo bien patrimonial'}
-          subtitle={modoEditar ? `${item?.tipo_bien_nombre ?? ''} — ${item?.modelo ?? ''}` : 'Completa los datos del activo patrimonial'}
+          subtitle={modoEditar
+            ? `${item?.tipo_bien_nombre ?? ''} — ${item?.modelo ?? ''}`
+            : 'Completa los datos del activo patrimonial'}
           onClose={onClose}
         />
+
         <ModalBody>
           <div className="space-y-6">
-            {/* Sección: Identificación del bien */}
+
+            {/* ── 1. Identificación ──────────────────────────────────────── */}
             <Seccion title="Identificación del bien" icon="label">
               <div className="grid grid-cols-3 gap-3">
-                {/* Categoría */}
                 <div>
                   <FLabel required>Categoría</FLabel>
                   <FSelect
-                    value={form.categoria_bien_id} onChange={v => {
-                      setF('categoria_bien_id', v);
-                      setF('tipo_bien_id', '');
-                      setDetalle({});
-                    }}
+                    value={form.categoria_bien_id}
+                    onChange={v => { setF('categoria_bien_id', v); setF('tipo_bien_id', ''); setDetalle({}); }}
                   >
                     <option value="">Seleccionar categoría...</option>
-                    {categorias?.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                   </FSelect>
                   <FError msg={errors.categoria_bien_id} />
                 </div>
 
-                {/* Tipo de bien — se habilita SOLO cuando hay categoría */}
                 <div>
                   <FLabel required>Tipo de bien</FLabel>
                   <FSelect
                     value={form.tipo_bien_id}
                     onChange={v => { setF('tipo_bien_id', v); setDetalle({}); }}
-                    disabled={!form.categoria_bien_id}
+                    disabled={!form.categoria_bien_id || !esInformatico}
                   >
                     <option value="">
                       {!form.categoria_bien_id
                         ? '← Selecciona primero la categoría'
                         : tiposFiltrados.length === 0
-                          ? 'Sin tipos para esta categoría'
+                          ? 'Sin tipos disponibles'
                           : 'Seleccionar tipo...'}
                     </option>
                     {tiposFiltrados.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
@@ -412,7 +702,6 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
                   <FError msg={errors.tipo_bien_id} />
                 </div>
 
-                {/* Marca */}
                 <div>
                   <FLabel required>Marca</FLabel>
                   <FSelect value={form.marca_id} onChange={v => setF('marca_id', v)}>
@@ -438,22 +727,24 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
               </div>
             </Seccion>
 
-            {/* Aviso para no-informáticos */}
+            {/* Aviso para categorías no informáticas */}
             {form.categoria_bien_id && !esInformatico && (
-              <div className="flex items-start gap-3 p-4 rounded-xl"
-                style={{ background: 'rgb(180 83 9 / 0.06)', border: '1px solid rgb(180 83 9 / 0.2)' }}>
+              <div
+                className="flex items-start gap-3 p-4 rounded-xl"
+                style={{ background: 'rgb(180 83 9 / 0.06)', border: '1px solid rgb(180 83 9 / 0.2)' }}
+              >
                 <Icon name="construction" className="text-[20px] shrink-0 mt-0.5" style={{ color: '#b45309' }} />
                 <div>
                   <p className="text-sm font-bold" style={{ color: '#b45309' }}>Módulo en desarrollo</p>
                   <p className="text-xs mt-1" style={{ color: 'var(--color-text-body)' }}>
-                    El registro de bienes muebles, inmuebles y otras categorías estará disponible próximamente.
-                    Puedes registrar el bien con los datos básicos sin detalle técnico.
+                    El registro detallado de bienes muebles, inmuebles y otras categorías estará disponible
+                    próximamente. Puedes registrar el bien con los datos básicos por ahora.
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Sección: Adquisición */}
+            {/* ── 2. Adquisición ─────────────────────────────────────────── */}
             <Seccion title="Adquisición" icon="receipt_long">
               <div className="grid grid-cols-4 gap-3">
                 <div>
@@ -487,142 +778,57 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
               </div>
             </Seccion>
 
-            {/* Sección: Estado del bien */}
-            <Seccion title="Estado del bien" icon="verified">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 rounded-xl"
-                  style={{ background: 'rgb(22 163 74 / 0.06)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
-                  <Icon name="check_circle" className="text-[22px]" style={{ color: '#16a34a' }} />
-                  <div className="flex-1">
-                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado del bien</p>
-                    {modoEditar ? (
-                      <FSelect value={form.estado_bien_id} onChange={v => setF('estado_bien_id', v)}>
-                        <option value="">Seleccionar...</option>
-                        {estadosBien.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-                      </FSelect>
-                    ) : (
-                      <p className="text-sm font-bold" style={{ color: '#16a34a' }}>
-                        {estadosBien.find(e => String(e.id) === String(form.estado_bien_id))?.nombre ?? 'Bueno / Activo (automático)'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-xl"
-                  style={{ background: 'rgb(37 99 235 / 0.06)', border: '1px solid rgb(37 99 235 / 0.2)' }}>
-                  <Icon name="power_settings_new" className="text-[22px]" style={{ color: '#1d4ed8' }} />
-                  <div className="flex-1">
-                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado funcionamiento</p>
-                    {modoEditar ? (
-                      <FSelect value={form.estado_funcionamiento_id} onChange={v => setF('estado_funcionamiento_id', v)}>
-                        <option value="">Seleccionar...</option>
-                        {estadosFuncion.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-                      </FSelect>
-                    ) : (
-                      <p className="text-sm font-bold" style={{ color: '#1d4ed8' }}>
-                        {estadosFuncion.find(e => String(e.id) === String(form.estado_funcionamiento_id))?.nombre ?? 'Operativo (automático)'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {!modoEditar && (
-                <p className="text-[10px]" style={{ color: 'var(--color-text-faint)' }}>
-                  * El estado se asigna automáticamente como <strong>Activo / Operativo</strong>. Cambia al registrar mantenimientos o bajas.
-                </p>
-              )}
-            </Seccion>
+            
 
-            {/* Sección: Ubicación — Empresa y Sede fijas del login, solo módulo/piso editables */}
+            {/* ── 4. Ubicación ───────────────────────────────────────────── */}
             <Seccion title="Ubicación física" icon="location_on">
-              {/* Info de la empresa y sede del usuario logueado */}
+             
 
-              <div className="grid grid-cols-4 gap-1 mb-1">
-                <div className="flex items-center gap-3 p-3 rounded-xl"
-                  style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
-                  <Icon name="business" className="text-[18px]" style={{ color: 'var(--color-primary)' }} />
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Empresa / Corte</p>
-                    <p className="text-xs font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
-                      {empresaNombre ?? `ID ${empresaId}`}
-                    </p>
-                  </div>
-                  <Icon name="lock" className="text-[14px] shrink-0" style={{ color: 'var(--color-text-faint)' }} />
-                </div>
-
-                <div className="flex items-center gap-1 p-3 rounded-xl"
-                  style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
-                  <Icon name="domain" className="text-[18px]" style={{ color: 'var(--color-primary)' }} />
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Sede asignada</p>
-                    <p className="text-xs font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
-                      {sedeDefault?.nombre ?? 'Sin sede asignada'}
-                    </p>
-                  </div>
-                  <Icon name="lock" className="text-[14px] shrink-0" style={{ color: 'var(--color-text-faint)' }} />
-                </div>
-              
-
-              <div className="flex items-center gap-1 p-3 rounded-xl"
-                  style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
-                  <Icon name="domain" className="text-[18px]" style={{ color: 'var(--color-primary)' }} />
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Modulo asignado</p>
-                    <p className="text-xs font-bold truncate" style={{ color: 'var(--color-text-primary)' }}>
-                      {modulo_nombre_auth?? 'Sin módulo asignad'}
-                    </p>
-                  </div>
-                  <Icon name="lock" className="text-[14px] shrink-0" style={{ color: 'var(--color-text-faint)' }} />
-                </div>             
-
-              </div>
-              <div className="flex items-start gap-2 p-2.5 rounded-xl mb-3"
-                style={{ background: 'rgb(127 29 29 / 0.04)', border: '1px solid rgb(127 29 29 / 0.15)' }}>
-                <Icon name="info" className="text-[14px] shrink-0 mt-0.5" style={{ color: 'var(--color-primary)' }} />
-                <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
-                  La empresa, sede y módulo se asignan automáticamente según tu usuario de sesión. Solo puedes especificar el piso.
-                </p>
-              </div>
-              {/* Ubicacion — configurables */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <FLabel>Ubicación Funcional</FLabel>
+                  <FLabel>Ubicación / Área</FLabel>
                   <FSelect value={form.ubicacion_id} onChange={v => setF('ubicacion_id', v)}>
-                    <option value="">Seleccionar ubicación...</option>
-                    {ubicacionesActivos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)} 
+                    <option value="">Sin ubicación específica</option>
+                    {ubicacionesActivos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                   </FSelect>
                 </div>
-               <div>
+                <div>
                   <FLabel>Piso</FLabel>
                   <FInput type="number" value={form.piso} onChange={v => setF('piso', v)} placeholder="Ej: 2" />
                 </div>
               </div>
-            
             </Seccion>
 
-            {/* Detalle técnico si aplica */}
-            <SeccionDetalle
-              tipoTecnico={tipoTecnico}
-              detalle={detalle}
-              setDetalle={setDetalle}
-              catalogos={{
-                tiposComputadora:  catalogos.tiposComputadora  ?? [],
-                tiposDisco:        catalogos.tiposDisco        ?? [],
-                arquitecturasBits: catalogos.arquitecturasBits ?? [],
-                tiposMonitor:      catalogos.tiposMonitor      ?? [],
-                tiposEscaner:      catalogos.tiposEscaner      ?? [],
-                tiposImpresion:    catalogos.tiposImpresion    ?? [],
-                interfacesConexion: catalogos.interfacesConexion ?? [],
-                tamanosCarro:      catalogos.tamanosCarro      ?? [],
-              }}
-            />
+            {/* ── 5. Detalle técnico (condicional por tipo) ──────────────── */}
+            {tipoTecnico && (
+              <SeccionDetalle
+                tipoTecnico={tipoTecnico}
+                detalle={detalle}
+                setDetalle={setDetalle}
+                catalogos={{
+                  tiposComputadora:   catalogos.tiposComputadora   ?? [],
+                  tiposDisco:         catalogos.tiposDisco         ?? [],
+                  arquitecturasBits:  catalogos.arquitecturasBits  ?? [],
+                  tiposTarjetaVideo:  catalogos.tiposTarjetaVideo  ?? [],
+                  tiposMonitor:       catalogos.tiposMonitor       ?? [],
+                  tiposEscaner:       catalogos.tiposEscaner       ?? [],
+                  tiposImpresion:     catalogos.tiposImpresion     ?? [],
+                  interfacesConexion: catalogos.interfacesConexion ?? [],
+                  tamanosCarro:       catalogos.tamanosCarro       ?? [],
+                }}
+              />
+            )}
+
           </div>
         </ModalBody>
 
         <ModalFooter align="right">
           <button onClick={onClose} className="btn-secondary">Cancelar</button>
-          <button onClick={handleValidar} disabled={guardando}
-            className="btn-primary flex items-center gap-2">
-            {guardando ? <span className="btn-loading-spin" /> : <Icon name={modoEditar ? 'save' : 'add_circle'} className="text-[16px]" />}
+          <button onClick={handleValidar} disabled={guardando} className="btn-primary flex items-center gap-2">
+            {guardando
+              ? <span className="btn-loading-spin" />
+              : <Icon name={modoEditar ? 'save' : 'add_circle'} className="text-[16px]" />
+            }
             {modoEditar ? 'Guardar cambios' : 'Registrar bien'}
           </button>
         </ModalFooter>
@@ -631,7 +837,7 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
       <ConfirmDialog
         open={confirm}
         title={modoEditar ? 'Confirmar edición' : 'Confirmar registro'}
-        message={`¿${modoEditar ? 'Guardar cambios en' : 'Registrar'} el bien "${tipoSel?.nombre ?? form.tipo_bien_id} — ${form.modelo}"?`}
+        message={`¿${modoEditar ? 'Guardar cambios en' : 'Registrar'} el bien "${tipoSel?.nombre ?? ''} — ${form.modelo}"?`}
         confirmLabel={modoEditar ? 'Sí, guardar' : 'Sí, registrar'}
         variant="primary"
         loading={guardando}

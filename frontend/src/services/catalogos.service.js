@@ -1,7 +1,7 @@
 import axiosBienes from '../api/axiosBienes';
 
-
 const buildCatalogoService = (slug) => ({
+  _slug: slug,
   listar: async (params = {}) => {
     const response = await axiosBienes.get(`/catalogos/${slug}/`, { params });
     return response.data;
@@ -29,15 +29,20 @@ const buildCatalogoService = (slug) => ({
 });
 
 const catalogosService = {
+  // ── Generales ──────────────────────────────────────────────────────────
   categoriasBien:        buildCatalogoService('categoria-bien'),
   tiposBien:             buildCatalogoService('tipo-bien'),
   marcas:                buildCatalogoService('marca'),
   regimenTenencia:       buildCatalogoService('regimen-tenencia'),
+  // ── Estados ────────────────────────────────────────────────────────────
   estadosBien:           buildCatalogoService('estado-bien'),
   estadosFuncionamiento: buildCatalogoService('estado-funcionamiento'),
+  // ── Motivos ────────────────────────────────────────────────────────────
   motivosBaja:           buildCatalogoService('motivo-baja'),
+  motivosMantenimiento:  buildCatalogoService('motivo-mantenimiento'),
   motivosTransferencia:  buildCatalogoService('motivo-transferencia'),
   motivosCancelacion:    buildCatalogoService('motivo-cancelacion'),
+  // ── Hardware / TI ──────────────────────────────────────────────────────
   tiposComputadora:      buildCatalogoService('tipo-computadora'),
   tiposDisco:            buildCatalogoService('tipo-disco'),
   arquitecturasBits:     buildCatalogoService('arq-bits'),
@@ -46,7 +51,7 @@ const catalogosService = {
   interfacesConexion:    buildCatalogoService('interfaz-conexion'),
   tiposImpresion:        buildCatalogoService('tipo-impresion'),
   tamanosCarro:          buildCatalogoService('tamano-carro'),
-  tiposTarjetaVideo:     buildCatalogoService('tipo_tarjeta_video'),
+  tiposTarjetaVideo:     buildCatalogoService('tipo_tarjeta_video'), 
 };
 
 export default catalogosService;

@@ -91,7 +91,31 @@ export default function Sidebar({ collapsed }) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 custom-scrollbar overflow-x-hidden">
-        {/* Dashboard & Alertas omitidos por brevedad, mantienen tu lógica original */}
+        {/* DASHBOARD DIRECT LINK */}
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) => `
+            group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+            ${isActive ? 'bg-primary/10 text-primary' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'}
+          `}
+        >
+          <Icon name="grid_view" className="text-xl" />
+          {!collapsed && <span className="text-[13px] font-bold">Resumen General</span>}
+        </NavLink>
+
+        <NavLink
+          to="/alertas"
+          className={({ isActive }) => `
+            group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+            ${isActive ? 'bg-red-500/10 text-red-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'}
+          `}
+        >
+          <div className="relative">
+            <Icon name="notifications" className="text-xl" />
+            <span className="absolute -top-1 -right-1 size-2 bg-red-500 rounded-full border-2 border-slate-900" />
+          </div>
+          {!collapsed && <span className="text-[13px] font-bold">Notificaciones</span>}
+        </NavLink>
         
         <div className="pt-6 pb-2 px-3">
           {!collapsed ? <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">Módulos</p> : <div className="h-px bg-white/5 w-full" />}

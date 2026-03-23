@@ -8,7 +8,7 @@ from django.conf import settings
 from shared.permissions import HasJWTPermission
 from rest_framework.exceptions import ValidationError
 from .services import BienService
-from .serializers import BienListSerializer, BienDetailSerializer, BienWriteSerializer
+from .serializers import BienListSerializer,  BienWriteSerializer
 from catalogos.models import CatTipoBien
 
 class BienViewSet(ViewSet):
@@ -76,11 +76,11 @@ class BienViewSet(ViewSet):
             "Retorna el bien con todos sus atributos y el detalle técnico "
             "según su tipo (CPU, Monitor, Impresora, Scanner o Switch)."
         ),
-        responses={200: BienDetailSerializer},
+        responses={200: BienListSerializer},
     )
     def retrieve(self, request, pk=None):
         result = BienService.obtener(pk, token=self._get_token(request))
-        return Response(BienDetailSerializer(result['data']).data, status=status.HTTP_200_OK)
+        return Response(BienListSerializer(result['data']).data, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Bienes'],
         summary="Registrar nuevo bien patrimonial",
@@ -91,21 +91,18 @@ class BienViewSet(ViewSet):
             "incluir el objeto `detalle` con los campos técnicos correspondientes."
         ),
         request=BienWriteSerializer,
-        responses={201: BienDetailSerializer, 400: OpenApiTypes.OBJECT},
+        responses={201: BienListSerializer, 400: OpenApiTypes.OBJECT},
     )
     def create(self, request):
         ser = BienWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        validated = ser.validated_data
         token = self._get_token(request)
-        try:
-            tipo_bien = CatTipoBien.objects.get(pk=validated['tipo_bien_id'])
-            validated['tipo_bien_nombre'] = tipo_bien.nombre
-        except CatTipoBien.DoesNotExist:
-            return Response({'success': False, 'error': 'tipo_bien_id inválido.'}, status=status.HTTP_400_BAD_REQUEST)
- 
-        result = BienService.crear(validated, usuario_registra_id=request.user.id, token=token)
-        return Response({'success': True, 'message': result['message']}, status=status.HTTP_201_CREATED)
+        result = BienService.crear(
+            data=ser.validated_data, 
+            usuario_registra_id=request.user.id, 
+            token=token
+        )
+        return Response(result, status=status.HTTP_201_CREATED)
     @extend_schema(
         tags=['Bienes'],
         summary="Actualizar datos de un bien",
@@ -119,24 +116,14 @@ class BienViewSet(ViewSet):
                              description="ID del bien a actualizar"),
         ],
         request=BienWriteSerializer,
-        responses={200: BienDetailSerializer, 400: OpenApiTypes.OBJECT},
+        responses={200: BienListSerializer, 400: OpenApiTypes.OBJECT},
     )
     def update(self, request, pk=None):
         ser = BienWriteSerializer(data=request.data, partial=True)
-        ser.is_valid(raise_exception=True)
-        validated = ser.validated_data
-        token = self._get_token(request) 
-        if validated.get('tipo_bien_id'):
-            try:
-                tipo_bien = CatTipoBien.objects.get(pk=validated['tipo_bien_id'])
-                validated['tipo_bien_nombre'] = tipo_bien.nombre
-            except CatTipoBien.DoesNotExist:
-                return Response({"success": False, "error": "tipo_bien_id inválido."}, status=status.HTTP_400_BAD_REQUEST)
-        result = BienService.actualizar(pk, validated, token=token)
-        return Response(
-            {"success": True, "message": result['message'], "data": BienDetailSerializer(result['data']).data},
-            status=status.HTTP_200_OK,
-        )
+        ser.is_valid(raise_exception=True)        
+        token = self._get_token(request)
+        result = BienService.actualizar(pk, ser.validated_data, token=token)
+        return Response(result, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Bienes'],
         summary="Listar bienes asignados a un usuario (kit)",

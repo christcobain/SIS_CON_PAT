@@ -64,41 +64,94 @@ function TarjetaBien({ b, seleccionado, onToggle }) {
 
   return (
     <label
-      className={`flex items-start gap-3 p-3 rounded-xl transition-all ${puedeSeleccionar ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}`}
+      className={`flex items-start gap-4 p-2.5 rounded-xl transition-all ${
+        puedeSeleccionar ? 'cursor-pointer hover:bg-surface-alt' : 'cursor-not-allowed opacity-60'
+      }`}
       style={{
-        background: seleccionado ? 'rgb(127 29 29 / 0.06)' : 'var(--color-surface-alt)',
-        border: `1px solid ${seleccionado ? 'rgb(127 29 29 / 0.3)' : 'var(--color-border)'}`,
-      }}>
-      <div className="relative size-5 mt-0.5 shrink-0">
-        <input type="checkbox" checked={seleccionado} onChange={() => puedeSeleccionar && onToggle(b.id)}
+        background: seleccionado ? 'rgb(var(--color-primary-rgb) / 0.05)' : 'var(--color-surface)',
+        border: `1px solid ${seleccionado ? 'var(--color-primary)' : 'var(--color-border)'}`,
+      }}
+    >
+      {/* Selector Izquierdo */}
+      <div className="relative size-5 shrink-0 mt-1">
+        <input 
+          type="checkbox" 
+          checked={seleccionado} 
+          onChange={() => puedeSeleccionar && onToggle(b.id)}
           disabled={!puedeSeleccionar}
-          className="appearance-none size-5 rounded transition-all"
+          className="appearance-none size-5 rounded-lg border-2 transition-all"
           style={{
-            border: `2px solid ${seleccionado ? 'var(--color-primary)' : 'var(--color-border)'}`,
+            borderColor: seleccionado ? 'var(--color-primary)' : 'var(--color-border-dark)',
             background: seleccionado ? 'var(--color-primary)' : 'transparent',
-          }} />
-        {seleccionado && <Icon name="check" className="absolute inset-0 flex items-center justify-center text-[11px] pointer-events-none" style={{ color: '#fff' }} />}
+          }} 
+        />
+        {seleccionado && <Icon name="check" className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-white" />}
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2 flex-wrap">
-          <div>
-            <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{b.tipo_bien_nombre} — {b.marca_nombre}</p>
-            <p className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>{b.codigo_patrimonial ?? 'S/C'} · {b.modelo}</p>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md" style={{ background: estadoB.bg, color: estadoB.color }}>
-              {b.estado_bien_nombre ?? '—'}
+
+      {/* Cuerpo de Información */}
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        
+        {/* FILA 1: TIPOBIEN MARCA MODELO => ESTADOS */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[11px] font-black uppercase truncate" style={{ color: 'var(--color-text-primary)' }}>
+              {b.tipo_bien_nombre}
             </span>
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md" style={{ background: funcB.bg, color: funcB.color }}>
-              {b.estado_funcionamiento_nombre ?? '—'}
+            <span className="text-[10px] font-bold opacity-60 truncate">
+              {b.marca_nombre} — {b.modelo}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[9px] font-black px-2 py-0.5 rounded border" style={{ color: funcB.color, borderColor: funcB.color + '33' }}>
+              {b.estado_funcionamiento_nombre}
+            </span>
+            <span className="text-[9px] font-black px-2 py-0.5 rounded border" style={{ color: estadoB.color, borderColor: estadoB.color + '33' }}>
+              {b.estado_bien_nombre}
             </span>
           </div>
         </div>
+
+        {/* FILA 2: CODPAT SEDE MODULO UBICACION */}
+        <div className="flex items-center gap-x-3 text-[10px] border-t border-border/40 pt-1">
+          <div className="flex items-center gap-1 shrink-0">
+            <Icon name="qr_code" className="text-[12px] text-primary" />
+            <span className="font-mono font-bold">{b.codigo_patrimonial || 'S/C'}</span>
+          </div>
+          <div className="flex items-center gap-1 truncate opacity-80">
+            <Icon name="location_on" className="text-[12px]" />
+            <span className="font-bold">{b.sede_nombre}</span>
+            <span className="opacity-50">/</span>
+            <span>{b.modulo_nombre || 'S.M.'}</span>
+            <span className="opacity-50">/</span>
+            <span className="font-medium">{b.ubicacion_nombre || 'U.'}</span>
+          </div>
+        </div>
+
+        {/* FILA 3: USUARIO_ASIGNADO_NOMBRE, USUARIO_ASIGNADO_CARGO */}
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <Icon name="person" className="text-[12px] text-primary" />
+          <span className="font-black uppercase" style={{ color: b.usuario_asignado_nombre ? 'var(--color-text-primary)' : 'var(--color-text-faint)' }}>
+            {b.usuario_asignado_nombre || 'Sin asignar'}
+          </span>
+          {b.usuario_asignado_cargo && (
+            <>
+              <span className="opacity-30">|</span>
+              <span className="text-[9px] font-bold opacity-60 italic truncate">
+                {b.usuario_asignado_cargo}
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* FILA 4: PUEDESELECCIONAR (ALERTA) */}
         {!puedeSeleccionar && (
-          <p className="text-[10px] mt-1.5 font-semibold" style={{ color: estadoB.color }}>
-            ⚠ No disponible — estado: {b.estado_bien_nombre}
-          </p>
+          <div className="flex items-center gap-1 mt-0.5 text-[8px] font-black text-red-500 uppercase tracking-tighter">
+            <Icon name="block" className="text-[10px]" />
+            Bloqueado por estado del bien: {b.estado_bien_nombre}
+          </div>
         )}
+
       </div>
     </label>
   );
@@ -157,12 +210,9 @@ export default function ModalTransferencia({
   const { sedes, modulos, ubicaciones }                 = useLocaciones();
   const { usuarios: usuariosMs }                        = useUsuarios({ is_active: true });
   const { fetchCatalogos, motivosTransferencia = [] }   = useCatalogos();
-
-  // ── Usuarios filtrados por sede destino seleccionada ─────────────────────────
   const [usuariosPorSede, setUsuariosPorSede] = useState([]);
   const [loadingUsuariosSede, setLoadingUsuariosSede] = useState(false);
-
-  const bienesConNombres = useBienesEnriquecidos(todosBienes, { sedes, modulos, usuarios: usuariosMs });
+  const bienesConNombres = useBienesEnriquecidos(todosBienes, { sedes, modulos,ubicaciones, usuarios: usuariosMs });
 
   const [form,      setForm]      = useState({ ...FORM_BASE });
   const [buscador,  setBuscador]  = useState('');
@@ -194,7 +244,6 @@ export default function ModalTransferencia({
   useEffect(() => {
     const sedeId = form.sede_destino_id;
     if (!sedeId) {
-      // Sin sede seleccionada: para asignación interna usar usuarios de la propia sede
       if (!isTraslado) {
         const misUsuarios = usuariosMs.filter(u =>
           (u.sedes ?? []).some(s => String(s.id) === String(sede_auth_id))
@@ -205,16 +254,12 @@ export default function ModalTransferencia({
       }
       return;
     }
-
-    // Para traslado: filtrar usuarios que pertenecen a la sede destino
     const usuariosFiltrados = usuariosMs.filter(u =>
       (u.sedes ?? []).some(s => String(s.id) === String(sedeId))
     );
-
     if (usuariosFiltrados.length > 0) {
       setUsuariosPorSede(usuariosFiltrados);
     } else {
-      // Si no hay en el estado local, llamar al API directamente
       setLoadingUsuariosSede(true);
       usuariosService.listar({ is_active: true })
         .then(data => {
@@ -231,12 +276,10 @@ export default function ModalTransferencia({
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  // Bienes filtrados por buscador
   const bienesFiltradosBuscador = useMemo(() => {
     const base = isTraslado
       ? bienesConNombres
       : bienesConNombres.filter(b => String(b.sede_id) === String(sede_auth_id));
-
     if (!buscador.trim()) return base;
     const q = buscador.trim().toLowerCase();
     return base.filter(b =>
@@ -248,7 +291,6 @@ export default function ModalTransferencia({
     );
   }, [bienesConNombres, buscador, isTraslado, sede_auth_id]);
 
-  // Bienes actualmente seleccionados (objetos completos para el resumen)
   const bienesSeleccionados = useMemo(() =>
     bienesConNombres.filter(b => form.bien_ids.includes(b.id)),
     [bienesConNombres, form.bien_ids]
@@ -290,7 +332,7 @@ export default function ModalTransferencia({
       toast.success(result?.message ?? 'Operación exitosa.');
       onGuardado();
     } catch (err) {
-      toast.error(err?.response?.data?.error ?? err?.response?.data?.detail ?? 'Error al registrar.');
+      toast.error(err?.response?.data ?? err?.response?.data?.detail ?? 'Error al registrar.');
     } finally { setGuardando(false); }
   };
 
@@ -384,7 +426,7 @@ export default function ModalTransferencia({
                       set('sede_destino_id', v);
                       set('modulo_destino_id', '');
                       set('ubicacion_destino_id', '');
-                      set('usuario_destino_id', ''); // resetear usuario al cambiar sede
+                      set('usuario_destino_id', ''); 
                     }}>
                     <option value="">Seleccionar sede...</option>
                     {(sedes ?? []).filter(s => s.is_active !== false).map(s => (
@@ -476,7 +518,7 @@ export default function ModalTransferencia({
                   style={S.input} onFocus={onF} onBlur={offF} />
               </div>
 
-              {/* Info del flujo */}
+              {/* Info del flujo */} 
               <div className="p-3 rounded-xl" style={{
                 background: isTraslado ? 'rgb(37 99 235 / 0.06)' : 'rgb(22 163 74 / 0.06)',
                 border: `1px solid ${isTraslado ? 'rgb(37 99 235 / 0.2)' : 'rgb(22 163 74 / 0.2)'}`,

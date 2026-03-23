@@ -77,7 +77,9 @@ class BienService:
     def _validar_unicidad_serie(numero_serie: str, exclude_pk: int = None):
         if not numero_serie or numero_serie.upper() in ('S/N', ''):
             return
-        qs = BienRepository.filter({'numero_serie': numero_serie, 'is_active': True})
+        qs = BienRepository.filter({'numero_serie': numero_serie,'is_active': None})
+        print('numero_serie=',numero_serie)
+        print(qs)
         if exclude_pk:
             qs = qs.exclude(pk=exclude_pk)
         if qs.exists():
@@ -134,17 +136,17 @@ class BienService:
     @staticmethod
     @transaction.atomic
     def crear(data: Dict[str, Any], usuario_registra_id: int, token: str = '') -> Dict[str, Any]:
-        tipo_nombre  = data.pop('tipo_bien_nombre', '')
         detalle_data = data.pop('detalle', {})
         BienService._validar_unicidad_serie(data.get('numero_serie'))
         BienService._validar_unicidad_codigo(data.get('codigo_patrimonial'))
-        BienService._validar_localizacion(data, token)
         data['usuario_registra_id'] = usuario_registra_id
         if not data.get('usuario_asignado_id'):
             data['usuario_asignado_id'] = usuario_registra_id
         bien = BienRepository.create(data)
-        BienService._crear_detalle(bien, tipo_nombre, detalle_data)
-        return {'success': True, 'message': 'Bien registrado exitosamente.', 'data': bien}
+        tipo_nombre = bien.tipo_bien.nombre if bien.tipo_bien else ""
+        if detalle_data:
+            BienService._crear_detalle(bien, tipo_nombre, detalle_data)
+        return {'success': True, 'message': 'Bien registrado exitosamente.'}
     @staticmethod
     @transaction.atomic
     def actualizar(pk: int, data: Dict[str, Any], token: str = '') -> Dict[str, Any]:
@@ -153,24 +155,12 @@ class BienService:
             raise NotFound(f'Bien con id={pk} no encontrado.')
         if not bien.is_active:
             raise ValidationError('No se puede modificar un bien dado de baja.')
-
-        tipo_nombre  = data.pop('tipo_bien_nombre', bien.tipo_bien.nombre if bien.tipo_bien else '')
         detalle_data = data.pop('detalle', {})
-
         BienService._validar_unicidad_serie(data.get('numero_serie'), exclude_pk=pk)
         BienService._validar_unicidad_codigo(data.get('codigo_patrimonial'), exclude_pk=pk)
-
-        if data.get('sede_id') or data.get('modulo_id') or data.get('ubicacion_id'):
-            BienService._validar_localizacion({
-                'empresa_id':   data.get('empresa_id',   bien.empresa_id),
-                'sede_id':      data.get('sede_id',      bien.sede_id),
-                'modulo_id':    data.get('modulo_id',    bien.modulo_id),
-                'ubicacion_id': data.get('ubicacion_id', bien.ubicacion_id),
-            }, token)
-
-        bien = BienRepository.update(bien, data)
-        BienService._actualizar_detalle(bien, tipo_nombre, detalle_data)
-
+        bien_actualizado = BienRepository.update(bien, data)
+        tipo_nombre = bien_actualizado.tipo_bien.nombre if bien_actualizado.tipo_bien else ""
+        if detalle_data:
+            BienService._actualizar_detalle(bien_actualizado, tipo_nombre, detalle_data)
         MsUsuariosClient.invalidar_cache()
-
-        return {'success': True, 'message': 'Bien actualizado exitosamente.', 'data': bien}
+        return {'success': True, 'message': 'Bien actualizado exitosamente.'}
