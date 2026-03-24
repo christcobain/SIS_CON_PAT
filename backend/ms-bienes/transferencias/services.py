@@ -2,6 +2,7 @@ import os
 from typing import Dict, Any, List
 from .pdf_generator import generar_pdf_transferencia
 from django.conf import settings
+from django.db.models import Q
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, NotFound, PermissionDenied
@@ -627,10 +628,7 @@ class TransferenciaService:
         return {"success": True, "message": "Transferencia cancelada."}
     @staticmethod
     @transaction.atomic
-    def reenviar(
-        pk, usuario_id, role, sede_registra_id,
-        data: Dict[str, Any], token=None,
-    ):
+    def reenviar(pk, usuario_id, role, sede_registra_id,data: Dict[str, Any], token=None,):
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'DEVUELTO':
             raise ValidationError(
@@ -713,9 +711,7 @@ class TransferenciaService:
         
         return generar_pdf_transferencia(t, cookie=cookie)
     @staticmethod
-    def listar_pendientes_segur(sede_id: int, role: str):
-        from django.db.models import Q
-        from .repositories import TransferenciaRepository
+    def listar_pendientes_segur(sede_id: int, role: str):        
         qs = TransferenciaRepository.filter({})
         qs = qs.filter(tipo='TRASLADO_SEDE')
         qs = qs.filter(
@@ -743,9 +739,7 @@ class TransferenciaService:
         )
         return qs 
     @staticmethod
-    def listar_pendientes_aprobacion(role: str, sede_id: int, modulo_id: int, token: str):
-        from django.db.models import Q
-        from .repositories import TransferenciaRepository
+    def listar_pendientes_aprobacion(role: str, sede_id: int, modulo_id: int, token: str):        
         qs = TransferenciaRepository.filter({'estado_transferencia': 'PENDIENTE_APROBACION'}) 
         if role == 'SYSADMIN':
             return qs 

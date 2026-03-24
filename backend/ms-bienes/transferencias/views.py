@@ -71,30 +71,34 @@ _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
 )
 class TransferenciaViewSet(ViewSet):
     def get_permissions(self):
-        view_detalle = HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')
-        view_transf = HasJWTPermission('ms-bienes:transferencias:view_transferencia')
+        view_t  = HasJWTPermission('ms-bienes:transferencias:view_transferencia')
+        view_td = HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')
+        add_t   = HasJWTPermission('ms-bienes:transferencias:add_transferencia')
+        add_td  = HasJWTPermission('ms-bienes:transferencias:add_transferenciadetalle')
+        chg_t   = HasJWTPermission('ms-bienes:transferencias:change_transferencia')
+        chg_td  = HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')
+        del_t   = HasJWTPermission('ms-bienes:transferencias:delete_transferencia')
+
         perms = {
-            'list': [OR(view_detalle, view_transf)],
-            'retrieve':                [HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')],
-            'mis_transferencias':      [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
-            'documento':               [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
-            'pendientes_segur':        [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
-            'pendientes_aprobacion':   [HasJWTPermission('ms-bienes:transferencias:view_transferencia')],
-            'crear_traslado':          [HasJWTPermission('ms-bienes:transferencias:add_transferencia')],
-            'crear_asignacion':        [HasJWTPermission('ms-bienes:transferencias:add_transferenciadetalle')],
-            'aprobar_adminsede':       [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
-            'devolver_adminsede':      [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
-            'reenviar':                [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
-            'subir_firmado':           [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
-            'cerrar_con_firma': [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
-            'cancelar':                [HasJWTPermission('ms-bienes:transferencias:delete_transferenciadetalle')],
-            'confirmar_recepcion':     [HasJWTPermission('ms-bienes:transferencias:change_transferencia')],
-            'aprobar_segur_salida':    [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
-            'rechazar_segur_salida':   [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
-            'aprobar_segur_entrada':   [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
-            'rechazar_segur_entrada':  [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
-            'aprobar_retorno_salida':  [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
-            'aprobar_retorno_entrada': [HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')],
+            'list':                    [OR(view_t, view_td)],
+            'retrieve':                [OR(view_t, view_td)],
+            'mis_transferencias':      [OR(view_t, view_td)],
+            'documento':               [OR(view_t, view_td)],
+            'crear_traslado':          [add_t],
+            'crear_asignacion':        [OR(add_t, add_td)],
+            'aprobar_adminsede':       [chg_t],
+            'devolver_adminsede':      [chg_t],
+            'reenviar':                [OR(chg_t, chg_td)],
+            'cancelar':                [OR(del_t, HasJWTPermission('ms-bienes:transferencias:delete_transferenciadetalle'))],
+            'confirmar_recepcion':     [chg_td],
+            'cerrar_con_firma':        [OR(chg_t, chg_td)],
+            'subir_firmado':           [OR(chg_t, chg_td)],
+            'aprobar_segur_salida':    [chg_td],
+            'rechazar_segur_salida':   [chg_td],
+            'aprobar_segur_entrada':   [chg_td],
+            'rechazar_segur_entrada':  [chg_td],
+            'aprobar_retorno_salida':  [chg_td],
+            'aprobar_retorno_entrada': [chg_td],
         }
         return perms.get(self.action, [IsAuthenticated()])
     def _get_token(self, request) -> str:
@@ -110,7 +114,11 @@ class TransferenciaViewSet(ViewSet):
     def _get_modulo(self, request):
         return request.auth.get('modulo_id', None) if request.auth else None 
     def list(self, request):
-        qs = TransferenciaService.listar(request.query_params, self._get_token(request))
+        params = request.query_params.copy()        
+        params['user_id'] = request.user.id
+        params['role']    = getattr(request.user, 'role', None) 
+        params['user_sede_id'] = getattr(request.user, 'sede_id', None)
+        qs = TransferenciaService.listar(params, self._get_token(request))        
         return Response(TransferenciaListSerializer(qs, many=True).data)
     def retrieve(self, request, pk=None):
         tr = TransferenciaService.obtener(pk,self._get_token(request))
@@ -542,8 +550,7 @@ class TransferenciaViewSet(ViewSet):
         parameters=[_PK],
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
-    @action(detail=True, methods=['post'], url_path='cerrar-con-firma',
-            parser_classes=[MultiPartParser, FormParser])
+    @action(detail=True, methods=['post'], url_path='cerrar-con-firma',parser_classes=[MultiPartParser, FormParser])
     def cerrar_con_firma(self, request, pk=None):
         archivo = request.FILES.get('archivo')
         if not archivo:

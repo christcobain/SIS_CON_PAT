@@ -17,7 +17,6 @@ class TransferenciaRepository:
     def listar(filters: dict):
         qs = TransferenciaRepository.filter(filters)
         return qs
-    
     @staticmethod
     def create(data: dict) -> Transferencia:
         return Transferencia.objects.create(**data)
@@ -35,18 +34,40 @@ class TransferenciaRepository:
         qs = Transferencia.objects.select_related(
             'motivo_transferencia', 
             'motivo_cancelacion'
-        ).prefetch_related('detalles__bien', 'aprobaciones').all()
-        search_value = params.pop('search', None)        
-        if search_value:
+        ).prefetch_related(
+            'detalles__bien', 
+            'aprobaciones'
+        ).all().order_by('-fecha_registro')
+        user_id = params.get('user_id')
+        role    = params.get('role')
+        user_sede_id = params.get('user_sede_id') 
+        if role and role != 'SYSADMIN':
+            if role in ['coordSistema', 'adminSede', 'segurSede']:
+                qs = qs.filter(Q(sede_origen_id=user_sede_id) | Q(sede_destino_id=user_sede_id))
+            elif role == 'asistSistema':
+                qs = qs.filter(Q(usuario_origen_id=user_id) | Q(usuario_destino_id=user_id))
+        if params.get('sede_origen_id'):
+            qs = qs.filter(sede_origen_id=params.get('sede_origen_id'))
+        if params.get('sede_destino_id'):
+            qs = qs.filter(sede_destino_id=params.get('sede_destino_id'))
+        if params.get('usuario_origen_id'):
+            qs = qs.filter(usuario_origen_id=params.get('usuario_origen_id'))
+        if params.get('usuario_destino_id'):
+            qs = qs.filter(usuario_destino_id=params.get('usuario_destino_id'))
+        if params.get('estado_transferencia'):
+            qs = qs.filter(estado_transferencia=params.get('estado_transferencia'))
+        if params.get('estado'): 
+            qs = qs.filter(estado_transferencia=params.get('estado'))
+        if params.get('tipo'):
+            qs = qs.filter(tipo=params.get('tipo'))
+        if params.get('search'):
+            s = params.get('search')
             qs = qs.filter(
-                Q(numero_orden__icontains=search_value) | 
-                Q(observacion_segursede__icontains=search_value) |
-                Q(motivo__icontains=search_value)
-            )
-        for key, value in filters.items():
-            if value:
-                qs = qs.filter(**{key: value})
-        return qs.order_by('-fecha_registro')
+                Q(numero_orden__icontains=s) |
+                Q(detalles__codigo_patrimonial__icontains=s) |
+                Q(detalles__numero_serie__icontains=s)
+            ).distinct()
+        return qs
     @staticmethod
     def get_mis_transferencias(usuario_id: int, role: str, sede_id: int) -> QuerySet:
         qs = Transferencia.objects.prefetch_related('detalles__bien')
