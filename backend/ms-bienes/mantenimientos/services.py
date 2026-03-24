@@ -1,6 +1,6 @@
 import os
 from typing import Dict, Any, List, Optional
-from django.db.models.query import QuerySet
+from django.db.models import QuerySet
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -19,8 +19,8 @@ from catalogos.models import CatEstadoFuncionamiento
 from shared.clients import MsUsuariosClient
 
 
-ROLES_APROBADOR = {'adminSede', 'coordSistema', 'SYSADMIN'}
-
+COORD_SEDE_ID   = 1
+COORD_MODULO_ID = 1
 
 class MantenimientoService:
     @staticmethod
@@ -47,7 +47,6 @@ class MantenimientoService:
             m.sede_nombre = sede.get('nombre') if sede else None
         except Exception:
             m.sede_nombre = None
-
         if m.modulo_id:
             try:
                 modulo = MsUsuariosClient.validar_modulo(m.modulo_id, token)
@@ -56,7 +55,6 @@ class MantenimientoService:
                 m.modulo_nombre = None
         else:
             m.modulo_nombre = None
-
         m.usuario_propietario_nombre     = MantenimientoService._get_user_name(m.usuario_propietario_id, token)
         m.aprobado_por_adminsede_nombre  = MantenimientoService._get_user_name(m.aprobado_por_adminsede_id, token)
         m.subido_por_nombre              = MantenimientoService._get_user_name(m.subido_por_id, token)
@@ -78,33 +76,32 @@ class MantenimientoService:
         except Exception:
             pass
     @staticmethod
-    def listar(filters: Dict[str, Any], token: str) -> QuerySet:
+    def listar(filters: Dict[str, Any], token: str):
         real_filters = dict(filters)
         if real_filters.get('estado'):
             real_filters['estado_mantenimiento'] = real_filters.pop('estado')
-
         qs = MantenimientoRepository.filter(real_filters)
         for m in qs:
             MantenimientoService._enriquecer(m, token)
         return qs
     @staticmethod
-    def mis_mantenimientos(usuario_id: int,role: str,sede_id: int,filters: Dict[str, Any],token: str,) -> QuerySet:
+    def mis_mantenimientos(usuario_id: int,role: str,sede_id: int,filters: Dict[str, Any],token: str) -> QuerySet:
         qs = MantenimientoRepository.filter_mis_mantenimientos(usuario_id, role, sede_id)
         if filters.get('estado'):
             qs = qs.filter(estado_mantenimiento=filters['estado'])
         for m in qs:
             MantenimientoService._enriquecer(m, token)
-        return qs
-    @staticmethod
+        return qs    @staticmethod
     def obtener(pk: int, token: str) -> Mantenimiento:
         m = MantenimientoService._get_or_404(pk)
         return MantenimientoService._enriquecer(m, token)
     @staticmethod
     @transaction.atomic
-    def crear(data: Dict[str, Any],usuario_realiza_id: int,sede_id: int,modulo_id: Optional[int],) -> Mantenimiento:
+    def crear(data: Dict[str, Any],usuario_realiza_id: int,sede_id: int, modulo_id: Optional[int],) -> Mantenimiento:
         bien_ids = data.pop('bien_ids', [])
         if not bien_ids:
             raise ValidationError('Debe incluir al menos un bien.')
+
         bienes = []
         for bid in bien_ids:
             bien = BienRepository.get_by_id(bid)
@@ -145,13 +142,15 @@ class MantenimientoService:
     def enviar_a_aprobacion(
         pk: int,
         usuario_id: int,
-        detalles_tecnicos: List[Dict],) -> Dict[str, Any]:
+        detalles_tecnicos: List[Dict],
+    ) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento not in ('EN_PROCESO', 'DEVUELTO'):
             raise ValidationError(
                 f'No se puede enviar a aprobación desde el estado '
                 f'"{m.estado_mantenimiento}".'
             )
+
         detalle_map = {
             d.bien_id: d
             for d in MantenimientoDetalleRepository.get_by_mantenimiento(m)
@@ -193,22 +192,30 @@ class MantenimientoService:
         )
         return {'success': True, 'message': 'Mantenimiento enviado a aprobación.'}
     @staticmethod
+    def _validar_acceso_aprobador(m: Mantenimiento, sede_id: int, modulo_id: Optional[int]) -> None:
+        if m.sede_id == sede_id:
+            return
+        if m.sede_id == COORD_SEDE_ID and sede_id == COORD_SEDE_ID and modulo_id == COORD_MODULO_ID:
+            return
+        raise PermissionDenied('No tiene acceso para operar mantenimientos de esta sede.')
+    @staticmethod
     @transaction.atomic
-    def aprobar(pk: int,aprobador_id: int,role: str,sede_id: int,observacion: str = '',cookie: str = '',) -> Dict[str, Any]:
+    def aprobar(
+        pk: int,
+        aprobador_id: int,
+        role: str,
+        sede_id: int,
+        modulo_id: Optional[int],
+        observacion: str = '',
+        cookie: str = '',
+    ) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento != 'PENDIENTE_APROBACION':
             raise ValidationError(
                 f'Solo se puede aprobar desde PENDIENTE_APROBACION. '
                 f'Estado actual: "{m.estado_mantenimiento}".'
             )
-        if role not in ROLES_APROBADOR:
-            raise PermissionDenied(
-                'Solo adminSede, coordSistema o SYSADMIN pueden aprobar.'
-            )
-        if role == 'adminSede' and m.sede_id != sede_id:
-            raise PermissionDenied(
-                'Solo puede aprobar mantenimientos de su propia sede.'
-            )
+        MantenimientoService._validar_acceso_aprobador(m, sede_id, modulo_id)
         now = timezone.now()
         MantenimientoRepository.update_fields(m, {
             'aprobado_por_adminsede_id':  aprobador_id,
@@ -228,28 +235,29 @@ class MantenimientoService:
                 'y subir el documento firmado para cerrar el proceso.'
             ),
         }
+
     @staticmethod
     @transaction.atomic
-    def devolver(pk: int,aprobador_id: int,role: str,sede_id: int,motivo: str,) -> Dict[str, Any]:
+    def devolver(
+        pk: int,
+        aprobador_id: int,
+        role: str,
+        sede_id: int,
+        modulo_id: Optional[int],
+        motivo: str,
+    ) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento != 'PENDIENTE_APROBACION':
             raise ValidationError(
                 'Solo se puede devolver desde PENDIENTE_APROBACION.'
             )
-        if role not in ROLES_APROBADOR:
-            raise PermissionDenied(
-                'Solo adminSede, coordSistema o SYSADMIN pueden devolver.'
-            )
-        if role == 'adminSede' and m.sede_id != sede_id:
-            raise PermissionDenied(
-                'Solo puede devolver mantenimientos de su propia sede.'
-            )
+        MantenimientoService._validar_acceso_aprobador(m, sede_id, modulo_id)
         MantenimientoRepository.update_fields(m, {
-            'estado_mantenimiento':      'DEVUELTO',
-            'aprobado_por_adminsede_id': None,
+            'estado_mantenimiento':       'DEVUELTO',
+            'aprobado_por_adminsede_id':  None,
             'fecha_aprobacion_adminsede': None,
-            'pdf_path':                  None,
-            'fecha_pdf':                 None,
+            'pdf_path':                   None,
+            'fecha_pdf':                  None,
         })
         MantenimientoAprobacionRepository.registrar(
             m, role, 'DEVUELTO', aprobador_id, observacion=motivo,
@@ -257,7 +265,12 @@ class MantenimientoService:
         return {'success': True, 'message': 'Mantenimiento devuelto para corrección.'}
     @staticmethod
     @transaction.atomic
-    def subir_pdf_firmado(pk: int,archivo,usuario_id: int,role: str, ) -> Dict[str, Any]:
+    def subir_pdf_firmado(
+        pk: int,
+        archivo,
+        usuario_id: int,
+        role: str,
+    ) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento != 'APROBADO':
             raise ValidationError(
@@ -267,6 +280,7 @@ class MantenimientoService:
         media_root = getattr(settings, 'MEDIA_ROOT', 'media')
         carpeta    = os.path.join(media_root, 'mantenimientos', 'pdfs', 'firmados')
         os.makedirs(carpeta, exist_ok=True)
+
         ext    = os.path.splitext(getattr(archivo, 'name', '.pdf'))[-1].lower() or '.pdf'
         nombre = f'MNT-{m.pk}-FIRMADO-{timezone.now().strftime("%Y%m%d%H%M%S")}{ext}'
         ruta   = os.path.join(carpeta, nombre)
@@ -296,7 +310,13 @@ class MantenimientoService:
         }
     @staticmethod
     @transaction.atomic
-    def cancelar(pk: int,usuario_id: int,role: str,motivo_cancelacion_id: int,detalle: str,) -> Dict[str, Any]:
+    def cancelar(
+        pk: int,
+        usuario_id: int,
+        role: str,
+        motivo_cancelacion_id: int,
+        detalle: str,
+    ) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento in ('ATENDIDO', 'CANCELADO'):
             raise ValidationError(
@@ -314,7 +334,12 @@ class MantenimientoService:
         )
         return {'success': True, 'message': 'Mantenimiento cancelado.'}
     @staticmethod
-    def subir_imagen(pk: int,imagen,descripcion: str,usuario_id: int,) -> Dict[str, Any]:
+    def subir_imagen(
+        pk: int,
+        imagen,
+        descripcion: str,
+        usuario_id: int,
+    ) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento not in ('EN_PROCESO', 'DEVUELTO'):
             raise ValidationError(

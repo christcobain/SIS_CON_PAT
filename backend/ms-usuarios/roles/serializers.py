@@ -15,13 +15,17 @@ class PermissionSerializer(serializers.ModelSerializer):
 class RoleListSerializer(serializers.ModelSerializer):
     total_permissions= serializers.IntegerField(source='permissions.count', read_only=True)
     active_permissions= serializers.SerializerMethodField()
+    permissions_grouped= serializers.SerializerMethodField()
     class Meta:
         model  = Role
         fields = [
             'id', 'name', 'description', 'is_active',
             'total_permissions', 'active_permissions',
+            'permissions_grouped',
             'created_at', 'updated_at',
         ]
+    def get_permissions_grouped(self, obj: Role) -> dict:
+        return obj.build_jwt_permissions()
     def get_active_permissions(self, obj):
         return obj.permissions.filter(is_active=True).count()
 class RoleDetailSerializer(serializers.ModelSerializer):

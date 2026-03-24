@@ -122,12 +122,12 @@ class MantenimientoViewSet(ViewSet):
             'mis_mantenimientos': [HasJWTPermission('ms-bienes:mantenimientos:view_mantenimiento')],
             'create':             [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
             'enviar_aprobacion':  [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
-            'subir_imagen':       [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
+            'subir_imagen':       [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimientoimagen')],
             'aprobar':            [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
             'devolver':           [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
             'cancelar':           [HasJWTPermission('ms-bienes:mantenimientos:delete_mantenimiento')],
             'subir_pdf_firmado':  [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
-            'documento':          [HasJWTPermission('ms-bienes:mantenimientos:view_mantenimiento')],
+            'documento':          [HasJWTPermission('ms-bienes:mantenimientos:view_mantenimientoimagen')],
         }
         return perms.get(self.action, [IsAuthenticated()])
 

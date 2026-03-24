@@ -50,7 +50,6 @@ export default function TransferenciasPage() {
     const [activeTab, setActiveTab] = useState(() => tabsDisponibles[0]?.id || '');
     const [filtros, setFiltros] = useState(FILTROS_INICIALES);
     
-    // Estados para control de modales
     const [modalForm, setModalForm] = useState(false);
     const [modalDetalle, setModalDetalle] = useState(false);
     const [confirmCancel, setConfirmCancel] = useState(false);
