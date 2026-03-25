@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { useAuthStore }       from '../../store/authStore';
-import { useToast }           from '../../hooks/useToast';
 import { useTransferencias }  from '../../hooks/useTransferencias';
 import { useAuth }            from '../../hooks/useAuth';
 
@@ -21,9 +19,8 @@ const TABS = [
 ];
 
 export default function Alertas() {
-  const toast = useToast();
   const { user } = useAuth();
-  const role = useAuthStore(s => s.role);
+
 
   const [activeTab,    setActiveTab]    = useState('pendientes');
   const [modalDetalle, setModalDetalle] = useState(false);
@@ -118,7 +115,7 @@ export default function Alertas() {
         item={itemDetalle}
         actualizando={actualizando}
         acciones={{ aprobarAdminSede, aprobarSalidaSeguridad, aprobarEntradaSeguridad, retornoSalida, retornoEntrada, devolverAprobacion }}
-        onAccionExitosa={() => { setModalDetalle(false); toast.success('Proceso actualizado'); refetch(); }}
+        onAccionExitosa={() => { setModalDetalle(false); refetch(); }}
       />
     </div>
   );

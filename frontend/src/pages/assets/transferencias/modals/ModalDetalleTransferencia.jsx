@@ -16,6 +16,7 @@ const BADGE = {
   PENDIENTE_APROBACION:  { label: 'Pendiente aprobación',  color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
   EN_ESPERA_CONFORMIDAD: { label: 'Espera conformidad',    color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)' },
   EN_RETORNO:            { label: 'En retorno',            color: '#c2410c', bg: 'rgb(194 65 12 / 0.1)'  },
+  EN_ESPERA_FIRMA:            { label: 'En espera de firma',            color: '#c2410c', bg: 'rgb(194 65 12 / 0.1)'  },
   ATENDIDO:              { label: 'Atendido',              color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
   DEVUELTO:              { label: 'Devuelto',              color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
   CANCELADO:             { label: 'Cancelado',             color: '#64748b', bg: 'var(--color-border-light)' },
@@ -59,7 +60,7 @@ function FlujoPaso({ label, nombre, fecha, hecho }) {
 }
 
 function TabRuta({ t }) {
-  const esTraslado = t.tipo === 'TRASLADO_SEDE';
+  // const esTraslado = t.tipo === 'TRASLADO_SEDE';
   return (
     <div className="space-y-4">
       <div>
@@ -199,12 +200,10 @@ export default function ModalDetalleTransferencia({
   open, onClose, item, actualizando, acciones, onAccionExitosa,
 }) {
   const [tab,  setTab]  = useState('ruta');
-  const role  = useAuthStore(s => s.role);
+  const [role,user ] = useAuthStore(s => s.role);
   const toast = useToast();
   const fileRef = useRef();
-
   if (!item) return null;
-
   const t     = item;
   const estado = t.estado_transferencia;
   const esTraslado    = t.tipo === 'TRASLADO_SEDE';
@@ -230,8 +229,8 @@ export default function ModalDetalleTransferencia({
     const archivo = e.target.files?.[0];
     if (!archivo) return;
     try {
-      await acciones.subirFirmado?.(t.id, archivo);
-      toast.success('Acta firmada subida correctamente.');
+      const result=await acciones.subirFirmado?.(t.id, archivo,user.id);
+      toast.success(result?.response?.data.message||'Acta firmada subida correctamente.');
       onAccionExitosa?.();
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Error al subir el acta.');
@@ -239,7 +238,10 @@ export default function ModalDetalleTransferencia({
   };
 
   const handleDescargarPDF = async () => {
-    try { await acciones.descargarPDF?.(t.id); } catch { toast.error('Error al descargar el PDF.'); }
+    try { 
+      await acciones.descargarPDF?.(t.id);   
+    } catch { 
+      toast.error('Error al descargar el PDF.'); }
   };
 
   return (
@@ -300,14 +302,15 @@ export default function ModalDetalleTransferencia({
 
             <div className="space-y-2">
               <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
-              {(t.pdf_path || estado === 'ATENDIDO') && (
-                <button onClick={handleDescargarPDF}
+              {(t.estado_transferencia === 'EN_ESPERA_FIRMA') && (
+                <button onClick={handleDescargarPDF}                
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
                   style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
                   <Icon name="picture_as_pdf" className="text-[16px]" />Descargar PDF
                 </button>
               )}
-              {esAsignacion && estado === 'ATENDIDO' && !t.tiene_pdf_firmado && (
+
+              { t.estado_transferencia === 'EN_ESPERA_FIRMA' && !t.tiene_pdf_firmado &&esTraslado&& (
                 <>
                   <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirFirmado} />
                   <button onClick={() => fileRef.current?.click()}
@@ -320,7 +323,8 @@ export default function ModalDetalleTransferencia({
                   </p>
                 </>
               )}
-              {t.tiene_pdf_firmado && (
+
+              {t.tiene_pdf_firmado || estado === 'ATENDIDO' && (
                 <div className="flex items-center gap-2 p-2.5 rounded-xl"
                   style={{ background: 'rgb(22 163 74 / 0.08)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
                   <Icon name="task_alt" className="text-[15px]" style={{ color: '#16a34a' }} />

@@ -88,11 +88,12 @@ class TransferenciaViewSet(ViewSet):
             'crear_asignacion':        [OR(add_t, add_td)],
             'aprobar_adminsede':       [chg_t],
             'devolver_adminsede':      [chg_t],
-            'reenviar':                [OR(chg_t, chg_td)],
+            'pendientes_segur':         [chg_td],
+            'pendientes_aprobacion':         [chg_t],
+            'reenviar':                [add_t],
             'cancelar':                [OR(del_t, HasJWTPermission('ms-bienes:transferencias:delete_transferenciadetalle'))],
             'confirmar_recepcion':     [chg_td],
             'cerrar_con_firma':        [OR(chg_t, chg_td)],
-            'subir_firmado':           [OR(chg_t, chg_td)],
             'aprobar_segur_salida':    [chg_td],
             'rechazar_segur_salida':   [chg_td],
             'aprobar_segur_entrada':   [chg_td],
@@ -114,11 +115,14 @@ class TransferenciaViewSet(ViewSet):
     def _get_modulo(self, request):
         return request.auth.get('modulo_id', None) if request.auth else None 
     def list(self, request):
-        params = request.query_params.copy()        
-        params['user_id'] = request.user.id
-        params['role']    = getattr(request.user, 'role', None) 
-        params['user_sede_id'] = getattr(request.user, 'sede_id', None)
-        qs = TransferenciaService.listar(params, self._get_token(request))        
+        FILTROS_PERMITIDOS = {'estado', 'tipo', 'sede_origen_id', 'sede_destino_id',
+                      'usuario_origen_id', 'usuario_destino_id', 'search',
+                      'estado_transferencia'}
+        filters = {k: v for k, v in request.query_params.items() if k in FILTROS_PERMITIDOS}
+        filters['user_id']      = request.user.id
+        filters['role']         = self._get_role(request)
+        filters['user_sede_id'] = self._get_sede(request)
+        qs = TransferenciaService.listar(filters, self._get_token(request))   
         return Response(TransferenciaListSerializer(qs, many=True).data)
     def retrieve(self, request, pk=None):
         tr = TransferenciaService.obtener(pk,self._get_token(request))
@@ -261,7 +265,6 @@ class TransferenciaViewSet(ViewSet):
             'Aprueba la transferencia según su sede.'
             
         ),
-        parameters=[_PK],
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
     @action(detail=False, methods=['get'], url_path='pendientes-segur')
@@ -277,7 +280,6 @@ class TransferenciaViewSet(ViewSet):
             'Aprueba la transferencia según su sede.'
             
         ),
-        parameters=[_PK],
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
     @action(detail=False, methods=['get'], url_path='pendientes-aprobacion')
@@ -426,6 +428,7 @@ class TransferenciaViewSet(ViewSet):
         result = TransferenciaService.confirmar_recepcion(
             pk,
             request.user.id,
+            self._get_role(request),   
             cookie=self._get_token(request),
         )
         return Response(result, status=status.HTTP_200_OK)

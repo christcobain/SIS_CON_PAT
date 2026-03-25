@@ -332,7 +332,8 @@ export default function ModalTransferencia({
       toast.success(result?.message ?? 'Operación exitosa.');
       onGuardado();
     } catch (err) {
-      toast.error(err?.response?.data ?? err?.response?.data?.detail ?? 'Error al registrar.');
+      console.log(err?.response?.data?.detail)
+      toast.error(err?.response?.data?.detail|| err?.response?.data || err?.response?.detail ||'Error al registrar.');
     } finally { setGuardando(false); }
   };
 

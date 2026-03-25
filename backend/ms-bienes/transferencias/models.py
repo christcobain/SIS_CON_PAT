@@ -95,7 +95,7 @@ class TransferenciaDetalle(models.Model):
 
 
 class TransferenciaAprobacion(models.Model):
-    ACCION_CHOICES = [
+    ACCION_CHOICES = [     
         ('APROBADO',  'Aprobado'),
         ('RECHAZADO', 'Rechazado'),
         ('DEVUELTO',  'Devuelto'),

@@ -56,8 +56,6 @@ class TransferenciaRepository:
             qs = qs.filter(usuario_destino_id=params.get('usuario_destino_id'))
         if params.get('estado_transferencia'):
             qs = qs.filter(estado_transferencia=params.get('estado_transferencia'))
-        if params.get('estado'): 
-            qs = qs.filter(estado_transferencia=params.get('estado'))
         if params.get('tipo'):
             qs = qs.filter(tipo=params.get('tipo'))
         if params.get('search'):

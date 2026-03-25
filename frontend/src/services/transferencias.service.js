@@ -90,7 +90,7 @@ const transferenciasService = {
   subirFirmado: async (id, archivo) => {
     const formData = new FormData();
     formData.append('archivo', archivo);
-    const response = await axiosBienes.post(`/transferencias/${id}/subir-firmado/`, formData, {
+    const response = await axiosBienes.post(`/transferencias/${id}/cerrar-con-firma/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;

@@ -91,7 +91,8 @@ class MantenimientoService:
             qs = qs.filter(estado_mantenimiento=filters['estado'])
         for m in qs:
             MantenimientoService._enriquecer(m, token)
-        return qs    @staticmethod
+        return qs    
+    @staticmethod
     def obtener(pk: int, token: str) -> Mantenimiento:
         m = MantenimientoService._get_or_404(pk)
         return MantenimientoService._enriquecer(m, token)

@@ -62,7 +62,7 @@ export default function TransferenciasPage() {
         transferencias, loading, error, actualizando, refetch, 
         descargarPDF, crearTraslado, crearAsignacion, aprobarAdminSede,
         devolverAprobacion, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
-        retornoSalida, retornoEntrada, reenviarTransferencia, cancelar,
+        retornoSalida, retornoEntrada, reenviarTransferencia, cancelar,subirFirmado
     } = useTransferencias(activeTab, { misTransferencias: filtros.misTransferencias, usuarioId: user?.id });
 
     const currentTabConfig = useMemo(() => 
@@ -184,13 +184,14 @@ export default function TransferenciasPage() {
                         onClose={() => setModalDetalle(false)}
                         item={itemDetalle}
                         actualizando={actualizando}
-                        acciones={{ aprobarAdminSede, aprobarSalidaSeguridad, aprobarEntradaSeguridad, retornoSalida, retornoEntrada, devolverAprobacion }}
+                        acciones={{ aprobarAdminSede, aprobarSalidaSeguridad, 
+                            aprobarEntradaSeguridad, retornoSalida, retornoEntrada, 
+                            devolverAprobacion,descargarPDF,subirFirmado }}
                         onAccionExitosa={() => { setModalDetalle(false); refetch(); }}
                     />
                 )}
             </Suspense>
 
-            {/* Este es ligero, puede quedarse cargado siempre o ser lazy también si fuera muy grande */}
             <ConfirmDialog
                 open={confirmCancel}
                 title="Cancelar Transferencia"

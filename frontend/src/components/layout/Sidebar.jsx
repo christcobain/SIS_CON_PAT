@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
+import { usePermission } from '../../hooks/usePermission';
 
 const MENU = [
   {
@@ -8,11 +8,10 @@ const MENU = [
     grupo: 'Gestión Administrativa',
     icon: 'manage_accounts',
     items: [
-      { label: 'Usuarios',              icon: 'group',                to: '/admin/usuarios',    perm: 'ms-usuarios:users:add_user'                          },
-      { label: 'Historial de Sesiones', icon: 'history',              to: '/admin/sesiones',    perm: 'ms-usuarios:authentication:view_loginattempt'        },
-      { label: 'Políticas de Password', icon: 'policy',               to: '/admin/politicas',   perm: 'ms-usuarios:authentication:view_passwordpolicy'      },
-      { label: 'Locaciones',            icon: 'account_balance',      to: '/admin/locaciones',  perm: 'ms-usuarios:locations:view_sede'                     },
-      { label: 'Roles y Permisos',      icon: 'admin_panel_settings', to: '/admin/roles',       perm: 'ms-usuarios:roles:view_role'                         },
+      { label: 'Usuarios', icon: 'group', to: '/admin/usuarios', perm: 'ms-usuarios:users:view_user' },
+      { label: 'Seguridad', icon: 'history', to: '/admin/seguridad', perm: 'ms-usuarios:authentication:view_passwordpolicy' },
+      { label: 'Locaciones', icon: 'account_balance', to: '/admin/locaciones', perm: 'ms-usuarios:locations:add_sede' },
+      { label: 'Roles y Permisos', icon: 'admin_panel_settings', to: '/admin/roles', perm: 'ms-usuarios:roles:view_role' },
     ],
   },
   {
@@ -20,11 +19,16 @@ const MENU = [
     grupo: 'Gestión de Bienes',
     icon: 'inventory_2',
     items: [
-      { label: 'Catálogos',             icon: 'category',             to: '/catalogos',         perm: 'ms-bienes:catalogos:view_catcategoriabien'            },
-      { label: 'Inventario de Activos', icon: 'warehouse',            to: '/bienes',            perm: 'ms-bienes:bienes:view_bien'                          },
-      { label: 'Mantenimiento',         icon: 'engineering',          to: '/mantenimientos',    perm: 'ms-bienes:mantenimientos:view_mantenimiento'          },
-      { label: 'Transferencias',        icon: 'swap_horiz',           to: '/transferencias',    perm: 'ms-bienes:transferencias:view_transferencia'          },
-      { label: 'Bajas de Activos',      icon: 'delete_sweep',         to: '/bajas',             perm: 'ms-bienes:bienes:delete_bien'                        },
+      { label: 'Catálogos', icon: 'category', to: '/catalogos', perm: 'ms-bienes:catalogos:add_catcategoriabien' },
+      { label: 'Inventario de Bienes', icon: 'warehouse', to: '/bienes', perm: 'ms-bienes:bienes:view_bien' },
+      { label: 'Mantenimiento', icon: 'engineering', to: '/mantenimientos', perm: 'ms-bienes:mantenimientos:view_mantenimiento' },
+      { 
+        label: 'Transferencias', 
+        icon: 'swap_horiz', 
+        to: '/transferencias', 
+        perm: ['ms-bienes:transferencias:view_transferencia', 'ms-bienes:transferencias:view_transferenciadetalle'] 
+      },
+      { label: 'Bajas de Activos', icon: 'delete_sweep', to: '/bajas', perm: 'ms-bienes:bienes:delete_bien' },
     ],
   },
   {
@@ -32,209 +36,123 @@ const MENU = [
     grupo: 'Reportes',
     icon: 'bar_chart',
     items: [
-      { label: 'Reportes Generales', icon: 'description', to: '/reportes',          perm: null },
-      { label: 'Datos de Procesos',  icon: 'analytics',   to: '/reportes/procesos', perm: null },
+      { label: 'Reportes Generales', icon: 'description', to: '/reportes', perm: null },
+      { label: 'Datos de Procesos', icon: 'analytics', to: '/reportes/procesos', perm: null },
     ],
   },
 ];
-
-function getActiveGroup(pathname) {
-  for (const section of MENU) {
-    if (section.items.some((i) => pathname.startsWith(i.to))) return section.id;
-  }
-  return null;
-}
-
-function isDarkActive() {
-  return document.documentElement.classList.contains('dark');
-}
-
-function applyTheme(dark) {
-  document.documentElement.classList.toggle('dark', dark);
-  localStorage.setItem('sisconpat_theme', dark ? 'dark' : 'light');
-}
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
-export default function Sidebar({ collapsed, onToggle }) {
-  const role            = useAuthStore((s) => s.role);
-  const permissionsFlat = useAuthStore((s) => s.permissionsFlat);
-  const location        = useLocation();
+export default function Sidebar({ collapsed }) {
+  const { can, canAny } = usePermission();
+  const location = useLocation();
+  const [openGroup, setOpenGroup] = useState(null);
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const filteredMenu = useMemo(() => {
+    return MENU.map(grupo => ({
+      ...grupo,
+      visibles: grupo.items.filter(item => {
+        if (!item.perm) return true;
+        return Array.isArray(item.perm) ? canAny(...item.perm) : can(item.perm);
+      })
+    })).filter(grupo => grupo.visibles.length > 0);
+  }, [can, canAny]);
 
-  const [openGroup, setOpenGroup] = useState(() => getActiveGroup(location.pathname));
-  const [dark,      setDark]      = useState(() => isDarkActive());
-
-  const canView = (perm) => {
-    if (!perm) return true;
-    if (role === 'SYSADMIN') return true;
-    return permissionsFlat.includes(perm);
-  };
-
-  const toggleGroup = (id) => {
-    if (collapsed) return;
-    setOpenGroup((prev) => (prev === id ? null : id));
-  };
+  const toggleGroup = (id) => !collapsed && setOpenGroup(prev => prev === id ? null : id);
 
   const toggleDark = () => {
     const next = !dark;
     setDark(next);
-    applyTheme(next);
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('sisconpat_theme', next ? 'dark' : 'light');
   };
-
-  const isOpen = (id) => !collapsed && openGroup === id;
 
   return (
     <aside
-      className="flex flex-col shrink-0 select-none overflow-hidden"
-      style={{
-        width: collapsed ? '60px' : '240px',
-        transition: 'width 0.25s ease',
-        background: '#1a1f2e',
-        borderRight: '1px solid rgba(255,255,255,0.05)',
-        boxShadow: '2px 0 12px 0 rgba(0,0,0,0.2)',
-      }}
+      className="flex flex-col shrink-0 select-none transition-all duration-300 ease-in-out border-r border-white/5"
+      style={{ width: collapsed ? '70px' : '260px', background: '#0f172a' }}
     >
-      <div
-        className="flex items-center gap-3 px-3 shrink-0"
-        style={{ height: '78px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-      >
-        <div
-          className="flex items-center justify-center rounded-lg font-black text-white shrink-0"
-          style={{ width: '32px', height: '32px', background: '#7F1D1D', fontSize: '13px', letterSpacing: '-0.5px' }}
-        >
-          SP
-        </div>
-        {!collapsed && (
-          <div className="min-w-0 overflow-hidden">
-            <p className="font-black leading-none tracking-tight truncate" style={{ color: '#f1f5f9', fontSize: '13px' }}>
-              SISCONPAT
-            </p>
-            <p className="font-bold uppercase tracking-widest truncate mt-0.5" style={{ color: '#475569', fontSize: '9px', letterSpacing: '1.5px' }}>
-              Control Patrimonial
-            </p>
+      {/* Header / Logo */}
+      <div className="h-20 flex items-center px-4 border-b border-white/5 bg-slate-900/50 backdrop-blur-md">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="size-10 shrink-0 bg-gradient-to-br from-primary to-blue-600 rounded-xl p-2 shadow-lg flex items-center justify-center">
+             <img src="/src/assets/images/ICONO.png" alt="L" className="w-full h-full object-contain brightness-0 invert" />
           </div>
-        )}
+          {!collapsed && (
+            <div className="flex flex-col leading-tight animate-in fade-in slide-in-from-left-2">
+              <span className="text-white font-black text-sm">SISCONPAT</span>
+              <span className="text-slate-500 font-bold text-[9px] tracking-widest uppercase">Sist. Patrimonial</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 flex flex-col gap-0.5">
-
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 custom-scrollbar overflow-x-hidden">
+        {/* DASHBOARD DIRECT LINK */}
         <NavLink
           to="/dashboard"
-          end
-          title={collapsed ? 'Dashboard' : undefined}
-          className={({ isActive }) =>
-            `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12.5px] font-semibold
-             transition-all duration-150 relative
-             ${isActive ? 'text-[#fca5a5]' : 'text-[#64748b] hover:text-[#cbd5e1]'}`
-          }
-          style={({ isActive }) => ({ background: isActive ? 'rgba(127,29,29,0.22)' : undefined })}
+          className={({ isActive }) => `
+            group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+            ${isActive ? 'bg-primary/10 text-primary' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'}
+          `}
         >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span
-                  className="absolute left-0 rounded-r"
-                  style={{ top: '5px', bottom: '5px', width: '3px', background: '#ef4444' }}
-                />
-              )}
-              <Icon name="dashboard" className="text-[18px] shrink-0" />
-              {!collapsed && <span className="truncate">Dashboard</span>}
-            </>
-          )}
+          <Icon name="grid_view" className="text-xl" />
+          {!collapsed && <span className="text-[13px] font-bold">Resumen General</span>}
         </NavLink>
 
         <NavLink
           to="/alertas"
-          title={collapsed ? 'Alertas' : undefined}
-          className={({ isActive }) =>
-            `flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12.5px] font-semibold
-             transition-all duration-150 relative
-             ${isActive ? 'text-[#fca5a5]' : 'text-[#64748b] hover:text-[#cbd5e1]'}`
-          }
-          style={({ isActive }) => ({ background: isActive ? 'rgba(127,29,29,0.22)' : undefined })}
+          className={({ isActive }) => `
+            group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+            ${isActive ? 'bg-red-500/10 text-red-400' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'}
+          `}
         >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span
-                  className="absolute left-0 rounded-r"
-                  style={{ top: '5px', bottom: '5px', width: '3px', background: '#ef4444' }}
-                />
-              )}
-              <Icon name="notifications_active" className="text-[18px] shrink-0" />
-              {!collapsed && <span className="truncate">Alertas</span>}
-            </>
-          )}
-        </NavLink>
-
-        {!collapsed && (
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '6px 0 2px' }}>
-            <p className="px-2 pt-2 font-black uppercase tracking-widest" style={{ color: '#334155', fontSize: '9px', letterSpacing: '1.5px' }}>
-              Módulos
-            </p>
+          <div className="relative">
+            <Icon name="notifications" className="text-xl" />
+            <span className="absolute -top-1 -right-1 size-2 bg-red-500 rounded-full border-2 border-slate-900" />
           </div>
-        )}
-        {collapsed && <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', margin: '6px 0' }} />}
+          {!collapsed && <span className="text-[13px] font-bold">Notificaciones</span>}
+        </NavLink>
+        
+        <div className="pt-6 pb-2 px-3">
+          {!collapsed ? <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">Módulos</p> : <div className="h-px bg-white/5 w-full" />}
+        </div>
 
-        {MENU.map(({ id, grupo, icon, items }) => {
-          const visibles  = items.filter((i) => canView(i.perm));
-          if (!visibles.length) return null;
-
-          const groupOpen = isOpen(id);
-          const hasActive = visibles.some((i) => location.pathname.startsWith(i.to));
-
+        {filteredMenu.map(({ id, grupo, icon, visibles }) => {
+          const isGroupOpen = openGroup === id && !collapsed;
+          const isGroupActive = visibles.some(i => location.pathname.startsWith(i.to));
+          
           return (
-            <div key={id}>
-              <button
-                onClick={() => toggleGroup(id)}
-                title={collapsed ? grupo : undefined}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12.5px] font-semibold transition-all duration-150"
-                style={{
-                  color: groupOpen || hasActive ? '#e2e8f0' : '#64748b',
-                  background: groupOpen || hasActive ? 'rgba(255,255,255,0.06)' : undefined,
-                }}
-                onMouseEnter={(e) => { if (!groupOpen && !hasActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                onMouseLeave={(e) => { if (!groupOpen && !hasActive) e.currentTarget.style.background = ''; }}
+            <div key={id} className="group/item">
+              <button onClick={() => toggleGroup(id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${isGroupOpen || isGroupActive ? 'text-slate-100 bg-white/5' : 'text-slate-400 hover:bg-white/5'}`}
               >
-                <Icon name={icon} className="text-[18px] shrink-0" />
+                <Icon name={icon} className={`text-xl ${isGroupActive ? 'text-primary' : ''}`} />
                 {!collapsed && (
                   <>
-                    <span className="flex-1 text-left truncate">{grupo}</span>
-                    <Icon
-                      name="expand_more"
-                      className="text-[17px] shrink-0 transition-transform duration-200"
-                      style={{ transform: groupOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                    />
+                    <span className="flex-1 text-left text-[13px] font-bold">{grupo}</span>
+                    <Icon name="expand_more" className={`text-lg transition-transform ${isGroupOpen ? 'rotate-180 text-primary' : 'opacity-40'}`} />
                   </>
                 )}
               </button>
 
-              <div
-                style={{
-                  maxHeight: groupOpen ? `${visibles.length * 40}px` : '0px',
-                  transition: 'max-height 0.25s ease-in-out',
-                  overflow: 'hidden',
-                }}
+              <div className="overflow-hidden transition-all duration-500"
+                style={{ maxHeight: isGroupOpen ? `${visibles.length * 45}px` : '0px', opacity: isGroupOpen ? 1 : 0 }}
               >
-                <div
-                  className="ml-3 pl-3 pb-1 flex flex-col gap-0.5"
-                  style={{ borderLeft: '1px solid rgba(255,255,255,0.08)', marginTop: '2px' }}
-                >
+                <div className="ml-5 mt-1 pl-4 border-l border-white/10 flex flex-col gap-1">
                   {visibles.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12px]
-                         transition-colors duration-150
-                         ${isActive ? 'text-[#fca5a5] font-bold' : 'text-[#475569] hover:text-[#94a3b8]'}`
-                      }
-                      style={({ isActive }) => ({ background: isActive ? 'rgba(127,29,29,0.18)' : undefined })}
+                    <NavLink key={item.to} to={item.to}
+                      className={({ isActive }) => `relative flex items-center gap-3 px-3 py-2 rounded-lg text-[12.5px] transition-all ${isActive ? 'text-primary font-black bg-primary/5' : 'text-slate-500 hover:text-slate-300'}`}
                     >
-                      <Icon name={item.icon} className="text-[16px] shrink-0" />
-                      <span className="truncate">{item.label}</span>
+                      {({ isActive }) => (
+                        <>
+                          {isActive && <span className="absolute left-[-17px] w-1.5 h-1.5 rounded-full bg-primary" />}
+                          <span className="truncate">{item.label}</span>
+                        </>
+                      )}
                     </NavLink>
                   ))}
                 </div>
@@ -244,30 +162,13 @@ export default function Sidebar({ collapsed, onToggle }) {
         })}
       </nav>
 
-      <div className="shrink-0 px-2 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <button
-          onClick={toggleDark}
-          title={collapsed ? (dark ? 'Modo Claro' : 'Modo Oscuro') : undefined}
-          className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[12px] font-semibold transition-all duration-150"
-          style={{ color: '#475569' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#94a3b8'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = ''; e.currentTarget.style.color = '#475569'; }}
-        >
-          <Icon name={dark ? 'light_mode' : 'dark_mode'} className="text-[18px] shrink-0" />
-          {!collapsed && (
-            <>
-              <span className="flex-1 text-left truncate">{dark ? 'Modo Claro' : 'Modo Oscuro'}</span>
-              <div
-                className="relative rounded-full shrink-0 transition-colors duration-300"
-                style={{ width: '32px', height: '17px', background: dark ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)' }}
-              >
-                <span
-                  className="absolute top-0.5 rounded-full bg-white shadow-sm transition-all duration-300"
-                  style={{ width: '13px', height: '13px', left: dark ? '17px' : '2px' }}
-                />
-              </div>
-            </>
-          )}
+      {/* Footer Dark Mode */}
+      <div className="p-4 border-t border-white/5 bg-slate-900/30">
+        <button onClick={toggleDark} className="group w-full flex items-center gap-3 px-3 py-3 rounded-2xl bg-slate-800/50 hover:bg-slate-800 border border-white/5">
+          <div className={`size-8 rounded-xl flex items-center justify-center ${dark ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-400'}`}>
+            <Icon name={dark ? 'light_mode' : 'dark_mode'} />
+          </div>
+          {!collapsed && <span className="text-[11px] font-black text-slate-200 uppercase">{dark ? 'Modo Claro' : 'Modo Oscuro'}</span>}
         </button>
       </div>
     </aside>
