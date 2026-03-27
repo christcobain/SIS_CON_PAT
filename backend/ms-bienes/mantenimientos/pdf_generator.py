@@ -2,387 +2,227 @@ import io
 import logging
 from pathlib import Path
 from django.conf import settings
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.lib.units import cm
-from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,Paragraph, Spacer, HRFlowable,)
+from reportlab.platypus import (
+    SimpleDocTemplate, Table, TableStyle,
+    Paragraph, Spacer, Image, HRFlowable, KeepTogether
+)
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.graphics.shapes import Drawing, Circle, String
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
+from reportlab.graphics.shapes import Drawing, String, Rect
 from shared.clients import MsUsuariosClient
 
 logger = logging.getLogger(__name__)
 
-AZUL_SELLO  = colors.HexColor('#1A3A8B')
-AZUL_HDR    = colors.HexColor('#1A3A8B')
-GRIS_HDR    = colors.HexColor('#4A4A4A')
-GRIS_HDR2   = colors.HexColor('#6B6B6B')
-GRIS_FILA   = colors.HexColor('#F2F2F2')
-GRIS_LINE   = colors.HexColor('#CCCCCC')
-GRIS_MOT    = colors.HexColor('#E8E8E8')
-VERDE_LIGHT = colors.HexColor('#EAF4EA')
-BLANCO      = colors.white
-NEGRO       = colors.black
+# ── COLORES ──────────────────────────────────────────────────────────────────
+GUINDA_PJ       = colors.HexColor('#9D1A23')
+GRIS_CABECERA   = colors.HexColor('#F2F2F2')
+GRIS_TEXTO_HDR  = colors.HexColor('#4A4A4A')
+GRIS_LINEA      = colors.HexColor('#CCCCCC')
+AZUL_SELLO_STAMP = colors.HexColor('#00318C')
+BLANCO          = colors.white
+NEGRO           = colors.black
 
-def _get_sede(sede_id: int, token: str) -> dict:
-    if not sede_id:
-        return {'nombre': '—', 'direccion': '—',
-                'distrito': '—', 'provincia': '—', 'departamento': '—'}
-    try:
-        data = MsUsuariosClient.validar_sede(sede_id, token)
-        return {
-            'nombre':       data.get('nombre',              f'Sede {sede_id}'),
-            'direccion':    data.get('direccion',           '—'),
-            'distrito':     data.get('distrito_nombre',     '—'),
-            'provincia':    data.get('provincia_nombre',    '—'),
-            'departamento': data.get('departamento_nombre', '—'),
-        }
-    except Exception as e:
-        logger.warning('pdf_mnt._get_sede id=%s: %s', sede_id, e)
-        return {'nombre': f'Sede {sede_id}', 'direccion': '—',
-                'distrito': '—', 'provincia': '—', 'departamento': '—'}
-def _get_modulo(modulo_id: int, token: str) -> dict:
-    if not modulo_id:
-        return {'nombre': '—'}
-    try:
-        data = MsUsuariosClient.validar_modulo(modulo_id, token)
-        return {'nombre': data.get('nombre', f'Módulo {modulo_id}')}
-    except Exception as e:
-        logger.warning('pdf_mnt._get_modulo id=%s: %s', modulo_id, e)
-        return {'nombre': f'Módulo {modulo_id}'}
-def _get_usuario(usuario_id: int, token: str) -> dict:
-    if not usuario_id:
-        return {'nombre_completo': '—', 'cargo': '', 'dni': ''}
-    try:
-        data   = MsUsuariosClient.validar_usuario(usuario_id, token)
-        nombre = f"{data.get('first_name', '')} {data.get('last_name', '')}".strip()
-        return {
-            'nombre_completo': nombre or f'Usuario {usuario_id}',
-            'cargo':           data.get('cargo', ''),
-            'dni':             data.get('dni', ''),
-        }
-    except Exception as e:
-        logger.warning('pdf_mnt._get_usuario id=%s: %s', usuario_id, e)
-        return {'nombre_completo': f'Usuario {usuario_id}', 'cargo': '', 'dni': ''}
+# ── HELPERS DE CONSULTA (MANTENIDOS) ──────────────────────────────────────────
 
-def _P(txt: str, st: ParagraphStyle) -> Paragraph:
-    return Paragraph(str(txt), st)
-def _fmt(dt) -> str:
-    if not dt:
-        return '—'
-    if hasattr(dt, 'strftime'):
-        return dt.strftime('%d/%m/%Y  %H:%M')
-    return str(dt)
-def _fmt_date(d) -> str:
-    if not d:
-        return '—'
-    if hasattr(d, 'strftime'):
-        return d.strftime('%d/%m/%Y')
-    return str(d)
-def _sello_vb(aprobado: bool, size: float = 1.7 * cm) -> Drawing:
-    d  = Drawing(size, size)
-    cx = cy = size / 2
-    r  = size / 2 - 1.5
-    ring = Circle(cx, cy, r)
-    ring.fillColor   = BLANCO
-    ring.strokeColor = AZUL_SELLO if aprobado else GRIS_LINE
-    ring.strokeWidth = 2.2
-    d.add(ring)
-    d.add(String(cx, cy + 2, 'V°B°',
-                 fontName='Helvetica-Bold', fontSize=7.5,
-                 fillColor=AZUL_SELLO if aprobado else GRIS_LINE,
-                 textAnchor='middle'))
-    if aprobado:
-        d.add(String(cx, cy - 7, '✓',
-                     fontName='Helvetica-Bold', fontSize=8,
-                     fillColor=AZUL_SELLO, textAnchor='middle'))
+def _get_usuario_info(usuario_id, token):
+    if not usuario_id: return {'nombre': '—', 'cargo': '—'}
+    try:
+        data = MsUsuariosClient.validar_usuario(usuario_id, token)
+        return {'nombre': f"{data.get('first_name','')} {data.get('last_name','')}".strip(), 'cargo': data.get('cargo','—')}
+    except: return {'nombre': f"ID: {usuario_id}", 'cargo': '—'}
+
+def _get_sede_info(sede_id, token):
+    try: return MsUsuariosClient.validar_sede(sede_id, token).get('nombre', f"Sede {sede_id}")
+    except: return f"Sede {sede_id}"
+
+def _get_modulo_info(modulo_id, token):
+    if not modulo_id: return "—"
+    try: return MsUsuariosClient.validar_modulo(modulo_id, token).get('nombre', f"Módulo {modulo_id}")
+    except: return f"Módulo {modulo_id}"
+
+def _sello_manual(label, aprobado):
+    d = Drawing(3.5*cm, 1.6*cm)
+    border = Rect(0, 0, 3.5*cm, 1.6*cm, rx=2, ry=2, fillColor=BLANCO, strokeColor=AZUL_SELLO_STAMP, strokeWidth=1.6)
+    d.add(border)
+    d.add(String(1.75*cm, 1.1*cm, label.upper(), fontName='Helvetica-Bold', fontSize=7, fillColor=AZUL_SELLO_STAMP, textAnchor='middle'))
+    d.add(String(1.75*cm, 0.5*cm, 'V°B°' if aprobado else 'PENDIENTE', fontName='Helvetica-Bold', fontSize=9, fillColor=AZUL_SELLO_STAMP, textAnchor='middle'))
     return d
-def _logo_path() -> str | None:
-    base = Path(getattr(settings, 'BASE_DIR', ''))
-    for p in [
-        base / 'static'      / 'img' / 'pj_logo.png',
-        base / 'staticfiles' / 'img' / 'pj_logo.png',
-        base / 'assets'               / 'pj_logo.png',
-    ]:
-        if p.exists():
-            return str(p)
-    return None
-def _estilos() -> dict:
+
+def _estilos():
     S = lambda name, **kw: ParagraphStyle(name, **kw)
     return {
-        's_inst':   S('inst',  fontName='Helvetica-Bold', fontSize=7.5,  textColor=NEGRO,       alignment=TA_LEFT),
-        's_tit':    S('tit',   fontName='Helvetica-Bold', fontSize=11,   textColor=GRIS_HDR,    alignment=TA_CENTER),
-        's_sub':    S('sub',   fontName='Helvetica',      fontSize=8,    textColor=GRIS_HDR2,   alignment=TA_CENTER),
-        's_num':    S('num',   fontName='Helvetica-Bold', fontSize=8,    textColor=NEGRO,       alignment=TA_RIGHT),
-        's_fec':    S('fec',   fontName='Helvetica',      fontSize=7.5,  textColor=NEGRO,       alignment=TA_RIGHT),
-        's_hdr':    S('hdr',   fontName='Helvetica-Bold', fontSize=8,    textColor=BLANCO,      alignment=TA_CENTER),
-        's_hdr_az': S('hdraz', fontName='Helvetica-Bold', fontSize=7.5,  textColor=BLANCO,      alignment=TA_CENTER),
-        's_val':    S('val',   fontName='Helvetica',      fontSize=7.5,  textColor=NEGRO,       leading=11),
-        's_val_b':  S('valb',  fontName='Helvetica-Bold', fontSize=7.5,  textColor=NEGRO,       leading=11),
-        's_val_az': S('valaz', fontName='Helvetica-Bold', fontSize=7.5,  textColor=AZUL_HDR,    leading=11),
-        's_usr':    S('usr',   fontName='Helvetica-Bold', fontSize=8,    textColor=GRIS_HDR,    leading=11),
-        's_cargo':  S('crg',   fontName='Helvetica',      fontSize=7,    textColor=colors.grey, leading=10),
-        's_ch':     S('ch',    fontName='Helvetica-Bold', fontSize=6.5,  textColor=BLANCO,      alignment=TA_CENTER),
-        's_cn':     S('cn',    fontName='Helvetica',      fontSize=6.5,  textColor=NEGRO,       alignment=TA_CENTER),
-        's_cn_l':   S('cnl',   fontName='Helvetica',      fontSize=6.5,  textColor=NEGRO,       alignment=TA_LEFT),
-        's_nota':   S('nota',  fontName='Helvetica',      fontSize=6.8,  textColor=NEGRO,       leading=10),
-        's_flabel': S('fl',    fontName='Helvetica-Bold', fontSize=7.5,  textColor=GRIS_HDR,    alignment=TA_CENTER),
-        's_fnomb':  S('fn',    fontName='Helvetica',      fontSize=7,    textColor=NEGRO,       alignment=TA_CENTER),
-        's_fdate':  S('fd',    fontName='Helvetica',      fontSize=6.5,  textColor=colors.grey, alignment=TA_CENTER),
-        's_est':    S('est',   fontName='Helvetica-Bold', fontSize=7.5,  textColor=GRIS_HDR,    alignment=TA_RIGHT),
-        's_block':  S('blk',   fontName='Helvetica',      fontSize=7.5,  textColor=NEGRO,       leading=11, spaceAfter=2),
-        's_block_b':S('blkb',  fontName='Helvetica-Bold', fontSize=7.5,  textColor=GRIS_HDR,    leading=11),
+        's_tit':    S('tit',   fontName='Helvetica-Bold', fontSize=14,   textColor=NEGRO,       alignment=TA_CENTER),
+        's_num':    S('num',   fontName='Helvetica-Bold', fontSize=10,   textColor=NEGRO,       alignment=TA_RIGHT),
+        's_fec':    S('fec',   fontName='Helvetica',      fontSize=9,    textColor=GRIS_TEXTO_HDR, alignment=TA_RIGHT),
+        's_val':    S('val',   fontName='Helvetica',      fontSize=8.5,  textColor=NEGRO,       leading=11),
+        's_lab_h':  S('labh',  fontName='Helvetica-Bold', fontSize=8,    textColor=BLANCO,      alignment=TA_CENTER),
+        's_val_h':  S('valh',  fontName='Helvetica-Bold', fontSize=8.5,  textColor=NEGRO,       alignment=TA_CENTER),
+        's_lab_d':  S('labd',  fontName='Helvetica-Bold', fontSize=8,    textColor=GUINDA_PJ,   leading=10),
+        's_val_d':  S('vald',  fontName='Helvetica',      fontSize=8,    textColor=NEGRO,       alignment=TA_JUSTIFY, leading=10),
+        's_fnomb':  S('fn',    fontName='Helvetica',      fontSize=7.5,  textColor=NEGRO,       alignment=TA_CENTER),
+        's_stmp':   S('stmp',  fontName='Helvetica-Bold', fontSize=7.5,  textColor=AZUL_SELLO_STAMP, alignment=TA_CENTER),
     }
 
-def _bloque_firma(label: str, aprobado: bool, nombre: str,cargo: str, fecha: str, st: dict) -> list:
-    return [
-        _sello_vb(aprobado),
-        _P(label,  st['s_flabel']),
-        Spacer(1, 0.35 * cm),
-        _P('___________________________', st['s_fdate']),
-        _P(nombre, st['s_fnomb']),
-        _P(cargo,  st['s_cargo']),
-        _P(fecha,  st['s_fdate']),
-    ]
-def generar_pdf_mantenimiento(mantenimiento, cookie: str = '') -> bytes:
-    buffer = io.BytesIO()
-    doc    = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        leftMargin=1.8 * cm,
-        rightMargin=1.8 * cm,
-        topMargin=1.5 * cm,
-        bottomMargin=1.5 * cm,
-    )
-    story = []
-    st    = _estilos()
-    sede          = _get_sede(mantenimiento.sede_id, cookie)
-    modulo        = _get_modulo(mantenimiento.modulo_id, cookie)
-    usr_realiza   = _get_usuario(mantenimiento.usuario_realiza_id,   cookie)
-    usr_propiet   = _get_usuario(mantenimiento.usuario_propietario_id, cookie)
-    usr_aprobador = _get_usuario(mantenimiento.aprobado_por_adminsede_id, cookie) \
-                    if mantenimiento.aprobado_por_adminsede_id else \
-                    {'nombre_completo': '—', 'cargo': '', 'dni': ''}
-    logo_path = _logo_path()
-    titulo_cell = [
-        _P('PODER JUDICIAL DEL PERÚ',                               st['s_inst']),
-        _P('Corte Superior de Justicia de Lima Norte',              st['s_inst']),
-        _P('Coordinación de Informática y Estadística',             st['s_inst']),
-        Spacer(1, 0.15 * cm),
-        _P('ACTA DE MANTENIMIENTO DE BIENES MUEBLES PATRIMONIALES', st['s_tit']),
-        Spacer(1, 0.1 * cm),
-        _P('Sistema de Control Patrimonial — SISCONPAT',            st['s_sub']),
-    ]
-    num_cell = [
-        _P(f'<b>N° Orden:</b>  {mantenimiento.numero_orden}',       st['s_num']),
-        _P(f'<b>Fecha registro:</b>  {_fmt(mantenimiento.fecha_registro)}', st['s_fec']),
-        _P(f'<b>Estado:</b>  {mantenimiento.get_estado_display()}',  st['s_fec']),
-        Spacer(1, 0.1 * cm),
-        _P(f'<b>Sede:</b>  {sede["nombre"]}',                        st['s_fec']),
-        _P(f'<b>Módulo:</b>  {modulo["nombre"]}',                    st['s_fec']),
-    ]
-    if logo_path:
-        from reportlab.platypus import Image as RLImage
-        logo_img = RLImage(logo_path, width=2.4 * cm, height=2.4 * cm)
-        hdr_data   = [[logo_img, titulo_cell, num_cell]]
-        hdr_widths = [2.6 * cm, 10.8 * cm, 4.8 * cm]
-    else:
-        hdr_data   = [[titulo_cell, num_cell]]
-        hdr_widths = [12.6 * cm, 5.6 * cm]
-    thdr = Table(hdr_data, colWidths=hdr_widths)
-    thdr.setStyle(TableStyle([
-        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING',   (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-        ('LINEBELOW',     (0, 0), (-1, 0),  1.2, AZUL_HDR),
-    ]))
-    story.append(thdr)
-    story.append(Spacer(1, 0.25 * cm))
-    # ── 2. BLOQUE DE RESPONSABLES ─────────────────────────────────────────────
-    def _celda_responsable(label_rol: str, usuario: dict) -> list:
-        return [
-            _P(f'<b>{label_rol}:</b>',             st['s_cargo']),
-            _P(usuario['nombre_completo'],          st['s_usr']),
-            _P(usuario.get('cargo', ''),            st['s_cargo']),
-            _P(f'DNI: {usuario.get("dni", "—")}',  st['s_cargo']),
+# ── CLASE PARA MANEJAR CABECERA Y FOLIO DINÁMICO ──────────────────────────────
+
+class ReporteMantenimientoCanvas(SimpleDocTemplate):
+    def __init__(self, filename, mantenimiento, tecnico, custodio, sede_nom, mod_nom, **kw):
+        super().__init__(filename, **kw)
+        self.mantenimiento = mantenimiento
+        self.tecnico = tecnico
+        self.custodio = custodio
+        self.sede_nom = sede_nom
+        self.mod_nom = mod_nom
+
+    def _draw_header(self, canvas, doc):
+        canvas.saveState()
+        st = _estilos()
+        
+        # Logo
+        logo_path = str(Path(settings.BASE_DIR) / 'static' / 'img' / 'pj_logo.png')
+        if Path(logo_path).exists():
+            canvas.drawImage(logo_path, doc.leftMargin, doc.height + doc.bottomMargin + 0.2*cm, width=2*cm, height=2*cm, preserveAspectRatio=True)
+        
+        # Título Centrado
+        tit = Paragraph("INFORME TÉCNICO DE MANTENIMIENTO PREVENTIVO / CORRECTIVO", st['s_tit'])
+        w, h = tit.wrap(19*cm, doc.topMargin)
+        tit.drawOn(canvas, doc.leftMargin + 3*cm, doc.height + doc.bottomMargin + 0.8*cm)
+        
+        # Bloque Derecha (Orden y Fecha)
+        f_reg = self.mantenimiento.fecha_registro.strftime('%d/%m/%Y %H:%M')
+        blq_r = [
+            Paragraph(f"ORDEN N°: {self.mantenimiento.numero_orden}", st['s_num']),
+            Paragraph(f"Fecha Emisión: {f_reg}", st['s_fec']),
         ]
-    filas_resp = [[_P('EJECUTA MANTENIMIENTO', st['s_hdr']),
-                   _P('PROPIETARIO DE LOS BIENES', st['s_hdr'])]]
-    celdas_r = _celda_responsable('Técnico / ASISTSISTEMA', usr_realiza)
-    celdas_p = _celda_responsable('Custodio / Servidor Judicial', usr_propiet)
-    for c_r, c_p in zip(celdas_r, celdas_p):
-        filas_resp.append([c_r, c_p])
-    tresp = Table(filas_resp, colWidths=[9.1 * cm, 9.1 * cm])
-    tresp.setStyle(TableStyle([
-        ('BACKGROUND',    (0, 0), (-1, 0),  GRIS_HDR),
-        ('BOX',           (0, 0), (-1, -1), 0.6, GRIS_HDR),
-        ('LINEAFTER',     (0, 0), (0, -1),  0.5, GRIS_LINE),
-        ('ROWBACKGROUNDS',(0, 1), (-1, -1), [GRIS_FILA, BLANCO, GRIS_FILA, BLANCO]),
-        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING',    (0, 0), (-1, -1), 2),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-        ('LEFTPADDING',   (0, 1), (-1, -1), 6),
-    ]))
-    story.append(tresp)
-    story.append(Spacer(1, 0.2 * cm))
-    # ── 3. PERIODO + SEDE ─────────────────────────────────────────────────────
-    periodo_inicio = _fmt_date(mantenimiento.fecha_inicio)
-    periodo_fin    = _fmt_date(mantenimiento.fecha_termino)
-    tper = Table([[
-        _P(f'<b>Fecha inicio:</b>  {periodo_inicio}',  st['s_val_b']),
-        _P(f'<b>Fecha término:</b>  {periodo_fin}',    st['s_val_b']),
-        _P(f'<b>Sede:</b>  {sede["nombre"]}',          st['s_val']),
-        _P(f'<b>Dirección:</b>  {sede["direccion"]} — {sede["distrito"]}', st['s_val']),
-    ]], colWidths=[4 * cm, 4 * cm, 4.8 * cm, 5.4 * cm])
-    tper.setStyle(TableStyle([
-        ('BOX',           (0, 0), (-1, -1), 0.5, GRIS_HDR2),
-        ('BACKGROUND',    (0, 0), (-1, -1), GRIS_MOT),
-        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING',    (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('LEFTPADDING',   (0, 0), (-1, -1), 6),
-        ('INNERGRID',     (0, 0), (-1, -1), 0.3, GRIS_LINE),
-    ]))
-    story.append(tper)
-    story.append(Spacer(1, 0.25 * cm))
-    # ── 4. TABLA DE BIENES INTERVENIDOS ───────────────────────────────────────
-    story.append(_P('BIENES INTERVENIDOS', st['s_block_b']))
-    story.append(Spacer(1, 0.1 * cm))
-    headers_b = [
-        'N°', 'Cód. Patrimonial', 'Descripción del Bien',
-        'Estado func.\nantes', 'Estado func.\ndespués', 'Observaciones',
+        curr_y = doc.height + doc.bottomMargin + 1.2*cm
+        for p in blq_r:
+            w, h = p.wrap(5.7*cm, doc.topMargin)
+            p.drawOn(canvas, doc.width + doc.leftMargin - 5.7*cm, curr_y)
+            curr_y -= 0.4*cm
+
+        # Línea Guinda
+        canvas.setStrokeColor(GUINDA_PJ)
+        canvas.setLineWidth(2)
+        canvas.line(doc.leftMargin, doc.height + doc.bottomMargin + 0.1*cm, doc.width + doc.leftMargin, doc.height + doc.bottomMargin + 0.1*cm)
+        
+        # Folio (X de Y) - Se dibuja al final en draw_footer o aquí mismo
+        canvas.setFont("Helvetica", 9)
+        canvas.setFillColor(GRIS_TEXTO_HDR)
+        pag_info = f"Folio: {doc.page} de %s"
+        canvas.drawRightString(doc.width + doc.leftMargin, doc.height + doc.bottomMargin + 0.2*cm, pag_info % self.total_pages)
+        
+        canvas.restoreState()
+
+    def build(self, flowables):
+        # Primero procesamos para saber el total de páginas
+        self.total_pages = 0
+        def count_pages(canvas, doc):
+            self.total_pages = canvas.getPageNumber()
+            
+        # Ejecutar la construcción
+        super().build(flowables, onFirstPage=self._draw_header, onLaterPages=self._draw_header)
+
+# ── FUNCIÓN PRINCIPAL ─────────────────────────────────────────────────────────
+
+def generar_pdf_mantenimiento(mantenimiento, cookie=''):
+    buffer = io.BytesIO()
+    st = _estilos()
+
+    # Datos iniciales
+    tecnico = _get_usuario_info(mantenimiento.usuario_realiza_id, cookie)
+    custodio = _get_usuario_info(mantenimiento.usuario_propietario_id, cookie)
+    sede_nom = _get_sede_info(mantenimiento.sede_id, cookie)
+    mod_nom  = _get_modulo_info(mantenimiento.modulo_id, cookie)
+
+    # Configurar documento
+    doc = ReporteMantenimientoCanvas(
+        buffer,
+        mantenimiento=mantenimiento,
+        tecnico=tecnico,
+        custodio=custodio,
+        sede_nom=sede_nom,
+        mod_nom=mod_nom,
+        pagesize=landscape(A4),
+        rightMargin=1*cm, leftMargin=1*cm, topMargin=2.5*cm, bottomMargin=1*cm
+    )
+
+    story = []
+
+    # 1. Datos Generales (Solo se muestra una vez al inicio)
+    f_reg = mantenimiento.fecha_registro.strftime('%d/%m/%Y %H:%M') if mantenimiento.fecha_registro else '—'
+    f_ini = mantenimiento.fecha_inicio_mant.strftime('%d/%m/%Y') if mantenimiento.fecha_inicio_mant else '—'
+    f_ter = mantenimiento.fecha_termino_mant.strftime('%d/%m/%Y') if mantenimiento.fecha_termino_mant else '—'
+    estado_mant = mantenimiento.estado_mantenimiento if hasattr(mantenimiento, 'get_estado_mantenimiento_display') else mantenimiento.estado_mantenimiento
+
+    data_gen = [
+        [Paragraph(f"<b>SEDE:</b> {sede_nom}", st['s_val']), 
+         Paragraph(f"<b>MÓDULO:</b> {mod_nom}", st['s_val']),
+         Paragraph(f"<b>ESTADO:</b> {estado_mant}", st['s_val'])],
+        
+        [Paragraph(f"<b>CUSTODIO:</b> {custodio['nombre']}", st['s_val']), 
+         Paragraph(f"<b>TÉCNICO:</b> {tecnico['nombre']}", st['s_val']),
+         Paragraph(f"<b>F. REGISTRO:</b> {f_reg}", st['s_val'])],
+
+        [Paragraph(f"<b>FECHA INICIO:</b> {f_ini}", st['s_val']), 
+         Paragraph(f"<b>FECHA TÉRMINO:</b> {f_ter}", st['s_val']),
+         Paragraph("", st['s_val'])], 
     ]
-    widths_b = [0.7*cm, 3.4*cm, 5.2*cm, 2.8*cm, 2.8*cm, 3.3*cm]
-    filas_b = [[_P(h, st['s_ch']) for h in headers_b]]
-    for i, det in enumerate(mantenimiento.detalles.all(), 1):
-        ef_antes   = det.estado_funcionamiento_antes   or '—'
-        ef_despues = det.estado_funcionamiento_despues or '—'
-        filas_b.append([
-            _P(str(i),                          st['s_cn']),
-            _P(det.codigo_patrimonial,          st['s_cn']),
-            _P(det.tipo_bien_nombre,            st['s_cn']),
-            _P(ef_antes,                        st['s_cn']),
-            _P(ef_despues,                      st['s_cn']),
-            _P(det.observacion_detalle or '',   st['s_cn_l']),
-        ])
-    tb = Table(filas_b, colWidths=widths_b)
-    tb.setStyle(TableStyle([
-        ('BACKGROUND',    (0, 0), (-1, 0),  GRIS_HDR2),
-        ('ROWBACKGROUNDS',(0, 1), (-1, -1), [BLANCO, GRIS_FILA]),
-        ('BOX',           (0, 0), (-1, -1), 0.5, GRIS_HDR2),
-        ('INNERGRID',     (0, 0), (-1, -1), 0.25, GRIS_LINE),
-        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING',    (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ('LEFTPADDING',   (0, 1), (0, -1),  4),
+    tg = Table(data_gen, colWidths=[9.2*cm, 9.2*cm, 9.2*cm])
+    tg.setStyle(TableStyle([
+        ('BOX', (0,0), (-1,-1), 0.5, colors.grey),
+        ('BACKGROUND', (0,0), (-1,-1), GRIS_CABECERA),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('LEFTPADDING', (0,0), (-1,-1), 8),
+        ('TOPPADDING', (0,0), (-1,-1), 5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
     ]))
-    story.append(tb)
-    story.append(Table(
-        [[_P('', st['s_val']),
-          _P(f'<b>Total bienes:</b>  {mantenimiento.detalles.count()}', st['s_est'])]],
-        colWidths=[14.2 * cm, 4 * cm],
-        style=[('TOPPADDING',    (0, 0), (-1, -1), 2),
-               ('BOTTOMPADDING', (0, 0), (-1, -1), 2)],
-    ))
-    story.append(Spacer(1, 0.25 * cm))
-    # ── 5. DATOS INICIALES / TRABAJOS REALIZADOS / DIAGNÓSTICO ───────────────
-    bloques_txt = [
-        ('Datos iniciales / Descripción del problema',
-         mantenimiento.diagnostico_inicial or '—'),
-        ('Trabajos realizados',
-         mantenimiento.trabajos_realizados or '—'),
-        ('Diagnóstico final',
-         mantenimiento.diagnostico_final or '—'),
-    ]
-    filas_txt = []
-    for titulo_blk, contenido in bloques_txt:
-        filas_txt.append([
-            _P(f'<b>{titulo_blk}:</b>', st['s_block_b']),
-            _P(contenido,               st['s_block']),
-        ])
-    ttxt = Table(filas_txt, colWidths=[5.5 * cm, 12.7 * cm])
-    ttxt.setStyle(TableStyle([
-        ('BOX',           (0, 0), (-1, -1), 0.5, GRIS_HDR2),
-        ('INNERGRID',     (0, 0), (-1, -1), 0.3, GRIS_LINE),
-        ('BACKGROUND',    (0, 0), (0, -1),  GRIS_MOT),
-        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
-        ('TOPPADDING',    (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-        ('LEFTPADDING',   (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING',  (0, 0), (-1, -1), 6),
-        ('ROWBACKGROUNDS',(0, 0), (-1, -1), [GRIS_MOT, BLANCO, GRIS_FILA]),
-    ]))
-    story.append(ttxt)
-    story.append(Spacer(1, 0.3 * cm))
-    # ── 6. NOTA LEGAL ─────────────────────────────────────────────────────────
-    story.append(HRFlowable(width='100%', thickness=0.5, color=GRIS_LINE))
-    story.append(Spacer(1, 0.15 * cm))
-    story.append(_P(
-        '<b>NOTA:</b>  '
-        'El presente documento acredita la realización del mantenimiento preventivo/correctivo '
-        'de los bienes muebles patrimoniales descritos, conforme a lo dispuesto en la '
-        '<b>Directiva N° 001-2021-SBN</b> y las normas internas del Poder Judicial del Perú. '
-        'Los trabajos realizados y el diagnóstico final quedan registrados como historial '
-        'técnico del bien en el Sistema de Control Patrimonial (SISCONPAT). '
-        'El propietario de los bienes manifiesta su conformidad con los trabajos ejecutados '
-        'mediante su firma en el presente documento.',
-        st['s_nota'],
-    ))
-    story.append(Spacer(1, 0.4 * cm))
-    # ── 7. FIRMAS ─────────────────────────────────────────────────────────────
-    fecha_aprobacion = _fmt(mantenimiento.fecha_aprobacion) \
-                       if mantenimiento.fecha_aprobacion else ''
-    columnas = [
-        _bloque_firma(
-            'Ejecutado por',
-            aprobado=True,
-            nombre=usr_realiza['nombre_completo'],
-            cargo=usr_realiza.get('cargo', 'Asistente de Sistemas'),
-            fecha=_fmt(mantenimiento.fecha_registro),
-            st=st,
-        ),
-        _bloque_firma(
-            'Visto Bueno — Administrador de Sede',
-            aprobado=bool(mantenimiento.aprobado_por_adminsede_id),
-            nombre=usr_aprobador['nombre_completo'],
-            cargo=usr_aprobador.get('cargo', 'Administrador de Sede'),
-            fecha=fecha_aprobacion,
-            st=st,
-        ),
-        _bloque_firma(
-            'Conformidad — Propietario de los Bienes',
-            aprobado=False,   
-            nombre=usr_propiet['nombre_completo'],
-            cargo=usr_propiet.get('cargo', 'Servidor Judicial'),
-            fecha='',
-            st=st,
-        ),
-    ]
-    n_filas = max(len(c) for c in columnas)
-    filas_f = []
-    for i in range(n_filas):
-        filas_f.append([
-            c[i] if i < len(c) else _P('', st['s_fdate'])
-            for c in columnas
-        ])
-    tf = Table(filas_f, colWidths=[6.1 * cm, 6.1 * cm, 6.0 * cm])
-    tf.setStyle(TableStyle([
-        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN',         (0, 0), (-1, -1), 'CENTER'),
-        ('LINEAFTER',     (0, 0), (1, -1),  0.4, GRIS_LINE),
-        ('LINEABOVE',     (0, 0), (-1, 0),  0.8, GRIS_HDR),
-        ('TOPPADDING',    (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-    ]))
+    story.append(tg)
+    story.append(Spacer(1, 0.5*cm))
+
+    # 2. Listado de Bienes
+    for d in mantenimiento.detalles.all():
+        bien = d.bien
+        h_titulos = [Paragraph(x, st['s_lab_h']) for x in ["TIPO BIEN", "MARCA", "MODELO", "SERIE", "CÓD. PATRIMONIAL"]]
+        v_valores = [Paragraph(str(x or "—"), st['s_val_h']) for x in [bien.tipo_bien.nombre, bien.marca.nombre, bien.modelo, bien.numero_serie, bien.codigo_patrimonial]]
+
+        detalles_mant = [
+            [Paragraph("ESTADO FUNC. INICIAL:", st['s_lab_d']), Paragraph(d.estado_funcionamiento_inicial.nombre if d.estado_funcionamiento_inicial else "—", st['s_val_d'])],
+            [Paragraph("DIAGNÓSTICO INICIAL:", st['s_lab_d']), Paragraph(d.diagnostico_inicial or "—", st['s_val_d'])],
+            [Paragraph("TRABAJO REALIZADO:", st['s_lab_d']), Paragraph(d.trabajo_realizado or "—", st['s_val_d'])],
+            [Paragraph("DIAGNÓSTICO FINAL:", st['s_lab_d']), Paragraph(d.diagnostico_final or "—", st['s_val_d'])],
+            [Paragraph("ESTADO FUNC. FINAL:", st['s_lab_d']), Paragraph(d.estado_funcionamiento_final.nombre if d.estado_funcionamiento_final else "—", st['s_val_d'])],
+            [Paragraph("OBSERVACIÓN DETALLE:", st['s_lab_d']), Paragraph(d.observacion_detalle or "Ninguna", st['s_val_d'])],
+        ]
+
+        t_detalles = Table(detalles_mant, colWidths=[5*cm, 22.2*cm])
+        t_detalles.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP'), ('LINEBELOW', (0,0), (0,-1), 0.5, GRIS_LINEA)]))
+
+        t_bien_full = Table([h_titulos, v_valores, [t_detalles, '', '', '', '']], colWidths=[5.5*cm]*5)
+        t_bien_full.setStyle(TableStyle([
+            ('SPAN', (0,2), (4,2)),
+            ('BACKGROUND', (0,0), (4,0), GUINDA_PJ),
+            ('INNERGRID', (0,0), (4,1), 0.5, colors.grey),
+            ('BOX', (0,0), (-1,-1), 0.8, NEGRO),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(KeepTogether(t_bien_full))
+        story.append(Spacer(1, 0.6*cm))
+
+    # 3. Firmas
+    ap_admin = mantenimiento.aprobaciones.filter(rol_aprobador='adminSede', accion='APROBADO').last()
+    admin_info = _get_usuario_info(ap_admin.usuario_id, cookie) if ap_admin else {'nombre': '—'}
+
+    f_tec = [_sello_manual("Técnico Sistemas", True), Spacer(1, 0.15*cm), Paragraph(tecnico['nombre'], st['s_fnomb']), Paragraph("SISTEMAS", st['s_stmp'])]
+    f_adm = [_sello_manual("V°B° Administración", ap_admin is not None), Spacer(1, 0.15*cm), Paragraph(admin_info['nombre'], st['s_fnomb']), Paragraph("ADMINISTRADOR DE SEDE", st['s_stmp'])]
+    f_usu = [HRFlowable(width="80%", thickness=1, color=NEGRO, spaceBefore=0.8*cm), Spacer(1, 0.15*cm), Paragraph(custodio['nombre'], st['s_fnomb']), Paragraph("CONFORMIDAD USUARIO", st['s_stmp'])]
+
+    tf = Table([[f_tec, f_adm, f_usu]], colWidths=[9.2*cm]*3)
+    tf.setStyle(TableStyle([('ALIGN',(0,0),(-1,-1),'CENTER'), ('VALIGN',(0,0),(-1,-1),'BOTTOM')]))
     story.append(tf)
-    # ── 8. FOOTER ─────────────────────────────────────────────────────────────
-    story.append(Spacer(1, 0.2 * cm))
-    story.append(HRFlowable(width='100%', thickness=0.4, color=GRIS_LINE))
-    story.append(Paragraph(
-        'dwr_log_mnt_formato_sisconpat_1',
-        ParagraphStyle('foot', fontName='Helvetica', fontSize=6,
-                       textColor=colors.grey, alignment=TA_RIGHT),
-    ))
+
+    # Construir con la clase personalizada
     doc.build(story)
     return buffer.getvalue()

@@ -29,8 +29,8 @@ function StatCard({ icon, iconBg, iconColor, label, value, loading, accent }) {
 
 export default function AlertasStats({
   totalPendientes  = 0,
-  pendientesAlta   = 0,
-  mantenUrgentes   = 0,
+  transfPendientes = 0,
+  mantPendientes   = 0,
   historialHoy     = 0,
   loading          = false,
 }) {
@@ -43,21 +43,21 @@ export default function AlertasStats({
         accent="#d97706" loading={loading}
       />
       <StatCard
-        icon="priority_high"
-        iconBg="bg-red-100" iconColor="text-red-600"
-        label="Prioridad Alta" value={pendientesAlta}
-        accent="#dc2626" loading={loading}
+        icon="swap_horiz"
+        iconBg="bg-blue-100" iconColor="text-blue-600"
+        label="Transf. Pendientes" value={transfPendientes}
+        accent="#2563eb" loading={loading}
       />
       <StatCard
         icon="engineering"
         iconBg="bg-primary/10" iconColor="text-primary"
-        label="Mant. Urgentes" value={mantenUrgentes}
+        label="Mant. Pendientes" value={mantPendientes}
         loading={loading}
       />
       <StatCard
         icon="history"
         iconBg="bg-slate-100" iconColor="text-slate-500"
-        label="Actividad Hoy" value={historialHoy}
+        label="Aprobados Hoy" value={historialHoy}
         loading={loading}
       />
     </div>

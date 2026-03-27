@@ -72,10 +72,7 @@ def _sello_manual(label: str, aprobado: bool, size_h: float = 3.5 * cm, size_v: 
                  fontName='Helvetica-Bold', fontSize=10,
                  fillColor=AZUL_SELLO_STAMP, textAnchor='middle'))
     
-    # Efecto de estampado manual (ligeras imperfecciones en el borde y relleno)
     if aprobado:
-        # Aquí se podría añadir un patrón de imperfecciones si se desea más realismo,
-        # pero para este diseño mantenemos un estilo de sello limpio pero contundente.
         pass
 
     return d
@@ -336,7 +333,7 @@ def generar_pdf_transferencia(transferencia, cookie: str = '') -> bytes:
     story.append(Table(
         [[_P('', st['s_val']),
           _P(f'<b>Total bienes:</b>  {transferencia.detalles.count()}'
-             f'   |   <b>Estado:</b>  {transferencia.estado_transferencia}', st['s_est'])]],
+            )]],
         colWidths=[18 * cm, 8.6 * cm],
         style=[('TOPPADDING', (0, 0), (-1, -1), 3),
                ('BOTTOMPADDING', (0, 0), (-1, -1), 2)],
@@ -358,7 +355,6 @@ def generar_pdf_transferencia(transferencia, cookie: str = '') -> bytes:
     story.append(Spacer(1, 0.4 * cm))
     # ── 8. FIRMAS (MEJORADO CON SELLOS ESTAMPADOS) ──────────────────────────
     aps = transferencia.aprobaciones
-    print(transferencia)
     def _nombre_ap(ap) -> str: return _resolver_nombre_aprobador(ap, cookie)
     def _fecha_ap(ap) -> str: return _fmt(ap.fecha) if ap else ''
 

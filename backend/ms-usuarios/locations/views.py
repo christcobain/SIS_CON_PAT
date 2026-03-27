@@ -443,7 +443,6 @@ class UbicacionViewSet(ViewSet):
             serializer = UbicacionCreateUpdateSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)       
             result = UbicacionService.create(serializer.validated_data)
-            print(result) 
             if not result['success']:
                 return Response(result, status=status.HTTP_400_BAD_REQUEST)
             return Response(result, status=status.HTTP_201_CREATED)

@@ -70,11 +70,11 @@ const transferenciasService = {
   // ==========================================
   // RETORNOS (NUEVO: Acciones para devoluciones de bienes)
   retornoSalida: async (id, data) => {
-    const response = await axiosBienes.post(`/transferencias/${id}/aprobar-retorno-salida/`, data);
+    const response = await axiosBienes.patch(`/transferencias/${id}/aprobar-retorno-salida/`, data);
     return response.data;
   },
   retornoEntrada: async (id, data) => {
-    const response = await axiosBienes.post(`/transferencias/${id}/aprobar-retorno-entrada/`, data);
+    const response = await axiosBienes.patch(`/transferencias/${id}/aprobar-retorno-entrada/`, data);
     return response.data;
   },
   // ==========================================

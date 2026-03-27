@@ -3,44 +3,50 @@ import { useMantenimientos } from '../../../hooks/useMantenimientos';
 import { useLocaciones } from '../../../hooks/useLocaciones';
 import { useToast } from '../../../hooks/useToast';
 import { usePermission } from '../../../hooks/usePermission';
-import ConfirmDialog from '../../../components/feedback/ConfirmDialog';
 import MantenimientosStats from './components/MantenimientosStats';
 import MantenimientosFiltros from './components/MantenimientosFiltros';
 import MantenimientosTabla from './components/MantenimientosTabla';
 import Can from '../../../components/auth/Can';
 
-const ModalCrearMantenimiento = lazy(() => import('./modals/ModalCrearMantenimiento'));
-const ModalDetalleMantenimiento = lazy(() => import('./modals/ModalDetalleMantenimiento'));
-const ModalEnviarAprobacion = lazy(() => import('./modals/ModalEnviarAprobacion'));
+const ModalCrearMantenimiento     = lazy(() => import('./modals/ModalCrearMantenimiento'));
+const ModalDetalleMantenimiento   = lazy(() => import('./modals/ModalDetalleMantenimiento'));
+const ModalEnviarAprobacion       = lazy(() => import('./modals/ModalEnviarAprobacion'));
 const ModalAprobacionMantenimiento = lazy(() => import('./modals/ModalAprobacionMantenimiento'));
+const ModalCancelarMantenimiento  = lazy(() => import('./modals/ModalCancelarMantenimiento'));
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
-
 const FILTROS_INICIALES = { estado: '', sede_id: '', search: '', misMantenimientos: false };
 
 export default function MantenimientosPage() {
-  const toast = useToast();
+  const toast    = useToast();
   const { sedes } = useLocaciones();
-  const { can } = usePermission();
-
+  const { can }  = usePermission();
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
-
   const {
-    mantenimientos, loading, actualizando, refetch, aplicarFiltros,
-    enviarAprobacion, aprobar, devolver, confirmarConformidad, cancelar,
+    mantenimientos,
+    loading,
+    actualizandoMant,
+    refetchMant,         
+    aplicarFiltros,
+    enviarAprobacion,
+    aprobar,
+    devolver,
+    cancelar,
   } = useMantenimientos(filtros);
+  const [itemEditar, setItemEditar] = useState(null);
 
-  const [modalCrear, setModalCrear] = useState(false);
-  const [modalDetalle, setModalDetalle] = useState(false);
-  const [modalEnviar, setModalEnviar] = useState(false);
+  const [modalCrear,      setModalCrear]      = useState(false);
+  const [modalDetalle,    setModalDetalle]    = useState(false);
+  const [modalEnviar,     setModalEnviar]     = useState(false);
   const [modalAprobacion, setModalAprobacion] = useState(false);
-  const [modoAprobacion, setModoAprobacion] = useState('aprobar');
-  const [confirmCancelar, setConfirmCancelar] = useState(false);
-  const [itemActivo, setItemActivo] = useState(null);
-  const [itemCancelar, setItemCancelar] = useState(null);
+  const [modalCancelar,   setModalCancelar]   = useState(false);  
+  const [modoAprobacion,  setModoAprobacion]  = useState('aprobar');
+  const [itemActivo,      setItemActivo]      = useState(null);
+  const [itemCancelar,    setItemCancelar]    = useState(null);
 
+  // ── Filtros ───────────────────────────────────────────────────────────────
   const onFiltroChange = (key, val) => {
     const next = { ...filtros, [key]: val };
     setFiltros(next);
@@ -52,7 +58,9 @@ export default function MantenimientosPage() {
     aplicarFiltros(FILTROS_INICIALES);
   };
 
+  // ── Handlers de navegación entre modales ──────────────────────────────────
   const handleVerDetalle = item => { setItemActivo(item); setModalDetalle(true); };
+  const handleEditar = (item) => { setItemEditar(item); setModalCrear(true); setModalDetalle(false); };
 
   const handleAprobar = item => {
     setItemActivo(item);
@@ -81,34 +89,28 @@ export default function MantenimientosPage() {
     setModalAprobacion(true);
   };
 
+  // ── Cancelar: abre el nuevo modal con selección de motivo ─────────────────
   const handleCancelar = item => {
     setItemCancelar(item);
-    setConfirmCancelar(true);
+    setModalDetalle(false);   
+    setModalCancelar(true);
   };
 
-  const confirmarCancelacion = async () => {
-    try {
-      await cancelar(itemCancelar.id, { motivo_cancelacion_id: 1, detalle_cancelacion: 'Cancelado desde panel' });
-      toast.success('Mantenimiento cancelado.');
-      setConfirmCancelar(false);
-      setItemCancelar(null);
-      refetch();
-    } catch (e) {
-      toast.error(e?.response?.data?.error || 'Error al cancelar.');
-    }
-  };
-
-  const handleAccionExitosa = () => {
+  const handleAccionExitosa = (res) => {
     setModalAprobacion(false);
     setModalEnviar(false);
     setModalDetalle(false);
+    setModalCancelar(false);
     setItemActivo(null);
-    toast.success('Proceso actualizado exitosamente.');
-    refetch();
+    setItemCancelar(null);
+    toast.success(res?.message || 'Operación realizada con éxito');
+    refetchMant();
   };
 
   return (
     <div className="p-4 max-w-[1600px] animate-in fade-in duration-500 pb-20 space-y-5">
+
+      {/* ── Cabecera ── */}
       <div className="card p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -122,15 +124,20 @@ export default function MantenimientosPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={refetch} disabled={loading}
+            <button
+              onClick={refetchMant}
+              disabled={loading}
               className="size-9 flex items-center justify-center rounded-xl transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95"
-              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+              style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+            >
               <Icon name="refresh" className={`text-[20px] ${loading ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
-            
+
             <Can perform="ms-bienes:mantenimientos:add_mantenimiento">
-              <button onClick={() => setModalCrear(true)}
-                className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm">
+              <button
+                onClick={() => setModalCrear(true)}
+                className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
+              >
                 <Icon name="add_circle" className="text-[18px]" />
                 <span className="font-black uppercase tracking-widest text-[10px]">Nueva orden</span>
               </button>
@@ -139,6 +146,7 @@ export default function MantenimientosPage() {
         </div>
       </div>
 
+      {/* ── Contenido principal ── */}
       <div className="page-content">
         <MantenimientosStats items={mantenimientos} loading={loading} />
 
@@ -157,21 +165,27 @@ export default function MantenimientosPage() {
           onDevolver={handleDevolver}
           onEnviar={handleEnviar}
           onCancelar={handleCancelar}
-          puedeAprobar={can('ms-bienes:mantenimientos:change_mantenimiento')}
-          puedeCancelar={can('ms-bienes:mantenimientos:delete_mantenimiento')}
-          puedeEnviar={can('ms-bienes:mantenimientos:add_mantenimiento')}
+          onEditar={handleEditar}
         />
       </div>
 
+      {/* ── Modales ── */}
       <Suspense fallback={null}>
+
+        {/* Crear */}
         {modalCrear && (
           <ModalCrearMantenimiento
             open={modalCrear}
             onClose={() => setModalCrear(false)}
-            onGuardado={() => { setModalCrear(false); refetch(); }}
+            item={itemEditar}
+            onGuardado={() => {
+              setModalCrear(false);
+              refetchMant();
+            }}            
           />
         )}
 
+        {/* Detalle */}
         {modalDetalle && (
           <ModalDetalleMantenimiento
             open={modalDetalle}
@@ -188,14 +202,15 @@ export default function MantenimientosPage() {
           />
         )}
 
+        {/* Enviar a aprobación */}
         {modalEnviar && (
           <ModalEnviarAprobacion
             open={modalEnviar}
             onClose={() => { setModalEnviar(false); setItemActivo(null); }}
             item={itemActivo}
             onEnviar={async (id, data) => {
-              await enviarAprobacion(id, data);
-              handleAccionExitosa();
+              const res = await enviarAprobacion(id, data)
+              handleAccionExitosa(res);
             }}
           />
         )}
@@ -206,21 +221,30 @@ export default function MantenimientosPage() {
             onClose={() => { setModalAprobacion(false); setItemActivo(null); }}
             item={itemActivo}
             modo={modoAprobacion}
-            onAprobar={async (id, obs) => { await aprobar(id, obs); handleAccionExitosa(); }}
-            onDevolver={async (id, motivo) => { await devolver(id, motivo); handleAccionExitosa(); }}
-            onConformar={async (id) => { await confirmarConformidad(id); handleAccionExitosa(); }}
+            onAprobar={async (id, obs) => { 
+                const res = await aprobar(id, obs); 
+                handleAccionExitosa(res); 
+            }}
+            onDevolver={async (id, motivo) => { 
+                const res = await devolver(id, motivo); 
+                handleAccionExitosa(res); 
+            }}
+          />
+        )}
+
+        {modalCancelar && (
+          <ModalCancelarMantenimiento
+            open={modalCancelar}
+            onClose={() => { setModalCancelar(false); setItemCancelar(null); }}
+            item={itemCancelar}
+            onCancelar={async (id, payload) => {
+              const res = await cancelar(id, payload);
+              handleAccionExitosa(res); 
+            }}
+            actualizando={actualizandoMant}
           />
         )}
       </Suspense>
-
-      <ConfirmDialog
-        open={confirmCancelar}
-        title="Cancelar mantenimiento"
-        message={`¿Cancelar la orden "${itemCancelar?.numero_orden}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Sí, cancelar" variant="danger" loading={actualizando}
-        onConfirm={confirmarCancelacion}
-        onClose={() => { setConfirmCancelar(false); setItemCancelar(null); }}
-      />
     </div>
   );
 }

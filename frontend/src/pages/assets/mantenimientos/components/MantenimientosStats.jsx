@@ -26,19 +26,45 @@ function KpiCard({ icon, label, value, loading, accentColor }) {
 }
 
 export default function MantenimientosStats({ items = [], loading = false }) {
-  const stats = useMemo(() => ({
-    enProceso:    items.filter(m => m.estado === 'EN_PROCESO').length,
-    pendientes:   items.filter(m => m.estado === 'PENDIENTE_APROBACION').length,
-    conformidad:  items.filter(m => m.estado === 'EN_ESPERA_CONFORMIDAD').length,
-    atendidos:    items.filter(m => m.estado === 'ATENDIDO').length,
-  }), [items]);
+  const stats = useMemo(() => {
+    return {
+      enProceso:    items.filter(m => m.estado_mantenimiento === 'EN_PROCESO').length,
+      pendientes:   items.filter(m => m.estado_mantenimiento === 'PENDIENTE_APROBACION').length,
+      conformidad:  items.filter(m => m.estado_mantenimiento === 'APROBADO').length,
+      atendidos:    items.filter(m => m.estado_mantenimiento === 'ATENDIDO').length,
+    };
+  }, [items]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <KpiCard icon="engineering"    label="En proceso"          value={stats.enProceso}   loading={loading} accentColor="#1d4ed8" />
-      <KpiCard icon="pending_actions" label="Pendiente aprobación" value={stats.pendientes}  loading={loading} accentColor="#b45309" />
-      <KpiCard icon="front_hand"     label="Espera conformidad"  value={stats.conformidad} loading={loading} accentColor="#7c3aed" />
-      <KpiCard icon="task_alt"       label="Atendidos"           value={stats.atendidos}   loading={loading} accentColor="#16a34a" />
+      <KpiCard 
+        icon="engineering" 
+        label="En proceso" 
+        value={stats.enProceso} 
+        loading={loading} 
+        accentColor="#1d4ed8" 
+      />
+      <KpiCard 
+        icon="pending_actions" 
+        label="Pendiente aprobación" 
+        value={stats.pendientes} 
+        loading={loading} 
+        accentColor="#b45309" 
+      />
+      <KpiCard 
+        icon="front_hand" 
+        label="Aprobado/Pend. Firma" 
+        value={stats.conformidad} 
+        loading={loading} 
+        accentColor="#7c3aed" 
+      />
+      <KpiCard 
+        icon="task_alt" 
+        label="Atendidos" 
+        value={stats.atendidos} 
+        loading={loading} 
+        accentColor="#16a34a" 
+      />
     </div>
   );
 }

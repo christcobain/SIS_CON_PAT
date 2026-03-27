@@ -56,7 +56,6 @@ const FUNC_COLOR = (n = '') => {
   return { color: '#64748b', bg: 'var(--color-border-light)' };
 };
 
-// ── Tarjeta de bien en la lista de selección ──────────────────────────────────
 function TarjetaBien({ b, seleccionado, onToggle }) {
   const estadoB = ESTADO_BIEN_COLOR(b.estado_bien_nombre ?? '');
   const funcB   = FUNC_COLOR(b.estado_funcionamiento_nombre ?? '');
@@ -157,7 +156,6 @@ function TarjetaBien({ b, seleccionado, onToggle }) {
   );
 }
 
-// ── Chips compactos de bienes seleccionados ───────────────────────────────────
 function ResumenBienesSeleccionados({ bienesSeleccionados, onQuitar }) {
   if (!bienesSeleccionados.length) return null;
   return (
@@ -202,10 +200,8 @@ export default function ModalTransferencia({
   const toast      = useToast();
   const isTraslado = activeTab === 'TRASLADO_SEDE';
   const isEditar   = !!item;
-
   const sedes_auth   = useAuthStore(s => s.sedes);
   const sede_auth_id = sedes_auth?.[0]?.id;
-
   const { bienes: todosBienes, loading: loadingBienes } = useBienes({});
   const { sedes, modulos, ubicaciones }                 = useLocaciones();
   const { usuarios: usuariosMs }                        = useUsuarios({ is_active: true });
@@ -332,7 +328,6 @@ export default function ModalTransferencia({
       toast.success(result?.message ?? 'Operación exitosa.');
       onGuardado();
     } catch (err) {
-      console.log(err?.response?.data?.detail)
       toast.error(err?.response?.data?.detail|| err?.response?.data || err?.response?.detail ||'Error al registrar.');
     } finally { setGuardando(false); }
   };
@@ -399,9 +394,11 @@ export default function ModalTransferencia({
                 ) : (
                   <div className="space-y-2 overflow-y-auto pr-1 mt-2" style={{ maxHeight: '40vh' }}>
                     {bienesFiltradosBuscador.map(b => (
-                      <TarjetaBien key={b.id} b={b}
-                        seleccionado={form.bien_ids.includes(b.id)}
-                        onToggle={toggleBien} />
+                      <TarjetaBien 
+                      key={b.id} 
+                      b={b}
+                      seleccionado={form.bien_ids.includes(b.id)}
+                      onToggle={toggleBien} />
                     ))}
                   </div>
                 )}

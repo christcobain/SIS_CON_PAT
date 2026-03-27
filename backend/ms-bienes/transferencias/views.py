@@ -178,7 +178,6 @@ class TransferenciaViewSet(ViewSet):
         response  = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="TRF-{pk}.pdf"'
         return response
-
     @extend_schema(
         tags=['Transferencias'],
         summary='Registrar traslado entre sedes',
@@ -197,7 +196,6 @@ class TransferenciaViewSet(ViewSet):
     @action(detail=False, methods=['post'], url_path='traslado')
     def crear_traslado(self, request):
         ser = TrasladoSedeWriteSerializer(data=request.data)
-        print(ser)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.crear_traslado_sede(
             ser.validated_data,
@@ -272,7 +270,7 @@ class TransferenciaViewSet(ViewSet):
         sede_id = self._get_sede(request)
         role    = self._get_role(request)
         qs = TransferenciaService.listar_pendientes_segur(sede_id, role)
-        return Response(TransferenciaSegurSerializer(qs, many=True).data) 
+        return Response(TransferenciaListSerializer(qs, many=True).data) 
     @extend_schema(
         tags=['Transferencias'],
         summary='Lista de pendientes de aprobacion.',

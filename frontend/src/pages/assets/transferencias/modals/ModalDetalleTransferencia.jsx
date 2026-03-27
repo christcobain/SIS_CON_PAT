@@ -16,7 +16,7 @@ const BADGE = {
   PENDIENTE_APROBACION:  { label: 'Pendiente aprobación',  color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
   EN_ESPERA_CONFORMIDAD: { label: 'Espera conformidad',    color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)' },
   EN_RETORNO:            { label: 'En retorno',            color: '#c2410c', bg: 'rgb(194 65 12 / 0.1)'  },
-  EN_ESPERA_FIRMA:            { label: 'En espera de firma',            color: '#c2410c', bg: 'rgb(194 65 12 / 0.1)'  },
+  EN_ESPERA_FIRMA:       { label: 'En espera de firma',    color: '#c2410c', bg: 'rgb(194 65 12 / 0.1)'  },
   ATENDIDO:              { label: 'Atendido',              color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
   DEVUELTO:              { label: 'Devuelto',              color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
   CANCELADO:             { label: 'Cancelado',             color: '#64748b', bg: 'var(--color-border-light)' },
@@ -60,7 +60,6 @@ function FlujoPaso({ label, nombre, fecha, hecho }) {
 }
 
 function TabRuta({ t }) {
-  // const esTraslado = t.tipo === 'TRASLADO_SEDE';
   return (
     <div className="space-y-4">
       <div>
@@ -149,11 +148,11 @@ function TabBienes({ bienes = [] }) {
 function TabAprobaciones({ t }) {
   const esTraslado = t.tipo === 'TRASLADO_SEDE';
   const pasos = esTraslado ? [
-    { label: 'Registrado',             nombre: t.usuario_origen_nombre,                fecha: t.fecha_registro,                   hecho: true },
-    { label: 'Aprobado por Admin Sede', nombre: t.aprobado_por_adminsede_nombre,        fecha: t.fecha_aprobacion_adminsede,       hecho: !!t.aprobado_por_adminsede_id },
-    { label: 'V°B° Salida (Segur.)',    nombre: t.aprobado_segur_salida_nombre,         fecha: t.fecha_aprobacion_segur_salida,    hecho: !!t.aprobado_segur_salida_id },
-    { label: 'V°B° Entrada (Segur.)',   nombre: t.aprobado_segur_entrada_nombre,        fecha: t.fecha_aprobacion_segur_entrada,   hecho: !!t.aprobado_segur_entrada_id },
-    { label: 'Confirmado por destino',  nombre: t.confirmado_por_usuario_destino_nombre, fecha: t.fecha_confirmacion_destino,      hecho: !!t.confirmado_por_usuario_destino_id },
+    { label: 'Registrado',             nombre: t.usuario_origen_nombre,                 fecha: t.fecha_registro,                   hecho: true },
+    { label: 'Aprobado por Admin Sede', nombre: t.aprobado_por_adminsede_nombre,         fecha: t.fecha_aprobacion_adminsede,       hecho: !!t.aprobado_por_adminsede_id },
+    { label: 'V°B° Salida (Segur.)',    nombre: t.aprobado_segur_salida_nombre,          fecha: t.fecha_aprobacion_segur_salida,    hecho: !!t.aprobado_segur_salida_id },
+    { label: 'V°B° Entrada (Segur.)',   nombre: t.aprobado_segur_entrada_nombre,         fecha: t.fecha_aprobacion_segur_entrada,   hecho: !!t.aprobado_segur_entrada_id },
+    { label: 'Confirmado por destino',  nombre: t.confirmado_por_usuario_destino_nombre, fecha: t.fecha_confirmacion_destino,       hecho: !!t.confirmado_por_usuario_destino_id },
   ] : [
     { label: 'Registrado',              nombre: t.usuario_origen_nombre,               fecha: t.fecha_registro,                   hecho: true },
     { label: 'Aprobado por Admin Sede', nombre: t.aprobado_por_adminsede_nombre,       fecha: t.fecha_aprobacion_adminsede,       hecho: !!t.aprobado_por_adminsede_id },
@@ -199,20 +198,21 @@ function TabAprobaciones({ t }) {
 export default function ModalDetalleTransferencia({
   open, onClose, item, actualizando, acciones, onAccionExitosa,
 }) {
-  const [tab,  setTab]  = useState('ruta');
-  const [role,user ] = useAuthStore(s => s.role);
+  const [tab, setTab] = useState('ruta');
+  const role = useAuthStore(s => s.role);
+  const user = useAuthStore(s => s.user);
   const toast = useToast();
   const fileRef = useRef();
   if (!item) return null;
-  const t     = item;
-  const estado = t.estado_transferencia;
-  const esTraslado    = t.tipo === 'TRASLADO_SEDE';
-  const esAsignacion  = t.tipo === 'ASIGNACION_INTERNA';
-  const badge = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
-  const bienes = t.bienes ?? [];
-
+  const t          = item;
+  const estado     = t.estado_transferencia;
+  const esTraslado = t.tipo === 'TRASLADO_SEDE';
+  const esAsignacion = t.tipo === 'ASIGNACION_INTERNA';
+  const badge      = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
+  const bienes     = t.bienes ?? [];  
   const puedeAprobarAdmin = ['SYSADMIN', 'coordSistema', 'adminSede'].includes(role);
   const puedeAprobarSegur = role === 'segurSede';
+  const esAsistSistema   = ['asistSistema', 'SYSADMIN'].includes(role);
 
   const ejecutar = async (fn, ...args) => {
     try {
@@ -229,8 +229,8 @@ export default function ModalDetalleTransferencia({
     const archivo = e.target.files?.[0];
     if (!archivo) return;
     try {
-      const result=await acciones.subirFirmado?.(t.id, archivo,user.id);
-      toast.success(result?.response?.data.message||'Acta firmada subida correctamente.');
+      const result = await acciones.subirFirmado?.(t.id, archivo, user?.id);
+      toast.success(result?.message || 'Acta firmada subida correctamente.');
       onAccionExitosa?.();
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Error al subir el acta.');
@@ -238,11 +238,16 @@ export default function ModalDetalleTransferencia({
   };
 
   const handleDescargarPDF = async () => {
-    try { 
-      await acciones.descargarPDF?.(t.id);   
-    } catch { 
-      toast.error('Error al descargar el PDF.'); }
+    try {
+      await acciones.descargarPDF?.(t.id);
+    } catch {
+      toast.error('Error al descargar el PDF.');
+    }
   };
+
+  const mostrarDescargaPDF =(esAsistSistema ) && estado === 'EN_ESPERA_FIRMA';
+  const mostrarSubirActa = (esAsistSistema ) && estado === 'EN_ESPERA_FIRMA'  && !t.tiene_pdf_firmado;
+ 
 
   return (
     <Modal open={open} onClose={onClose} size="xl">
@@ -272,6 +277,7 @@ export default function ModalDetalleTransferencia({
             </div>
           </div>
 
+          {/* ── Panel lateral derecho ── */}
           <aside className="w-56 shrink-0 p-4 space-y-3 overflow-y-auto" style={{ borderLeft: '1px solid var(--color-border)' }}>
             <div className="card p-3 text-center space-y-2">
               <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado</p>
@@ -285,10 +291,10 @@ export default function ModalDetalleTransferencia({
             <div className="card p-3 space-y-2">
               <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Resumen</p>
               {[
-                { label: 'Tipo',        value: esTraslado ? 'Traslado' : 'Asignación', icon: 'sync_alt'    },
-                { label: 'Bienes',      value: bienes.length,                           icon: 'inventory_2' },
-                { label: 'Registro',    value: t.fecha_registro ? fmtT(t.fecha_registro) : '—', icon: 'calendar_today' },
-                { label: 'Aprobado',    value: t.aprobado_por_adminsede_nombre ?? '—',  icon: 'verified'    },
+                { label: 'Tipo',     value: esTraslado ? 'Traslado' : 'Asignación', icon: 'sync_alt'       },
+                { label: 'Bienes',   value: bienes.length,                           icon: 'inventory_2'    },
+                { label: 'Registro', value: t.fecha_registro ? fmtT(t.fecha_registro) : '—', icon: 'calendar_today' },
+                { label: 'Aprobado', value: t.aprobado_por_adminsede_nombre ?? '—',  icon: 'verified'       },
               ].map(s => (
                 <div key={s.label} className="flex items-start gap-1.5">
                   <Icon name={s.icon} className="text-[13px] mt-0.5 shrink-0" style={{ color: 'var(--color-text-faint)' }} />
@@ -300,31 +306,41 @@ export default function ModalDetalleTransferencia({
               ))}
             </div>
 
+            {/* ── Documentación ── */}
             <div className="space-y-2">
               <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
-              {(t.estado_transferencia === 'EN_ESPERA_FIRMA') && (
-                <button onClick={handleDescargarPDF}                
+
+              {/* Descargar PDF — visible cuando estado es EN_ESPERA_FIRMA */}
+              {mostrarDescargaPDF && (
+                <button
+                  onClick={handleDescargarPDF}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
                   style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
                   <Icon name="picture_as_pdf" className="text-[16px]" />Descargar PDF
                 </button>
               )}
 
-              { t.estado_transferencia === 'EN_ESPERA_FIRMA' && !t.tiene_pdf_firmado &&esTraslado&& (
+              {/* Subir acta firmada — visible cuando estado es EN_ESPERA_FIRMA y es traslado y no tiene firma */}
+              {mostrarSubirActa && (
                 <>
-                  <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirFirmado} />
-                  <button onClick={() => fileRef.current?.click()}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={handleSubirFirmado}
+                  />
+                  <button
+                    onClick={() => fileRef.current?.click()}
                     className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
                     style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
                     <Icon name="upload_file" className="text-[16px]" />Subir acta firmada
                   </button>
-                  <p className="text-[9px] leading-relaxed" style={{ color: 'var(--color-text-faint)' }}>
-                    Solo para asignaciones internas. Sube el scan firmado por el destinatario.
-                  </p>
                 </>
               )}
 
-              {t.tiene_pdf_firmado || estado === 'ATENDIDO' && (
+              {/* Confirmación de acta firmada subida */}
+              {(t.tiene_pdf_firmado || estado === 'ATENDIDO') && (
                 <div className="flex items-center gap-2 p-2.5 rounded-xl"
                   style={{ background: 'rgb(22 163 74 / 0.08)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
                   <Icon name="task_alt" className="text-[15px]" style={{ color: '#16a34a' }} />

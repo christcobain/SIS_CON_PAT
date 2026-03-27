@@ -3,6 +3,7 @@ import { useAuthStore }      from '../../../store/authStore';
 import { useToast }          from '../../../hooks/useToast';
 import transferenciasService from '../../../services/transferencias.service';
 
+
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
 );
@@ -119,25 +120,19 @@ function InfoChip({ icon, label, color }) {
 }
 
 // ── Tarjeta individual de transferencia ───────────────────────────────────────
-function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado }) {
+function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,subirFirmado,user }) {
   const toast   = useToast();
   const fileRef = useRef();
-
   const [busy,    setBusy]    = useState(false);
   const [modalDv, setModalDv] = useState(null);
-
   const estado     = t.estado_transferencia;
   const esTraslado = t.tipo === 'TRASLADO_SEDE';
   const bienes     = t.bienes ?? [];
-
-  // ── Flags de rol ────────────────────────────────────────────────────────
   const esAdminAprobador = ['adminSede', 'coordSistema', 'SYSADMIN'].includes(role);
   const esSegur          = ['segurSede', 'SYSADMIN'].includes(role);
   const esAsistSistema   = ['asistSistema', 'SYSADMIN'].includes(role);
-
   const miSede = String(sedeId);
 
-  // ── Flags de progreso ───────────────────────────────────────────────────
   const adminAprobado   = !!t.aprobado_por_adminsede_id;
   const segurSalidaOk   = !!t.aprobado_segur_salida_id;
   const segurEntradaOk  = !!t.aprobado_segur_entrada_id;
@@ -145,10 +140,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado }) {
   const sedeOrigen  = String(t.sede_origen_id  ?? '');
   const sedeDestino = String(t.sede_destino_id ?? '');
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // CONDICIONES DE ACCIÓN (espejo exacto del backend)
-
-  const puedeAprobarAdmin =
+   const puedeAprobarAdmin =
     esAdminAprobador &&
     estado === 'PENDIENTE_APROBACION' &&
     !adminAprobado;
@@ -194,9 +186,8 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado }) {
     esSegur && esTraslado &&
     estado === 'EN_RETORNO' &&
     retornoSalidaOk &&
-    !t.aprobado_retorno_entrada_id &&
+    !t.aprobado_retorno_entrada_id && t.aprobado_retorno_salida_id&&
     sedeOrigen === miSede;
-
   const hayAccionPrimaria = puedeAprobarAdmin || puedeAprobarSalida || puedeAprobarEntrada ||
                             puedeConfirmarRecepcion || puedeSubirActa ||
                             puedeRetornoSalida || puedeRetornoEntrada;
@@ -209,37 +200,30 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado }) {
       toast.success(msg);
       onAprobado();
     } catch (e) {
-      toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Error al procesar.');
+      toast.error(e?.response?.data?.error || e?.response?.data?.detail ||e?.detail || 'Error al procesar.');
     } finally {
       setBusy(false);
     }
   };
-
-  // ── Manejadores con motivo ───────────────────────────────────────────────
   const handleDevolver        = async (m) => { setModalDv(null); await accion(() => transferenciasService.devolver(t.id, { motivo_devolucion: m }), 'Transferencia devuelta al registrador.'); };
   const handleRechazarSalida  = async (m) => { setModalDv(null); await accion(() => transferenciasService.rechazarSalidaSeguridad(t.id, { motivo_devolucion: m }), 'Salida rechazada.'); };
   const handleRechazarEntrada = async (m) => { setModalDv(null); await accion(() => transferenciasService.rechazarEntradaSeguridad(t.id, { motivo_devolucion: m }), 'Entrada rechazada. En retorno.'); };
 
-  // ── Subir acta firmada ───────────────────────────────────────────────────
-  const handleSubirActa = async (e) => {
+  const handleSubirFirmado = async e => {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
     setBusy(true);
-    try {
-      const formData = new FormData();
-      formData.append('archivo', archivo);
-      await transferenciasService.subirFirmado(t.id, formData);
-      toast.success('Acta firmada subida. Transferencia completada (ATENDIDO).');
+    try {      
+      const result = await subirFirmado(t.id, archivo, user?.id);
+      toast.success(result?.message || 'Acta firmada subida correctamente.');
       onAprobado();
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Error al subir el acta.');
     } finally {
       setBusy(false);
-      e.target.value = '';
     }
   };
 
-  // ── Indicador del paso activo ────────────────────────────────────────────
   const getPaso = () => {
     if (puedeAprobarAdmin)          return { paso: '①', desc: esTraslado ? 'Requiere aprobación de Admin Sede' : 'Requiere aprobación de Admin Sede', color: 'var(--color-primary)' };
     if (puedeAprobarSalida)         return { paso: '②', desc: 'Requiere V°B° de Seguridad — Salida física (tu sede)', color: '#7c3aed' };
@@ -259,20 +243,10 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado }) {
     rechazar_salida:  { titulo: 'Rechazar salida física',      placeholder: 'Describe el motivo del rechazo de salida...' },
     rechazar_entrada: { titulo: 'Rechazar entrada — retorno',  placeholder: 'Describe el motivo del rechazo de entrada...' },
   };
-  const modalCfg = modalDv ? MODAL_CFG[modalDv] : null;
-  const handleDescargarPDF = async () => {
-    try { 
-      await transferenciasService.descargarPDF?.(t.id); 
-    } catch { 
-      toast.error('Error al descargar el PDF.'); }
-  };
-  
+  const modalCfg = modalDv ? MODAL_CFG[modalDv] : null; 
 
   return (
-    <>
-      {/* Input oculto para subir acta */}
-      <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirActa} />
-
+    <>     
       <div
         className="card p-4 hover:shadow-md transition-shadow"
         style={{
@@ -397,13 +371,21 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado }) {
             <ActionBtn icon="download" label="Descargar Acta PDF"
               color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)"
               disabled={busy}
-              onClick={handleDescargarPDF} />
+              onClick={() => onDownload(t.id)} />
           )}
           {/* ⑦ Subir acta firmada → cierra el proceso con ATENDIDO */}
+          {/* Input oculto para subir acta */}
+            <input 
+            ref={fileRef} 
+            type="file" 
+            accept=".pdf,.jpg,.jpeg,.png" 
+            className="hidden" 
+            onChange={handleSubirFirmado} />
           {puedeSubirActa && (
             <ActionBtn icon="upload_file" label="Subir Acta Firmada"
               color="#7c3aed" bgColor="rgb(124 58 237 / 0.12)" borderColor="rgb(124 58 237 / 0.45)"
-              disabled={busy} onClick={() => fileRef.current?.click()} />
+              disabled={busy} 
+              onClick={() => fileRef.current?.click()} />
           )}
 
           {/* ⑤ SegurSede destino confirma retorno-salida */}
@@ -448,9 +430,10 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado }) {
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function AlertasPendientesTransferencias({ onVerDetalle }) {
+export default function AlertasPendientesTransferencias({ onVerDetalle,onDownload,subirFirmado }) {
   const role   = useAuthStore(s => s.role);
   const sedes  = useAuthStore(s => s.sedes);
+  const user = useAuthStore(s => s.user);
   const sedeId = sedes?.[0]?.id;
 
   const [pendientes, setPendientes] = useState([]);
@@ -529,6 +512,9 @@ export default function AlertasPendientesTransferencias({ onVerDetalle }) {
           sedeId={sedeId}
           onDetalle={onVerDetalle}
           onAprobado={refresh}
+          onDownload={onDownload}
+          subirFirmado={subirFirmado}
+          user={user}
         />
       ))}
     </div>

@@ -16,22 +16,23 @@ const fmtT = iso => !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateS
 const BADGE = {
   EN_PROCESO:            { label: 'En proceso',         color: '#1d4ed8', bg: 'rgb(37 99 235 / 0.1)'  },
   PENDIENTE_APROBACION:  { label: 'Pend. aprobación',   color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
-  EN_ESPERA_CONFORMIDAD: { label: 'Espera conformidad', color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)' },
+  APROBADO: { label: 'Aprobado', color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)' },
   ATENDIDO:              { label: 'Atendido',           color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
   DEVUELTO:              { label: 'Devuelto',           color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
   CANCELADO:             { label: 'Cancelado',          color: '#64748b', bg: 'var(--color-border-light)' },
 };
 
 const ROL_LABEL = {
-  ASISTSISTEMA: 'Asist. Sistemas',
-  ADMINSEDE:    'Admin Sede',
-  PROPIETARIO:  'Propietario',
+  asistSistema: 'Asist. Sistemas',
+  adminSede:    'Admin Sede',
 };
 const ACCION_CFG = {
+  ENVIADO:   { icon: 'check_circle',  color: '#16a34a' },
+  REGISTRADO:   { icon: 'check_circle',  color: '#16a34a' },
   APROBADO:   { icon: 'check_circle',  color: '#16a34a' },
   DEVUELTO:   { icon: 'reply',         color: '#b45309' },
   CANCELADO:  { icon: 'cancel',        color: '#dc2626' },
-  CONFIRMADO: { icon: 'front_hand',    color: '#7c3aed' },
+  ATENDIDO: { icon: 'front_hand',    color: '#7c3aed' },
 };
 
 const TABS = [
@@ -92,7 +93,7 @@ function TabInfo({ m }) {
         <div className="relative pl-3.5" style={{ borderLeft: '2px solid var(--color-border)' }}>
           <FlujoPaso label="Registrado"           nombre={null}                               fecha={m.fecha_registro}                hecho={true} />
           <FlujoPaso label="Aprobado Admin Sede"  nombre={m.aprobado_por_adminsede_nombre}    fecha={m.fecha_aprobacion_adminsede}    hecho={!!m.aprobado_por_adminsede_id} />
-          <FlujoPaso label="Confirmado propietario" nombre={m.confirmado_por_propietario_nombre} fecha={m.fecha_confirmacion_propietario} hecho={!!m.confirmado_por_propietario_id} />
+          <FlujoPaso label="Confirmado propietario" nombre={m.usuario_propietario_nombre} fecha={m.fecha_pdf_firmado} hecho={m.estado_mantenimiento=='ATENDIDO'} />
         </div>
       </div>
     </div>
@@ -115,54 +116,66 @@ function TabBienes({ detalles = [] }) {
               <div className="size-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgb(127 29 29 / 0.08)' }}>
                 <Icon name="devices" className="text-[18px]" style={{ color: 'var(--color-primary)' }} />
               </div>
-              <div>
+              <div className=' grid '>
                 <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{d.tipo_bien_nombre}</p>
-                <p className="text-[11px]" style={{ color: 'var(--color-text-muted)' }}>{d.marca_bien} · {d.modelo}</p>
-                <p className="text-[11px] font-mono" style={{ color: 'var(--color-primary)' }}>{d.codigo_patrimonial ?? d.numero_serie}</p>
+                <span className="text-[10px] font-mono bg-surface-alt px-1.5 py-0.5 rounded border border-border self-start">Marca: {d.marca_nombre}</span>
+                <span className="text-[10px] font-mono bg-surface-alt px-1.5 py-0.5 rounded border border-border self-start">Modelo: {d.modelo}</span>
+                <span className="text-[10px] font-mono bg-surface-alt px-1.5 py-0.5 rounded border border-border self-start">Cód. Pat. {d.codigo_patrimonial || 'S/C'}</span>
               </div>
             </div>
+
             <div className="text-right shrink-0 space-y-1">
               {d.estado_funcionamiento_inicial && (
-                <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-md"
+                <span className="inline-block text-[9px] font-bold bg-surface-alt px-2 py-0.5 rounded-md"
                   style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
-                  Inicial: {d.estado_funcionamiento_inicial}
+                  Estado Func. Inicial: {d.estado_funcionamiento_inicial_nombre}
                 </span>
               )}
-              {d.estado_funcionamiento_final && (
-                <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-md"
-                  style={{ background: 'rgb(22 163 74 / 0.1)', color: '#16a34a' }}>
-                  Final: {d.estado_funcionamiento_final}
-                </span>
+              {d.estado_funcionamiento_final && (                
+                <span className="text-[9px] font-black px-2 py-1 rounded bg-surface-alt border border-border uppercase"
+                style={{ background: 'rgb(22 163 74 / 0.1)', color: '#16a34a' }}
+                >
+                Estado Func. Final: {d.estado_funcionamiento_inicial_nombre || 'Sin estado'}
+              </span>
               )}
             </div>
+
           </div>
-          {(d.diagnostico_inicial || d.trabajo_realizado || d.diagnostico_final) && (
-            <div className="grid grid-cols-3 gap-2 pt-3" style={{ borderTop: '1px solid var(--color-border-light)' }}>
-              {d.diagnostico_inicial && (
-                <div className="p-2 rounded-lg" style={{ background: 'var(--color-surface)' }}>
-                  <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--color-text-muted)' }}>Diag. inicial</p>
-                  <p className="text-[11px]" style={{ color: 'var(--color-text-body)' }}>{d.diagnostico_inicial}</p>
+
+          
+          {/* Informe en una sola columna: Uno debajo de otro */}
+            <td className="p-3">
+              <div className="flex flex-col gap-2 max-w-md">
+                <div className="space-y-1">
+                  <p className="text-[9px] font-black text-muted uppercase tracking-tighter">● Diagnóstico Inicial</p>
+                  <p className="text-[11px] leading-snug pl-3 border-l-2 border-border italic text-muted">
+                    {d.diagnostico_inicial || '—'}
+                  </p>
                 </div>
-              )}
-              {d.trabajo_realizado && (
-                <div className="p-2 rounded-lg" style={{ background: 'var(--color-surface)' }}>
-                  <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--color-text-muted)' }}>Trabajo realizado</p>
-                  <p className="text-[11px]" style={{ color: 'var(--color-text-body)' }}>{d.trabajo_realizado}</p>
+                <div className="space-y-1">
+                  <p className="text-[9px] font-black text-blue-600 uppercase tracking-tighter">● Trabajo Realizado</p>
+                  <p className="text-[11px] font-bold leading-snug pl-3 border-l-2 border-blue-200">
+                    {d.trabajo_realizado || '—'}
+                  </p>
                 </div>
-              )}
-              {d.diagnostico_final && (
-                <div className="p-2 rounded-lg" style={{ background: 'var(--color-surface)' }}>
-                  <p className="text-[9px] font-black uppercase mb-1" style={{ color: 'var(--color-text-muted)' }}>Diag. final</p>
-                  <p className="text-[11px]" style={{ color: 'var(--color-text-body)' }}>{d.diagnostico_final}</p>
+                <div className="space-y-1">
+                  <p className="text-[9px] font-black text-green-600 uppercase tracking-tighter">● Diagnóstico Final</p>
+                  <p className="text-[11px] font-bold leading-snug pl-3 border-l-2 border-green-200">
+                    {d.diagnostico_final || '—'}
+                  </p>
                 </div>
-              )}
-            </div>
-          )}
-          {d.observacion_detalle && (
-            <p className="text-[11px] mt-2 italic pt-2" style={{ borderTop: '1px solid var(--color-border-light)', color: 'var(--color-text-body)' }}>
-              {d.observacion_detalle}
-            </p>
-          )}
+                {d.observacion_detalle && (
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-amber-600 uppercase tracking-tighter">● Observaciones</p>
+                    <p className="text-[11px] leading-snug pl-3 border-l-2 border-amber-200">
+                      {d.observacion_detalle}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </td>
+
+
         </div>
       ))}
     </div>
@@ -176,7 +189,8 @@ function TabImagenes({ imagenes = [] }) {
       <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>Sin imágenes de evidencia</p>
     </div>
   );
-  return (
+  
+  return (    
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {imagenes.map(img => (
         <div key={img.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
@@ -237,7 +251,7 @@ export default function ModalDetalleMantenimiento({
   const [tab,     setTab]     = useState('info');
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(false);
-  const { obtener, descargarPDF, subirFirmado, subirImagen } = useMantenimientos();
+  const { obtener, descargarPDF, subirFirmadoMant, subirImagen } = useMantenimientos();
   const role  = useAuthStore(s => s.role);
   const toast = useToast();
   const fileImgRef  = useRef();
@@ -245,7 +259,8 @@ export default function ModalDetalleMantenimiento({
 
   useEffect(() => {
     if (!open || !item?.id) return;
-    setTab('info'); setData(null);
+    setTab('info'); 
+    setData(null);
     setLoading(true);
     obtener(item.id)
       .then(d => setData(d))
@@ -254,13 +269,13 @@ export default function ModalDetalleMantenimiento({
   }, [open, item?.id]);
 
   if (!item) return null;
-  const m       = data ?? item;
+  const m       = data ?? item;  
   const estado  = m.estado_mantenimiento ?? m.estado;
   const badge   = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
   const detalles = m.detalles ?? m.detalles_mantenimiento ?? [];
   const imagenes  = m.imagenes ?? [];
   const aprobaciones = m.aprobaciones ?? [];
-  const totalBienes = m.total_bienes ?? detalles.length;
+  const totalBienes = m.total_bienes ?? detalles.length;  
 
   const handleSubirImagen = async e => {
     const archivo = e.target.files?.[0];
@@ -280,8 +295,8 @@ export default function ModalDetalleMantenimiento({
     const archivo = e.target.files?.[0];
     if (!archivo) return;
     try {
-      await subirFirmado(item.id, archivo);
-      toast.success('Acta firmada subida exitosamente.');
+      const result=await subirFirmadoMant(item.id, archivo);
+      toast.success(result?.message ||'Acta firmada subida exitosamente.');
       onSubirFirmado?.();
     } catch { toast.error('Error al subir el acta firmada.'); }
   };
@@ -308,9 +323,10 @@ export default function ModalDetalleMantenimiento({
                     {id === 'bienes'    && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>{totalBienes}</span>}
                     {id === 'imagenes'  && imagenes.length > 0 && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: 'rgb(124 58 237 / 0.1)', color: '#7c3aed' }}>{imagenes.length}</span>}
                     {id === 'historial' && aprobaciones.length > 0 && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>{aprobaciones.length}</span>}
-                  </button>
+                  </button>                  
                 ))}
               </div>
+              
               <div className="flex-1 overflow-y-auto p-6">
                 {tab === 'info'      && <TabInfo       m={m} />}
                 {tab === 'bienes'    && <TabBienes     detalles={detalles} />}
@@ -345,14 +361,14 @@ export default function ModalDetalleMantenimiento({
 
               <div className="space-y-2">
                 <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
-                {m.pdf_path && (
+                {estado === 'APROBADO'&& !m.pdf_path && (
                   <button onClick={handleDescargar}
                     className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase cursor-pointer"
                     style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
                     <Icon name="download" className="text-[15px]" />Descargar PDF
                   </button>
                 )}
-                {estado === 'ATENDIDO' && !m.pdf_firmado_path && (
+                {estado === 'APROBADO' && !m.pdf_firmado_path && (
                   <>
                     <input ref={fileFirmRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirFirmado} />
                     <button onClick={() => fileFirmRef.current?.click()}
@@ -385,8 +401,11 @@ export default function ModalDetalleMantenimiento({
         )}
       </ModalBody>
 
-      <ModalFooter align="space">
-        <button onClick={onClose} className="btn-secondary">Cerrar</button>
+      <ModalFooter align="right" className="bg-slate-50 dark:bg-slate-900/80">
+        <button onClick={onClose} className="px-6 py-2 text-[11px] font-black uppercase tracking-widest text-muted hover:text-body transition-colors">
+            Cerrar Ficha
+        </button>
+
         <div className="flex items-center gap-2 flex-wrap">
           {(estado === 'EN_PROCESO' || estado === 'DEVUELTO') && (
             <button onClick={() => onEnviar(m)} className="btn-primary flex items-center gap-2">

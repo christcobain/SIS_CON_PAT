@@ -78,8 +78,6 @@ class BienService:
         if not numero_serie or numero_serie.upper() in ('S/N', ''):
             return
         qs = BienRepository.filter({'numero_serie': numero_serie,'is_active': None})
-        print('numero_serie=',numero_serie)
-        print(qs)
         if exclude_pk:
             qs = qs.exclude(pk=exclude_pk)
         if qs.exists():

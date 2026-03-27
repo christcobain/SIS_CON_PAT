@@ -7,11 +7,15 @@ const mantenimientosService = {
     return response.data;
   },
   obtener: async (id) => {
-    const response = await axiosBienes.get(`/${id}/`);
+    const response = await axiosBienes.get(`/mantenimientos/${id}/`);
     return response.data;
   },
   misMantenimientos: async (params = {}) => {
     const response = await axiosBienes.get('/mantenimientos/mis-mantenimientos/', { params });
+    return response.data;
+  },
+  pendientesAprobacion: async () => {
+    const response = await axiosBienes.get('/mantenimientos/pendientes-aprobacion/');
     return response.data;
   },
   descargarPDF: async (id) => {
@@ -47,10 +51,10 @@ const mantenimientosService = {
     });
     return response.data;
   },
-  confirmarConformidad: async (id) => {
-    const response = await axiosBienes.patch(`/mantenimientos/${id}/confirmar-conformidad/`);
-    return response.data;
-  },
+  // confirmarConformidad: async (id) => {
+  //   const response = await axiosBienes.patch(`/mantenimientos/${id}/confirmar-conformidad/`);
+  //   return response.data;
+  // },
   cancelar: async (id, data) => {
     const response = await axiosBienes.patch(`/mantenimientos/${id}/cancelar/`, data);
     return response.data;
@@ -58,7 +62,7 @@ const mantenimientosService = {
   subirFirmado: async (id, archivo) => {
     const formData = new FormData();
     formData.append('archivo', archivo);
-    const response = await axiosBienes.post(`/mantenimientos/${id}/subir-firmado/`, formData, {
+    const response = await axiosBienes.post(`/mantenimientos/${id}/pdf-firmado/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;

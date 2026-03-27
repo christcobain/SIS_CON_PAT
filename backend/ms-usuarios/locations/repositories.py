@@ -159,7 +159,7 @@ class UbicacionRepository:
         )
     @staticmethod
     def get_all():
-        return UbicacionRepository.base_queryset().all()
+        return UbicacionRepository.base_queryset().all().order_by('nombre')
     @staticmethod
     def get_by_id(pk: int):
         return (UbicacionRepository.base_queryset().filter(pk=pk).first())

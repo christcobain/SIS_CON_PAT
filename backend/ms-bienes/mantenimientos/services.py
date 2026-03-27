@@ -1,6 +1,6 @@
 import os
 from typing import Dict, Any, List, Optional
-from django.db.models import QuerySet
+from django.db.models import QuerySet,Q
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -16,6 +16,7 @@ from .repositories import (
 from .pdf_generator import generar_pdf_mantenimiento
 from bienes.repositories import BienRepository
 from catalogos.models import CatEstadoFuncionamiento
+from transferencias.services import TransferenciaService
 from shared.clients import MsUsuariosClient
 
 
@@ -102,7 +103,6 @@ class MantenimientoService:
         bien_ids = data.pop('bien_ids', [])
         if not bien_ids:
             raise ValidationError('Debe incluir al menos un bien.')
-
         bienes = []
         for bid in bien_ids:
             bien = BienRepository.get_by_id(bid)
@@ -133,11 +133,15 @@ class MantenimientoService:
             'fecha_inicio_mant':      timezone.now().date(),
         })
         MantenimientoDetalleRepository.bulk_create(mantenimiento, bienes)
+        TransferenciaService._cambiar_estado_bienes(bienes, 'EN_MANTENIMIENTO')
         MantenimientoAprobacionRepository.registrar(
-            mantenimiento, 'asistSistema', 'ENVIADO', usuario_realiza_id,
+            mantenimiento, 'asistSistema', 'REGISTRADO', usuario_realiza_id,
             observacion='Mantenimiento registrado.',
         )
-        return mantenimiento
+        return {
+            'success': True,
+            'message': f'Mant. Nro. {mantenimiento.numero_orden} registrado exitosamente.',
+        }
     @staticmethod
     @transaction.atomic
     def enviar_a_aprobacion(
@@ -151,12 +155,10 @@ class MantenimientoService:
                 f'No se puede enviar a aprobación desde el estado '
                 f'"{m.estado_mantenimiento}".'
             )
-
         detalle_map = {
             d.bien_id: d
             for d in MantenimientoDetalleRepository.get_by_mantenimiento(m)
         }
-
         for item in detalles_tecnicos:
             bien_id = item.get('bien_id')
             det = detalle_map.get(bien_id)
@@ -193,6 +195,28 @@ class MantenimientoService:
         )
         return {'success': True, 'message': 'Mantenimiento enviado a aprobación.'}
     @staticmethod
+    def listar_pendientes_aprobacion(role: str, sede_id: int, modulo_id: int, token: str):
+        ESTADOS_EXCLUIDOS = ['ATENDIDO', 'CANCELADO']
+        if role == 'SYSADMIN':
+            qs = MantenimientoRepository.filter({})
+            qs = qs.exclude(estado_mantenimiento__in=ESTADOS_EXCLUIDOS) 
+        elif role in ('coordSistema', 'adminSede'):
+            filtros = Q()
+            filtros |= Q(
+                estado_mantenimiento='PENDIENTE_APROBACION',
+                aprobado_por_adminsede_id__isnull=True,
+                sede_id=sede_id,
+            )
+            qs = MantenimientoRepository.filter({})
+            qs = qs.filter(filtros)
+        qs = qs.order_by('-fecha_registro')
+        lista = list(qs)
+        for tr in lista:
+            MantenimientoService._enriquecer(tr, token)
+            _ = list(tr.detalles.all()) 
+        return lista
+    
+    @staticmethod
     def _validar_acceso_aprobador(m: Mantenimiento, sede_id: int, modulo_id: Optional[int]) -> None:
         if m.sede_id == sede_id:
             return
@@ -224,8 +248,9 @@ class MantenimientoService:
             'estado_mantenimiento':       'APROBADO',
         })
         MantenimientoAprobacionRepository.registrar(
-            m, role, 'APROBADO', aprobador_id, observacion=observacion,
+            m, role, 'APROBADO', aprobador_id, observacion='Aprobado',
         )
+        
         MantenimientoService._guardar_pdf(m, cookie=cookie)
         return {
             'success': True,
@@ -295,6 +320,7 @@ class MantenimientoService:
             if det.estado_funcionamiento_final_id:
                 updates['estado_funcionamiento_id'] = det.estado_funcionamiento_final_id
             BienRepository.update_fields(bien, updates)
+        TransferenciaService._restaurar_estado_bienes(m, 'ACTIVO')
         MantenimientoRepository.update_fields(m, {
             'pdf_firmado_path':   os.path.join('mantenimientos', 'pdfs', 'firmados', nombre),
             'fecha_pdf_firmado':  now,
@@ -302,7 +328,7 @@ class MantenimientoService:
             'estado_mantenimiento': 'ATENDIDO',
         })
         MantenimientoAprobacionRepository.registrar(
-            m, role, 'PDF_SUBIDO', usuario_id,
+            m, role, 'ATENDIDO', usuario_id,
             observacion='Documento firmado subido. Proceso cerrado.',
         )
         return {
@@ -324,16 +350,21 @@ class MantenimientoService:
                 f'No se puede cancelar un mantenimiento en estado '
                 f'"{m.estado_mantenimiento}".'
             )
+        detalles = m.detalles.all()
+        if not detalles:
+            raise ValidationError("El mantenimiento no tiene bienes asociados.")
+        lista_bienes = [d.bien for d in detalles]          
         MantenimientoRepository.update_fields(m, {
             'estado_mantenimiento':  'CANCELADO',
             'motivo_cancelacion_id': motivo_cancelacion_id,
             'detalle_cancelacion':   detalle,
             'fecha_cancelacion':     timezone.now(),
         })
+        TransferenciaService._cambiar_estado_bienes(lista_bienes, 'ACTIVO')
         MantenimientoAprobacionRepository.registrar(
             m, role, 'CANCELADO', usuario_id, observacion=detalle,
         )
-        return {'success': True, 'message': 'Mantenimiento cancelado.'}
+        return {'success': True, 'message': 'Mantenimiento cancelado Exitosamente.'}
     @staticmethod
     def subir_imagen(
         pk: int,

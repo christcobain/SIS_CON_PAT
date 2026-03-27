@@ -7,7 +7,7 @@ export function useMantenimientos(filtrosIniciales = {}) {
   const [mantenimientos, setMantenimientos] = useState([]);
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState(null);
-  const [actualizando,   setActualizando]   = useState(false);
+  const [actualizandoMant,   setActualizando]   = useState(false);
   const [filtros,        setFiltros]        = useState(filtrosIniciales);
 
 
@@ -84,11 +84,11 @@ export function useMantenimientos(filtrosIniciales = {}) {
     mantenimientos,
     loading,
     error,
-    actualizando,
+    actualizandoMant,
     filtros,
 
     aplicarFiltros,
-    refetch: fetchMantenimientos,
+    refetchMant: fetchMantenimientos,
     obtener:             (id)          => mantenimientosService.obtener(id),
     misMantenimientos:   (params)      => mantenimientosService.misMantenimientos(params),
     descargarPDF,
@@ -97,8 +97,8 @@ export function useMantenimientos(filtrosIniciales = {}) {
     enviarAprobacion:    (id, data)    => ejecutarYRefrescar(mantenimientosService.enviarAprobacion, id, data),
     aprobar:             (id, obs)     => ejecutarYRefrescar(mantenimientosService.aprobar, id, obs),
     devolver:            (id, motivo)  => ejecutarYRefrescar(mantenimientosService.devolver, id, motivo),
-    confirmarConformidad:(id)          => ejecutarYRefrescar(mantenimientosService.confirmarConformidad, id),
+    // confirmarConformidad:(id)          => ejecutarYRefrescar(mantenimientosService.confirmarConformidad, id),
     cancelar:            (id, data)    => ejecutarYRefrescar(mantenimientosService.cancelar, id, data),
-    subirFirmado:        (id, archivo) => ejecutarYRefrescar(mantenimientosService.subirFirmado, id, archivo),
+    subirFirmadoMant:        (id, archivo) => ejecutarYRefrescar(mantenimientosService.subirFirmado, id, archivo),
   };
 }

@@ -122,9 +122,10 @@ class MantenimientoViewSet(ViewSet):
             'mis_mantenimientos': [HasJWTPermission('ms-bienes:mantenimientos:view_mantenimiento')],
             'create':             [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
             'enviar_aprobacion':  [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
+            'pendientes_aprobacion': [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
             'subir_imagen':       [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimientoimagen')],
             'aprobar':            [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
-            'devolver':           [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
+            'devolver':           [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
             'cancelar':           [HasJWTPermission('ms-bienes:mantenimientos:delete_mantenimiento')],
             'subir_pdf_firmado':  [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
             'documento':          [HasJWTPermission('ms-bienes:mantenimientos:view_mantenimientoimagen')],
@@ -167,16 +168,13 @@ class MantenimientoViewSet(ViewSet):
     def create(self, request):
         ser = MantenimientoCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        m = MantenimientoService.crear(
+        mant = MantenimientoService.crear(
             data=ser.validated_data,
             usuario_realiza_id=request.user.id,
             sede_id=self._get_sede(request),
             modulo_id=self._get_modulo(request),
         )
-        return Response(
-            MantenimientoDetailSerializer(m).data,
-            status=status.HTTP_201_CREATED,
-        )
+        return Response(mant,status=status.HTTP_201_CREATED)
     
 
     @extend_schema(
@@ -242,6 +240,22 @@ class MantenimientoViewSet(ViewSet):
         return Response(result, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Mantenimientos'],
+        summary='Lista de pendientes de aprobacion.',
+        description=(
+            'Aprueba el mantenimiento según su sede.'
+            
+        ),
+        responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
+    )
+    @action(detail=False, methods=['get'], url_path='pendientes-aprobacion')
+    def pendientes_aprobacion(self, request):
+        role    = self._get_role(request)
+        sede_id = self._get_sede(request)
+        modulo_id = self._get_modulo(request)
+        qs = MantenimientoService.listar_pendientes_aprobacion(role, sede_id, modulo_id, self._get_token(request))
+        return Response(MantenimientoListSerializer(qs, many=True).data)
+    @extend_schema(
+        tags=['Mantenimientos'],
         summary='Aprobar mantenimiento (adminSede / coordSistema)',
         description=(
             'El aprobador revisa el informe técnico y lo aprueba.\n\n'
@@ -267,6 +281,7 @@ class MantenimientoViewSet(ViewSet):
             aprobador_id=request.user.id,
             role=self._get_role(request),
             sede_id=self._get_sede(request),
+            modulo_id=self._get_modulo(request),
             observacion=ser.validated_data.get('observacion', ''),
             cookie=self._get_token(request),
         )
@@ -294,6 +309,7 @@ class MantenimientoViewSet(ViewSet):
             aprobador_id=request.user.id,
             role=self._get_role(request),
             sede_id=self._get_sede(request),
+            modulo_id=self._get_modulo(request),
             motivo=ser.validated_data['motivo_devolucion'],
         )
         return Response(result, status=status.HTTP_200_OK)

@@ -75,16 +75,20 @@ class MantenimientoDetalle(models.Model):
         return (
             f'{self.mantenimiento.numero_orden} | '
             f'{self.bien.tipo_bien} | '
-            f'{self.bien.codigo_patrimonial or "S/N"}'
+            f'{self.bien.codigo_patrimonial or "S/N"} |  '
+            f'{self.bien.marca or "S/N"} |  '
+            f'{self.bien.modelo or "S/N"} | '
+            f'{self.bien.numero_serie or "S/N"} | '
         )
 
 class MantenimientoAprobacion(models.Model):
     ACCION_CHOICES = [
+        ('REGISTRADO',   'Registrado y derivado para actualizar data'),
         ('ENVIADO',   'Enviado a aprobación'),
-        ('APROBADO',  'Aprobado'),
+        ('APROBADO',  'Aprobado — Pendiente de Firma'),
         ('DEVUELTO',  'Devuelto'),
         ('CANCELADO', 'Cancelado'),
-        ('PDF_SUBIDO','PDF firmado subido'),
+        ('ATENDIDO','Atendido con PDF subido'),
     ]
     ROL_CHOICES = [
         ('asistSistema', 'Asistente de Sistemas'),

@@ -188,8 +188,10 @@ export default function TransferenciasTabla({
 
                   <td className="px-4 py-3">
                     <AccionesFila item={t} role={role}
-                      onVerDetalle={onVerDetalle} onEditar={onEditar}
-                      onCancelar={onCancelar} onDownload={onDownload} />
+                      onVerDetalle={onVerDetalle} 
+                      onEditar={onEditar}
+                      onCancelar={onCancelar} 
+                      onDownload={onDownload} />
                   </td>
                 </tr>
               );

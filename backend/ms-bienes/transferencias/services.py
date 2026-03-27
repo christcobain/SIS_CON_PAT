@@ -23,9 +23,6 @@ MODULO_COORD_INFORMATICA  = 1
 
 
 class TransferenciaService:
-
-    # ─────────────────────────────────────────────────────────────────────
-    # HELPERS PRIVADOS
     @staticmethod
     def _rol_aprobador_adminsede(role: str) -> str:
         return role if role == 'coordSistema' else 'adminSede'
@@ -150,10 +147,6 @@ class TransferenciaService:
         )
     @staticmethod
     def _aplicar_traslado(transferencia) -> None:
-        """
-        Actualiza sede/módulo/ubicación/custodio en cada bien al completar un TRASLADO_SEDE.
-        No cambia estado_bien — eso se hace en cerrar_con_firma al pasar a ATENDIDO.
-        """
         detalles = TransferenciaDetalleRepository.get_by_transferencia_con_bienes(transferencia)
         for detalle in detalles:
             BienRepository.update_fields(detalle.bien, {
@@ -165,10 +158,6 @@ class TransferenciaService:
             })
     @staticmethod
     def _aplicar_asignacion(transferencia) -> None:
-        """
-        Actualiza módulo/ubicación/custodio en cada bien al aprobar una ASIGNACION_INTERNA.
-        No cambia estado_bien — eso se hace en cerrar_con_firma al pasar a ATENDIDO.
-        """
         detalles = TransferenciaDetalleRepository.get_by_transferencia_con_bienes(transferencia)
         for detalle in detalles:
             BienRepository.update_fields(detalle.bien, {
@@ -179,11 +168,6 @@ class TransferenciaService:
             })
     @staticmethod
     def _guardar_pdf(transferencia, cookie: str = '') -> None:
-        """
-        Genera el PDF del acta y lo persiste en MEDIA_ROOT/transferencias/pdfs/.
-        Actualiza pdf_path y fecha_pdf en la transferencia.
-        Nunca lanza excepción — fallo silencioso para no interrumpir el flujo.
-        """
         try:
             pdf_bytes = generar_pdf_transferencia(transferencia, cookie=cookie)
         except Exception:
@@ -332,13 +316,7 @@ class TransferenciaService:
         }
     @staticmethod
     @transaction.atomic
-    def crear_asignacion_interna(
-        data: Dict[str, Any],
-        usuario_registra_id: int,
-        sede_registra_id: int,
-        role: str,
-        token: str = None,
-    ) -> Dict[str, Any]:
+    def crear_asignacion_interna(data: Dict[str, Any],usuario_registra_id: int,sede_registra_id: int,role: str,token: str = None) -> Dict[str, Any]:
         if role not in ROLES_REGISTRA_ASIGNACION:
             raise PermissionDenied('Solo asistSistema puede registrar asignaciones internas.')
         bien_ids = data.pop('bien_ids', [])
@@ -375,10 +353,7 @@ class TransferenciaService:
     # APROBACIONES
     @staticmethod
     @transaction.atomic
-    def aprobar_adminsede(
-        pk, aprobador_id, role, sede_aprobador_id, modulo_aprobador_id,
-        cookie: str = '',
-    ):
+    def aprobar_adminsede(pk, aprobador_id, role, sede_aprobador_id, modulo_aprobador_id,cookie: str = ''):
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'PENDIENTE_APROBACION':
             raise ValidationError(f'No se puede aprobar en estado "{t.estado_transferencia}".')
@@ -414,9 +389,7 @@ class TransferenciaService:
         return {'success': True, 'message': 'Aprobación registrada exitosamente.'}
     @staticmethod
     @transaction.atomic
-    def devolver_adminsede(
-        pk, aprobador_id, motivo, role, sede_aprobador_id, modulo_aprobador_id,
-    ):
+    def devolver_adminsede(pk, aprobador_id, motivo, role, sede_aprobador_id, modulo_aprobador_id,):
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'PENDIENTE_APROBACION':
             raise ValidationError('Solo se puede devolver en estado PENDIENTE_APROBACION.')
@@ -488,11 +461,6 @@ class TransferenciaService:
     @staticmethod
     @transaction.atomic
     def aprobar_segur_entrada(pk, segursede_id, observacion, role, sede_segur_id):
-        """
-        SEGURSEDE sede destino aprueba la entrada física del bien.
-        Tras esto, el estado pasa a EN_ESPERA_CONFORMIDAD y el destinatario
-        debe confirmar la recepción mediante confirmar_recepcion().
-        """
         if role not in ROLES_SEGURSEDE:
             raise PermissionDenied('Solo segurSede puede aprobar la entrada física.')
         t = TransferenciaService._get_or_404(pk)
@@ -539,18 +507,9 @@ class TransferenciaService:
         )
         return {'success': True, 'message': 'Entrada rechazada. Bien en retorno a sede origen.'}
     # ─────────────────────────────────────────────────────────────────────
-    # CONFIRMACIÓN DE RECEPCIÓN (TRASLADO — paso post-seguridad destino)
     @staticmethod
     @transaction.atomic
     def confirmar_recepcion(pk, usuario_destino_id,role, cookie: str = ''):
-        """
-        El usuario destinatario confirma que recibió físicamente los bienes.
-        Precondición : estado == EN_ESPERA_CONFORMIDAD
-        Resultado    : estado → EN_ESPERA_FIRMA
-                       Bienes actualizados (sede/módulo/ubicación/custodio)
-                       PDF del acta generado y guardado en disco
-        Paso siguiente: cerrar_con_firma() — sube el acta escaneada y cierra el proceso.
-        """
         t = TransferenciaService._get_or_404(pk)
         if t.tipo != 'TRASLADO_SEDE':
             raise ValidationError('Solo aplica a traslados entre sedes.')
@@ -582,14 +541,6 @@ class TransferenciaService:
     @staticmethod
     @transaction.atomic
     def cerrar_con_firma(pk: int, archivo, usuario_id: int) -> Dict[str, Any]:
-        """
-        Sube el acta escaneada con firma física y cierra el proceso.
-
-        Precondición : estado == EN_ESPERA_FIRMA
-        Resultado    : pdf_firmado_path guardado en disco
-                       Bienes → estado ACTIVO
-                       estado_transferencia → ATENDIDO
-        """
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'EN_ESPERA_FIRMA':
             raise ValidationError(
@@ -625,15 +576,7 @@ class TransferenciaService:
     # ─────────────────────────────────────────────────────────────────────
     # DESCARGA DEL PDF
     @staticmethod
-    def obtener_documento(pk: int, cookie: str = '') -> bytes:
-        """
-        Retorna los bytes del PDF del acta de transferencia.
-        Prioridad:
-          1. PDF firmado (si ya fue subido con cerrar_con_firma).
-          2. PDF generado automáticamente (guardado con _guardar_pdf).
-          3. Generación al vuelo (fallback — no requiere estado específico).
-        Disponible a partir de EN_ESPERA_FIRMA (acta generada) y en ATENDIDO.
-        """    
+    def obtener_documento(pk: int, cookie: str = '') -> bytes: 
         t = TransferenciaService._get_or_404(pk)        
         ESTADOS_CON_DOCUMENTO = {'EN_ESPERA_FIRMA', 'ATENDIDO'}
         if t.estado_transferencia not in ESTADOS_CON_DOCUMENTO:
@@ -641,8 +584,7 @@ class TransferenciaService:
                 'El documento solo está disponible cuando el estado es '
                 'EN_ESPERA_FIRMA o ATENDIDO.'
             )
-        media_root = getattr(settings, 'MEDIA_ROOT', 'media') 
-        print('obtener_documento== ',t.pdf_path)       
+        media_root = getattr(settings, 'MEDIA_ROOT', 'media')      
         if t.pdf_firmado_path:
             ruta = os.path.join(media_root, t.pdf_firmado_path)
             if os.path.exists(ruta):
@@ -701,7 +643,6 @@ class TransferenciaService:
             'estado_transferencia':             'DEVUELTO',
             'aprobado_retorno_entrada_id':      segursede_id,
             'fecha_aprobacion_retorno_entrada': timezone.now(),
-            # Limpia todas las aprobaciones para permitir reenvío
             'aprobado_por_adminsede_id':        None,
             'fecha_aprobacion_adminsede':       None,
             'aprobado_segur_salida_id':         None,
@@ -722,7 +663,6 @@ class TransferenciaService:
 
     # ─────────────────────────────────────────────────────────────────────
     # CANCELAR Y REENVIAR
-    # ─────────────────────────────────────────────────────────────────────
     @staticmethod
     @transaction.atomic
     def cancelar(pk, usuario_id, motivo_cancelacion_id, detalle):
@@ -775,7 +715,7 @@ class TransferenciaService:
             if origen['sede_origen_id'] != sede_registra_id:
                 raise PermissionDenied('Solo puede trasladar bienes de su propia sede.')
             sede_destino = data.get('sede_destino_id', t.sede_destino_id)
-            if sede_destino == origen['sede_origen_id']:
+            if sede_destino == origen['sede_origen_id'] and t.tipo=='TRASLADO_SEDE':
                 raise ValidationError('La sede destino debe ser diferente a la sede origen.')
             TransferenciaDetalleRepository.delete_by_transferencia(t)
             TransferenciaDetalleRepository.bulk_create(t, bienes)
@@ -825,35 +765,28 @@ class TransferenciaService:
         return {'success': True, 'message': 'Transferencia reenviada para aprobación.'}
 
     # ─────────────────────────────────────────────────────────────────────
-    # PENDIENTES (vistas de bandeja)
     @staticmethod
     def listar_pendientes_segur(sede_id: int, role: str):
         qs = TransferenciaRepository.filter({'tipo': 'TRASLADO_SEDE'})
         qs = qs.exclude(estado_transferencia__in=['ATENDIDO', 'CANCELADO', 'DEVUELTO'])
- 
         filtros = Q()
- 
-        # Paso ② — segurSede ORIGEN aprueba salida física
         filtros |= Q(
             sede_origen_id=sede_id,
             estado_transferencia='PENDIENTE_APROBACION',
             aprobado_por_adminsede_id__isnull=False,
             aprobado_segur_salida_id__isnull=True,
         )
-        # Paso ③ — segurSede DESTINO aprueba entrada física
         filtros |= Q(
             sede_destino_id=sede_id,
             estado_transferencia='PENDIENTE_APROBACION',
             aprobado_segur_salida_id__isnull=False,
             aprobado_segur_entrada_id__isnull=True,
         )
-        # Paso ⑤ — segurSede DESTINO confirma retorno-salida
         filtros |= Q(
             sede_destino_id=sede_id,
             estado_transferencia='EN_RETORNO',
             aprobado_retorno_salida_id__isnull=True,
         )
-        # Paso ⑥ — segurSede ORIGEN confirma retorno-entrada
         filtros |= Q(
             sede_origen_id=sede_id,
             estado_transferencia='EN_RETORNO',
@@ -862,76 +795,43 @@ class TransferenciaService:
         )
  
         return qs.filter(filtros).distinct()
- 
     @staticmethod
     def listar_pendientes_aprobacion(role: str, sede_id: int, modulo_id: int, token: str):
-        """
-        Bandeja para roles administrativos (adminSede, coordSistema, asistSistema).
- 
-        Reglas por rol:
-        ─────────────────────────────────────────────────────────────────────
-        SYSADMIN:
-          Todo lo que no esté en ATENDIDO o CANCELADO.
- 
-        coordSistema / adminSede:
-          ① TRASLADO   PENDIENTE_APROBACION sin aprobación admin (su sede origen)
-          ① ASIGNACION PENDIENTE_APROBACION sin aprobación admin (su sede origen)
-          ④ TRASLADO   EN_ESPERA_CONFORMIDAD  (su sede destino)  ← solo informativo
-          ⑦ TRASLADO   EN_ESPERA_FIRMA        (su sede destino)  ← subir acta
-          ⑦ ASIGNACION EN_ESPERA_FIRMA        (su sede origen)   ← subir acta
- 
-        asistSistema:
-          ④ TRASLADO   EN_ESPERA_CONFORMIDAD  (su sede destino)  ← confirmar recepción
-          ⑦ TRASLADO   EN_ESPERA_FIRMA        (su sede destino)  ← subir acta
-          ⑦ ASIGNACION EN_ESPERA_FIRMA        (su sede destino)  ← subir acta
-        ─────────────────────────────────────────────────────────────────────
-        """
-        ESTADOS_EXCLUIDOS = ['ATENDIDO', 'CANCELADO']
- 
+        ESTADOS_EXCLUIDOS = ['ATENDIDO', 'CANCELADO','EN_ESPERA_FIRMA'] 
         if role == 'SYSADMIN':
             qs = TransferenciaRepository.filter({})
-            qs = qs.exclude(estado_transferencia__in=ESTADOS_EXCLUIDOS)
- 
+            qs = qs.exclude(estado_transferencia__in=ESTADOS_EXCLUIDOS) 
         elif role in ('coordSistema', 'adminSede'):
             filtros = Q()
- 
-            # Paso ① — pendientes de aprobación admin (TRASLADO y ASIGNACION)
             filtros |= Q(
                 estado_transferencia='PENDIENTE_APROBACION',
                 aprobado_por_adminsede_id__isnull=True,
                 sede_origen_id=sede_id,
             )
-            # Paso ④ — traslados EN_ESPERA_CONFORMIDAD en su sede destino (informativo)
-            filtros |= Q(
-                tipo='TRASLADO_SEDE',
-                estado_transferencia='EN_ESPERA_CONFORMIDAD',
-                sede_destino_id=sede_id,
-            )
-            # Paso ⑦ — EN_ESPERA_FIRMA en su sede destino (traslados) o sede origen (asignaciones)
-            filtros |= Q(
-                tipo='TRASLADO_SEDE',
-                estado_transferencia='EN_ESPERA_FIRMA',
-                sede_destino_id=sede_id,
-            )
+            # filtros |= Q(
+            #     tipo='TRASLADO_SEDE',
+            #     estado_transferencia='EN_ESPERA_CONFORMIDAD',
+            #     sede_destino_id=sede_id,
+            # )
+            # filtros |= Q(
+            #     tipo='TRASLADO_SEDE',
+            #     estado_transferencia='EN_ESPERA_FIRMA',
+            #     sede_destino_id=sede_id,
+            # )
             filtros |= Q(
                 tipo='ASIGNACION_INTERNA',
-                estado_transferencia='EN_ESPERA_FIRMA',
+                estado_transferencia='PENDIENTE_APROBACION',
                 sede_origen_id=sede_id,
-            )
- 
+            ) 
             qs = TransferenciaRepository.filter({})
-            qs = qs.filter(filtros)
- 
+            qs = qs.filter(filtros) 
         elif role == 'asistSistema':
             filtros = Q()
- 
-            # Paso ④ — TRASLADO esperando confirmación de recepción (su sede destino)
             filtros |= Q(
                 tipo='TRASLADO_SEDE',
                 estado_transferencia='EN_ESPERA_CONFORMIDAD',
                 sede_destino_id=sede_id,
             )
-            # Paso ⑦ — EN_ESPERA_FIRMA: traslados y asignaciones en su sede destino
             filtros |= Q(
                 tipo='TRASLADO_SEDE',
                 estado_transferencia='EN_ESPERA_FIRMA',
@@ -941,20 +841,15 @@ class TransferenciaService:
                 tipo='ASIGNACION_INTERNA',
                 estado_transferencia='EN_ESPERA_FIRMA',
                 sede_destino_id=sede_id,
-            )
- 
+            ) 
             qs = TransferenciaRepository.filter({})
-            qs = qs.filter(filtros)
- 
+            qs = qs.filter(filtros) 
         else:
-            # segurSede y cualquier otro rol sin bandeja administrativa
-            qs = TransferenciaRepository.filter({}).none()
- 
+            qs = TransferenciaRepository.filter({}).none() 
         qs = qs.order_by('-fecha_registro')
         lista = list(qs)
         for tr in lista:
             TransferenciaService._enriquecer_transferencia(tr, token)
-            _ = list(tr.detalles.all())
- 
+            _ = list(tr.detalles.all()) 
         return lista
     

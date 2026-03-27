@@ -20,7 +20,6 @@ class BDEmpleadosClient:
     def get_by_dni(cls, dni: str) -> dict:
         try:
             response = requests.get(f"{cls.BASE_URL}/{dni}/", timeout=5)
-            print('response==',response)
             if response.status_code == 404:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos.')
             if response.status_code != 200:
