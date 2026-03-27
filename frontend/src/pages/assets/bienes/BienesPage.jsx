@@ -24,8 +24,8 @@ const FILTROS_INICIALES = {
   modulo_id:                '',
   custodio_q:               '',
   tipo_bien_id:             '',
-  estado_bien_id:           '', 
-  estado_funcionamiento_id: '', 
+  estado_bien_nombre:           '', 
+  estado_funcionamiento_nombre: '', 
 };
 
 

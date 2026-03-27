@@ -257,7 +257,6 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
             : undefined,
         }}
       >
-        {/* ── Cabecera ── */}
         <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
           <div className="flex items-start gap-3 min-w-0">
             <div className="size-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
@@ -305,7 +304,6 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
           </button>
         </div>
 
-        {/* ── Indicador de paso activo ── */}
         {paso && (
           <div
             className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3"
@@ -316,10 +314,8 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
           </div>
         )}
 
-        {/* ── Barra de acciones ── */}
         <div className="flex items-center gap-2 flex-wrap border-t pt-3" style={{ borderColor: 'var(--color-border-light)' }}>
 
-          {/* ① Admin: Aprobar + Devolver */}
           {puedeAprobarAdmin && (<>
             <ActionBtn icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'}
               color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
@@ -330,7 +326,6 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
               disabled={busy} onClick={() => setModalDv('devolver')} />
           </>)}
 
-          {/* ② SegurSede origen: V°B° Salida + Rechazar */}
           {puedeAprobarSalida && (<>
             <ActionBtn icon="output" label="V°B° Salida"
               color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)"
@@ -341,7 +336,6 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
               disabled={busy} onClick={() => setModalDv('rechazar_salida')} />
           </>)}
 
-          {/* ③ SegurSede destino: V°B° Entrada + Rechazar */}
           {puedeAprobarEntrada && (<>
             <ActionBtn icon="input" label="V°B° Entrada"
               color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
@@ -352,7 +346,6 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
               disabled={busy} onClick={() => setModalDv('rechazar_entrada')} />
           </>)}
 
-          {/* ④ asistSistema: Confirmar recepción del TRASLADO */}
           {puedeConfirmarRecepcion && (
             <ActionBtn icon="front_hand" label="Confirmar Recepción"
               color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
@@ -360,12 +353,9 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
               onClick={() => accion(() => transferenciasService.confirmarRecepcion(t.id, {}), 'Recepción confirmada. Descarga el acta y súbela firmada.')} />
           )}
 
-          {/* ④ adminSede: solo informativo, el traslado llegó a su sede */}
           {soloInformativoConformidad && (
             <InfoChip icon="hourglass_top" label="Esperando confirmación del asistente de destino" color="#64748b" />
           )}
-
-          {/* ⑦ Descargar PDF generado */}
           
           {puedeDescargarPDF && (            
             <ActionBtn icon="download" label="Descargar Acta PDF"
@@ -373,8 +363,6 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
               disabled={busy}
               onClick={() => onDownload(t.id)} />
           )}
-          {/* ⑦ Subir acta firmada → cierra el proceso con ATENDIDO */}
-          {/* Input oculto para subir acta */}
             <input 
             ref={fileRef} 
             type="file" 
@@ -388,7 +376,6 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
               onClick={() => fileRef.current?.click()} />
           )}
 
-          {/* ⑤ SegurSede destino confirma retorno-salida */}
           {puedeRetornoSalida && (
             <ActionBtn icon="undo" label="Confirmar Retorno Salida"
               color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)"
@@ -396,7 +383,6 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
               onClick={() => accion(() => transferenciasService.retornoSalida(t.id, {}), 'Salida de retorno confirmada.')} />
           )}
 
-          {/* ⑥ SegurSede origen confirma retorno-entrada */}
           {puedeRetornoEntrada && (
             <ActionBtn icon="home" label="Confirmar Retorno Entrada"
               color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
@@ -404,7 +390,6 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
               onClick={() => accion(() => transferenciasService.retornoEntrada(t.id, {}), 'Retorno completado.')} />
           )}
 
-          {/* Mensaje cuando no hay acciones ni estado informativo */}
           {!hayAccionPrimaria && !soloInformativoConformidad && (
             <p className="text-[10px] italic" style={{ color: 'var(--color-text-faint)' }}>
               Sin acciones disponibles para tu rol en esta etapa.

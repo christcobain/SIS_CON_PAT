@@ -63,7 +63,6 @@ export default function ModalAprobacionMantenimiento({
       if (esAprobar)   await onAprobar(item.id, observacion.trim());
       if (esDevolver)  await onDevolver(item.id, observacion.trim());
       if (esConformar) await onConformar(item.id);
-      toast.success(`Acción ejecutada exitosamente.`);
       setObservacion('');
       onClose();
     } catch (e) {

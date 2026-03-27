@@ -237,7 +237,6 @@ class TransferenciaService:
         if ultima:
             ultima.usuario_nombre = TransferenciaService.get_user_name(ultima.usuario_id, token)
         return tr
-
     # ─────────────────────────────────────────────────────────────────────
     # LISTADOS
     @staticmethod
@@ -273,7 +272,6 @@ class TransferenciaService:
             TransferenciaService._enriquecer_transferencia(tr, token)
             _ = list(tr.detalles.all())
         return lista
-
     # ─────────────────────────────────────────────────────────────────────
     # CREACIÓN
     @staticmethod
@@ -409,7 +407,6 @@ class TransferenciaService:
         )
         TransferenciaService._restaurar_estado_bienes(t, 'ACTIVO')
         return {'success': True, 'message': 'Transferencia devuelta para corrección.'}
-
     # ─────────────────────────────────────────────────────────────────────
     # SEGURSEDE — SALIDA Y ENTRADA FÍSICA
     @staticmethod
@@ -621,7 +618,6 @@ class TransferenciaService:
             detalle=motivo or 'Salida de retorno confirmada desde sede destino.',
         )
         return {'success': True, 'message': 'Salida de retorno confirmada. Bien en camino a sede origen.'}
-
     @staticmethod
     @transaction.atomic
     def aprobar_retorno_entrada(pk, segursede_id, observacion, role, sede_segur_id):
@@ -660,7 +656,6 @@ class TransferenciaService:
             detalle=observacion or 'Bien recibido en sede origen. Retorno completado.',
         )
         return {'success': True, 'message': 'Retorno completado. Bien disponible en sede origen.'}
-
     # ─────────────────────────────────────────────────────────────────────
     # CANCELAR Y REENVIAR
     @staticmethod
@@ -727,14 +722,12 @@ class TransferenciaService:
             bienes_actuales = [d.bien for d in detalles]
             estado_bloqueo  = 'EN_TRASLADO' if t.tipo == 'TRASLADO_SEDE' else 'EN_ASIGNACION'
             TransferenciaService._cambiar_estado_bienes(bienes_actuales, estado_bloqueo)
-
         if data.get('sede_destino_id'):
             MsUsuariosClient.validar_sede(data['sede_destino_id'], token)
         if data.get('usuario_destino_id'):
             MsUsuariosClient.validar_usuario(data['usuario_destino_id'], token)
         if data.get('modulo_destino_id'):
             MsUsuariosClient.validar_modulo(data['modulo_destino_id'], token)
-
         update_data = {
             'estado_transferencia':             'PENDIENTE_APROBACION',
             'motivo_devolucion':                None,
@@ -756,14 +749,12 @@ class TransferenciaService:
         ]:
             if campo in data:
                 update_data[campo] = data[campo]
-
         TransferenciaRepository.update_fields(t, update_data)
         TransferenciaService._registrar_aprobacion(
             t, 'REGISTRADOR', 'APROBADO', usuario_id,
             detalle='Transferencia reenviada con correcciones.',
         )
         return {'success': True, 'message': 'Transferencia reenviada para aprobación.'}
-
     # ─────────────────────────────────────────────────────────────────────
     @staticmethod
     def listar_pendientes_segur(sede_id: int, role: str):
@@ -792,8 +783,7 @@ class TransferenciaService:
             estado_transferencia='EN_RETORNO',
             aprobado_retorno_salida_id__isnull=False,
             aprobado_retorno_entrada_id__isnull=True,
-        )
- 
+        ) 
         return qs.filter(filtros).distinct()
     @staticmethod
     def listar_pendientes_aprobacion(role: str, sede_id: int, modulo_id: int, token: str):

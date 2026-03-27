@@ -43,23 +43,114 @@ const getDynamicColor = (text) => {
   return `hsl(${Math.abs(hash % 360)}, 65%, 45%)`;
 };
 
-// ── Exportadores ──────────────────────────────────────────────────────────────
+// ── Helpers de exportación: detalle técnico según tipo ───────────────────────
+function extraerDetalleTecnico(b) {
+  if (b.detalle_cpu) {
+    const d = b.detalle_cpu;
+    return {
+      tipo_tecnico: 'CPU',
+      hostname: d.hostname ?? '',
+      ip: d.direccion_ip ?? '',
+      mac: d.direccion_mac ?? '',
+      procesador: d.procesador_tipo ?? '',
+      velocidad: d.procesador_velocidad ?? '',
+      nucleos: d.procesador_nucleos ?? '',
+      ram: d.capacidad_ram_gb ?? '',
+      disco: d.capacidad_disco ?? '',
+      so: d.sistema_operativo ?? '',
+      office: d.version_office ?? '',
+      tipo_computadora: d.tipo_computadora_nombre ?? '',
+      tipo_disco: d.tipo_disco_nombre ?? '',
+      conectado_red: d.conectado_red ? 'SÍ' : 'NO',
+      multimedia: d.multimedia ?? '',
+    };
+  }
+  if (b.detalle_monitor) {
+    const d = b.detalle_monitor;
+    return { tipo_tecnico: 'MONITOR', tipo_monitor: d.tipo_monitor_nombre ?? '', tamano_pulgadas: d.tamano_pulgadas ?? '' };
+  }
+  if (b.detalle_impresora) {
+    const d = b.detalle_impresora;
+    return {
+      tipo_tecnico: 'IMPRESORA',
+      tipo_impresion: d.tipo_impresion_nombre ?? '',
+      interfaz: d.interfaz_conexion_nombre ?? '',
+      color: d.impresion_color ? 'SÍ' : 'NO',
+      duplex: d.unidad_duplex ? 'SÍ' : 'NO',
+      red: d.conexion_red ? 'SÍ' : 'NO',
+      ip: d.direccion_ip ?? '',
+      velocidad_ppm: d.velocidad_impresion_ppm ?? '',
+    };
+  }
+  if (b.detalle_scanner) {
+    const d = b.detalle_scanner;
+    return {
+      tipo_tecnico: 'SCANNER',
+      tipo_escaner: d.tipo_escaner_nombre ?? '',
+      interfaz: d.interfaz_conexion_nombre ?? '',
+      adf: d.alimentador_automatico ? 'SÍ' : 'NO',
+      resolucion: d.resolucion_exploracion ?? '',
+    };
+  }
+  if (b.detalle_switch) {
+    const d = b.detalle_switch;
+    return {
+      tipo_tecnico: 'SWITCH',
+      ip: d.direccion_ip ?? '',
+      mac: d.direccion_mac ?? '',
+      puertos_utp: d.cantidad_puertos_utp ?? '',
+      velocidad_mbps: d.velocidad_mbps ?? '',
+      admin: d.admin_software ? 'SÍ' : 'NO',
+      vlan: d.soporta_vlan ? 'SÍ' : 'NO',
+    };
+  }
+  return { tipo_tecnico: '' };
+}
+
+// ── Exportar CSV ──────────────────────────────────────────────────────────────
 function exportCSV(items) {
-  const headers = ['ID', 'Tipo', 'Categoría', 'Marca', 'Modelo', 'N° Serie', 'Cód. Patrimonial', 'Sede', 'Módulo', 'Custodio', 'Estado Bien', 'Funcionamiento'];
-  const rows = items.map(b => [
-    b.id ?? '',
-    b.tipo_bien_nombre ?? '',
-    b.categoria_bien_nombre ?? '',
-    b.marca_nombre ?? '',
-    b.modelo ?? '',
-    b.numero_serie ?? '',
-    b.codigo_patrimonial ?? '',
-    b.sede_nombre ?? '',
-    b.modulo_nombre ?? '',
-    b.usuario_asignado_nombre ?? '',
-    b.estado_bien_nombre ?? '',
-    b.estado_funcionamiento_nombre ?? '',
-  ]);
+  const headers = [
+    'ID', 'Tipo', 'Categoría', 'Marca', 'Modelo', 'N° Serie', 'Cód. Patrimonial',
+    'Régimen Tenencia', 'Estado Bien', 'Funcionamiento', 'Sede', 'Módulo', 'Ubicación',
+    'Piso', 'Custodio', 'Año Adquisición', 'Fecha Compra', 'N° Orden Compra',
+    'Garantía Vence', 'Observación', 'Activo',
+    // Detalle técnico
+    'Tipo Técnico', 'Hostname', 'IP', 'MAC', 'Procesador', 'Velocidad Proc.',
+    'Núcleos', 'RAM', 'Disco', 'S.O.', 'Office', 'Tipo Computadora', 'Tipo Disco',
+    'Conectado Red', 'Multimedia',
+    'Tipo Monitor', 'Pulgadas',
+    'Tipo Impresión', 'Interfaz', 'Color', 'Dúplex', 'Red Impresora', 'Vel. PPM',
+    'Tipo Escáner', 'ADF', 'Resolución Escáner',
+    'Puertos UTP', 'Vel. Mbps', 'Admin SW', 'Soporta VLAN',
+  ];
+
+  const rows = items.map(b => {
+    const dt = extraerDetalleTecnico(b);
+    return [
+      b.id ?? '', b.tipo_bien_nombre ?? '', b.categoria_bien_nombre ?? '',
+      b.marca_nombre ?? '', b.modelo ?? '', b.numero_serie ?? '', b.codigo_patrimonial ?? '',
+      b.regimen_tenencia_nombre ?? '', b.estado_bien_nombre ?? '', b.estado_funcionamiento_nombre ?? '',
+      b.sede_nombre ?? '', b.modulo_nombre ?? '', b.ubicacion_nombre ?? '',
+      b.piso ?? '', b.usuario_asignado_nombre ?? '',
+      b.anio_adquisicion ?? '', b.fecha_compra ?? '', b.numero_orden_compra ?? '',
+      b.fecha_vencimiento_garantia ?? '', b.observacion ?? '', b.is_active ? 'SÍ' : 'NO',
+      // CPU
+      dt.tipo_tecnico ?? '', dt.hostname ?? '', dt.ip ?? '', dt.mac ?? '',
+      dt.procesador ?? '', dt.velocidad ?? '', dt.nucleos ?? '', dt.ram ?? '',
+      dt.disco ?? '', dt.so ?? '', dt.office ?? '', dt.tipo_computadora ?? '',
+      dt.tipo_disco ?? '', dt.conectado_red ?? '', dt.multimedia ?? '',
+      // Monitor
+      dt.tipo_monitor ?? '', dt.tamano_pulgadas ?? '',
+      // Impresora
+      dt.tipo_impresion ?? '', dt.interfaz ?? '', dt.color ?? '', dt.duplex ?? '',
+      dt.red ?? '', dt.velocidad_ppm ?? '',
+      // Scanner
+      dt.tipo_escaner ?? '', dt.adf ?? '', dt.resolucion ?? '',
+      // Switch
+      dt.puertos_utp ?? '', dt.velocidad_mbps ?? '', dt.admin ?? '', dt.vlan ?? '',
+    ];
+  });
+
   const csvContent = [headers, ...rows]
     .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
     .join('\n');
@@ -72,33 +163,53 @@ function exportCSV(items) {
   URL.revokeObjectURL(url);
 }
 
+// ── Exportar Excel (.xls HTML table) ─────────────────────────────────────────
 function exportExcel(items) {
-  const headers = ['ID', 'Tipo', 'Categoría', 'Marca', 'Modelo', 'N° Serie', 'Cód. Patrimonial', 'Sede', 'Módulo', 'Custodio', 'Estado Bien', 'Funcionamiento'];
-  const rows = items.map(b => [
-    b.id ?? '',
-    b.tipo_bien_nombre ?? '',
-    b.categoria_bien_nombre ?? '',
-    b.marca_nombre ?? '',
-    b.modelo ?? '',
-    b.numero_serie ?? '',
-    b.codigo_patrimonial ?? '',
-    b.sede_nombre ?? '',
-    b.modulo_nombre ?? '',
-    b.usuario_asignado_nombre ?? '',
-    b.estado_bien_nombre ?? '',
-    b.estado_funcionamiento_nombre ?? '',
-  ]);
-  const thStyle = 'background:#7F1D1D;color:white;font-weight:bold;padding:6px 10px;border:1px solid #ccc;font-size:11px;';
-  const tdStyle = 'padding:5px 10px;border:1px solid #ddd;font-size:11px;';
-  const html = `
-    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
-    <head><meta charset="UTF-8"></head>
-    <body>
-      <table>
-        <thead><tr>${headers.map(h => `<th style="${thStyle}">${h}</th>`).join('')}</tr></thead>
-        <tbody>${rows.map(r => `<tr>${r.map(v => `<td style="${tdStyle}">${v}</td>`).join('')}</tr>`).join('')}</tbody>
-      </table>
-    </body></html>`;
+  const thStyle = 'background:#7F1D1D;color:white;font-weight:bold;padding:5px 8px;border:1px solid #991B1B;font-size:10px;white-space:nowrap;';
+  const tdStyle = 'padding:4px 8px;border:1px solid #e2e8f0;font-size:10px;';
+  const tdMono  = 'padding:4px 8px;border:1px solid #e2e8f0;font-size:10px;font-family:monospace;';
+
+  const headers = [
+    'ID','Cód.Patrimonial','Tipo','Categoría','Marca','Modelo','N° Serie',
+    'Estado Bien','Funcionamiento','Sede','Módulo','Ubicación','Piso','Custodio',
+    'Año Adq.','Fecha Compra','Activo',
+    'Tipo Técnico','Hostname/IP/MAC','Procesador','RAM','Disco','S.O.',
+    'Tipo Monitor','Pulgadas',
+    'Tipo Impresión','Color','Dúplex','Red','Vel.PPM',
+    'Tipo Escáner','ADF','Resolución',
+    'Puertos UTP','Vel.Mbps','Admin SW',
+  ];
+
+  const rows = items.map(b => {
+    const dt = extraerDetalleTecnico(b);
+    const redInfo = dt.ip ? `IP:${dt.ip} MAC:${dt.mac ?? ''}` : '';
+    const cpuInfo = dt.hostname ? `${dt.hostname} ${redInfo}` : redInfo;
+    return [
+      b.id ?? '', b.codigo_patrimonial ?? '', b.tipo_bien_nombre ?? '',
+      b.categoria_bien_nombre ?? '', b.marca_nombre ?? '', b.modelo ?? '', b.numero_serie ?? '',
+      b.estado_bien_nombre ?? '', b.estado_funcionamiento_nombre ?? '',
+      b.sede_nombre ?? '', b.modulo_nombre ?? '', b.ubicacion_nombre ?? '',
+      b.piso ?? '', b.usuario_asignado_nombre ?? '',
+      b.anio_adquisicion ?? '', b.fecha_compra ?? '', b.is_active ? 'SÍ' : 'NO',
+      dt.tipo_tecnico ?? '', cpuInfo,
+      dt.procesador ? `${dt.procesador} ${dt.velocidad ?? ''} x${dt.nucleos ?? ''}` : '',
+      dt.ram ?? '', dt.disco ?? '', dt.so ?? '',
+      dt.tipo_monitor ?? '', dt.tamano_pulgadas ?? '',
+      dt.tipo_impresion ?? '', dt.color ?? '', dt.duplex ?? '', dt.red ?? '', dt.velocidad_ppm ?? '',
+      dt.tipo_escaner ?? '', dt.adf ?? '', dt.resolucion ?? '',
+      dt.puertos_utp ?? '', dt.velocidad_mbps ?? '', dt.admin ?? '',
+    ];
+  });
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head><meta charset="UTF-8"></head>
+<body>
+<table>
+  <thead><tr>${headers.map(h => `<th style="${thStyle}">${h}</th>`).join('')}</tr></thead>
+  <tbody>${rows.map(r => `<tr>${r.map((v, i) => `<td style="${i === 0 ? tdMono : tdStyle}">${v}</td>`).join('')}</tr>`).join('')}</tbody>
+</table>
+</body></html>`;
+
   const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -108,44 +219,65 @@ function exportExcel(items) {
   URL.revokeObjectURL(url);
 }
 
+// ── Exportar PDF (impresión del navegador) ────────────────────────────────────
 function exportPDF(items) {
   const fecha = new Date().toLocaleDateString('es-PE', { dateStyle: 'long' });
-  const rows  = items.map((b, i) => `
-    <tr style="background:${i % 2 === 0 ? '#fff' : '#f8f8f8'}">
-      <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;">${i + 1}</td>
-      <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;font-weight:bold;">${b.codigo_patrimonial ?? '—'}</td>
-      <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;">${b.tipo_bien_nombre ?? '—'}</td>
-      <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;">${b.marca_nombre ?? '—'} ${b.modelo ?? ''}</td>
-      <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;">${b.numero_serie ?? 'S/N'}</td>
-      <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;">${b.sede_nombre ?? '—'}</td>
-      <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;">${b.usuario_asignado_nombre ?? '—'}</td>
-      <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;">${b.estado_bien_nombre ?? '—'}</td>
-      <td style="padding:5px 8px;border:1px solid #e2e8f0;font-size:10px;">${b.estado_funcionamiento_nombre ?? '—'}</td>
-    </tr>`).join('');
+
+  const filas = items.map((b, i) => {
+    const dt  = extraerDetalleTecnico(b);
+    const det = dt.tipo_tecnico
+      ? `<div style="font-size:8px;color:#475569;margin-top:2px">${dt.tipo_tecnico}: ${
+          dt.hostname ? `${dt.hostname} · IP ${dt.ip ?? '—'} · ` : ''
+        }${dt.procesador ? `${dt.procesador} ${dt.velocidad ?? ''} · RAM ${dt.ram ?? '—'} · Disco ${dt.disco ?? '—'} · ${dt.so ?? '—'}` : ''}${
+          dt.tipo_monitor ? `Monitor ${dt.tipo_monitor} ${dt.tamano_pulgadas ?? '—'}"` : ''
+        }${dt.tipo_impresion ? `${dt.tipo_impresion} · Color: ${dt.color ?? '—'} · Dúplex: ${dt.duplex ?? '—'}` : ''
+        }${dt.tipo_escaner ? `${dt.tipo_escaner} · ADF: ${dt.adf ?? '—'}` : ''
+        }${dt.puertos_utp ? `Puertos UTP: ${dt.puertos_utp} · ${dt.velocidad_mbps ?? '—'} Mbps` : ''
+        }</div>`
+      : '';
+
+    return `<tr style="background:${i % 2 === 0 ? '#fff' : '#f8fafc'}">
+      <td style="padding:4px 6px;border:1px solid #e2e8f0;font-size:9px;text-align:center">${i + 1}</td>
+      <td style="padding:4px 6px;border:1px solid #e2e8f0;font-size:9px;font-weight:700;color:#7F1D1D;font-family:monospace">${b.codigo_patrimonial ?? '—'}</td>
+      <td style="padding:4px 6px;border:1px solid #e2e8f0;font-size:9px">
+        <div style="font-weight:700">${b.tipo_bien_nombre ?? '—'}</div>
+        <div style="color:#94a3b8;font-size:8px">${b.categoria_bien_nombre ?? ''}</div>
+      </td>
+      <td style="padding:4px 6px;border:1px solid #e2e8f0;font-size:9px">${b.marca_nombre ?? '—'}<br><span style="color:#94a3b8;font-size:8px">${b.modelo ?? ''}</span></td>
+      <td style="padding:4px 6px;border:1px solid #e2e8f0;font-size:8px;font-family:monospace">${b.numero_serie ?? 'S/N'}</td>
+      <td style="padding:4px 6px;border:1px solid #e2e8f0;font-size:9px">${b.sede_nombre ?? '—'}</td>
+      <td style="padding:4px 6px;border:1px solid #e2e8f0;font-size:9px">${b.usuario_asignado_nombre ?? '—'}</td>
+      <td style="padding:4px 6px;border:1px solid #e2e8f0;font-size:9px">
+        <span style="color:${b.estado_bien_nombre?.toUpperCase().includes('ACTIVO') ? '#16a34a' : '#64748b'};font-weight:700">${b.estado_bien_nombre ?? '—'}</span>
+        <br><span style="font-size:8px;color:#64748b">${b.estado_funcionamiento_nombre ?? '—'}</span>
+        ${det}
+      </td>
+    </tr>`;
+  }).join('');
 
   const html = `<!DOCTYPE html><html><head>
     <meta charset="UTF-8">
-    <title>Inventario de Bienes</title>
+    <title>Inventario de Bienes — SISCONPAT</title>
     <style>
-      @page { size: A4 landscape; margin: 15mm; }
+      @page { size: A4 landscape; margin: 12mm; }
       body { font-family: Arial, sans-serif; margin: 0; }
-      h1 { color: #7F1D1D; font-size: 16px; margin-bottom: 4px; }
-      p { font-size: 11px; color: #64748b; margin: 0 0 12px; }
+      h1 { color: #7F1D1D; font-size: 14px; margin-bottom: 3px; }
+      .sub { font-size: 10px; color: #64748b; margin: 0 0 10px; }
       table { width: 100%; border-collapse: collapse; }
       thead tr { background: #7F1D1D; }
-      thead th { color: white; padding: 7px 8px; font-size: 10px; text-align: left; border: 1px solid #991B1B; }
-      tfoot td { background: #f1f5f9; font-size: 10px; padding: 6px 8px; font-weight: bold; }
+      thead th { color: white; padding: 6px 6px; font-size: 9px; text-align: left; border: 1px solid #991B1B; white-space: nowrap; }
+      tfoot td { background: #f1f5f9; font-size: 9px; padding: 5px 6px; font-weight: bold; }
     </style>
   </head><body>
     <h1>Inventario de Bienes Patrimoniales — CSJLN</h1>
-    <p>Generado el ${fecha} &nbsp;|&nbsp; Total: ${items.length} registro(s)</p>
+    <p class="sub">Generado: ${fecha} &nbsp;|&nbsp; Total: ${items.length} registro(s) &nbsp;|&nbsp; SISCONPAT v1.1</p>
     <table>
       <thead><tr>
-        <th>#</th><th>Cód. Patrimonial</th><th>Tipo</th><th>Marca / Modelo</th>
-        <th>N° Serie</th><th>Sede</th><th>Custodio</th><th>Estado</th><th>Funcionamiento</th>
+        <th>#</th><th>Cód. Patrimonial</th><th>Tipo / Categoría</th><th>Marca / Modelo</th>
+        <th>N° Serie</th><th>Sede</th><th>Custodio</th><th>Estado / Detalle Técnico</th>
       </tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="9">Total de registros exportados: ${items.length}</td></tr></tfoot>
+      <tbody>${filas}</tbody>
+      <tfoot><tr><td colspan="8">Total exportado: ${items.length} registro(s) — Sistema de Control Patrimonial · CSJLN</td></tr></tfoot>
     </table>
   </body></html>`;
 
@@ -154,71 +286,61 @@ function exportPDF(items) {
   win.document.write(html);
   win.document.close();
   win.focus();
-  setTimeout(() => { win.print(); }, 500);
+  setTimeout(() => { win.print(); }, 600);
 }
 
-// ── Menú de exportación ───────────────────────────────────────────────────────
-function ExportMenu({ items, totalFiltrados }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-
-  useState(() => {
-    if (!open) return;
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  });
-
+// ── Botones de exportación individuales ──────────────────────────────────────
+function ExportButtons({ items, totalFiltrados }) {
   const opciones = [
-    { label: 'Exportar CSV',   icon: 'table_view',     color: '#16a34a', fn: () => { exportCSV(items);   setOpen(false); } },
-    { label: 'Exportar Excel', icon: 'grid_on',        color: '#1d4ed8', fn: () => { exportExcel(items); setOpen(false); } },
-    { label: 'Exportar PDF',   icon: 'picture_as_pdf', color: '#dc2626', fn: () => { exportPDF(items);   setOpen(false); } },
+    {
+      label: 'CSV',
+      icon: 'table_view',
+      title: `Exportar ${totalFiltrados} registros a CSV`,
+      color: '#16a34a',
+      hoverBg: 'rgb(22 163 74 / 0.1)',
+      fn: () => exportCSV(items),
+    },
+    {
+      label: 'Excel',
+      icon: 'grid_on',
+      title: `Exportar ${totalFiltrados} registros a Excel`,
+      color: '#1d4ed8',
+      hoverBg: 'rgb(37 99 235 / 0.1)',
+      fn: () => exportExcel(items),
+    },
+    {
+      label: 'PDF',
+      icon: 'picture_as_pdf',
+      title: `Imprimir / exportar ${totalFiltrados} registros a PDF`,
+      color: '#dc2626',
+      hoverBg: 'rgb(220 38 38 / 0.1)',
+      fn: () => exportPDF(items),
+    },
   ];
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-        style={{
-          background: open ? 'rgb(127 29 29 / 0.08)' : 'var(--color-surface)',
-          border: `1px solid ${open ? 'var(--color-primary)' : 'var(--color-border)'}`,
-          color: open ? 'var(--color-primary)' : 'var(--color-text-muted)',
-          height: 36,
-        }}
-        title={`Exportar ${totalFiltrados} registro(s)`}
-      >
-        <Icon name="download" className="text-[16px]" />
-        <span>Exportar</span>
-        <Icon name="arrow_drop_down" className="text-[18px]"
-          style={{ transform: open ? 'rotate(180deg)' : '', transition: 'transform .2s' }} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full mt-1 rounded-xl overflow-hidden shadow-xl z-50"
+    <div className="flex items-center gap-1.5">
+      <span className="text-[9px] font-black uppercase tracking-widest mr-1" style={{ color: 'var(--color-text-faint)' }}>
+        Exportar:
+      </span>
+      {opciones.map(op => (
+        <button
+          key={op.label}
+          onClick={op.fn}
+          title={op.title}
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[10px] font-black uppercase transition-all cursor-pointer"
           style={{
             background: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            minWidth: 180,
-          }}>
-          <div className="px-3 pt-2.5 pb-1.5" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-            <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-faint)' }}>
-              {totalFiltrados} registro(s)
-            </p>
-          </div>
-          {opciones.map(o => (
-            <button key={o.label} onClick={o.fn}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all text-left"
-              style={{ color: o.color }}
-              onMouseEnter={e => { e.currentTarget.style.background = `${o.color}10`; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-              <Icon name={o.icon} className="text-[18px]" />
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
+            border: `1px solid ${op.color}30`,
+            color: op.color,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = op.hoverBg; e.currentTarget.style.borderColor = op.color; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-surface)'; e.currentTarget.style.borderColor = `${op.color}30`; }}
+        >
+          <Icon name={op.icon} className="text-[16px]" />
+          {op.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -311,15 +433,19 @@ function FilaBien({ b, onVerDetalle, onEditar, puedeEditar }) {
   );
 }
 
+// ── Componente principal ──────────────────────────────────────────────────────
 export default function BienesTabla({ items = [], loading, error, refetch, onVerDetalle, onEditar }) {
   const { can } = usePermission();
   const puedeEditar = can('ms-bienes:bienes:change_bien');
+
   const [page,     setPage]     = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
   const totalItems = items.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const pagActual  = Math.min(page, totalPages);
   const slice      = items.slice((pagActual - 1) * pageSize, pagActual * pageSize);
+
   const prevTotal = useRef(totalItems);
   if (prevTotal.current !== totalItems) { prevTotal.current = totalItems; if (page !== 1) setPage(1); }
 
@@ -379,11 +505,11 @@ export default function BienesTabla({ items = [], loading, error, refetch, onVer
         </table>
       </div>
 
-      {/* ── Footer con paginación ── */}
+      {/* ── Footer con paginación y exportación ── */}
       <div className="table-footer px-6 py-4 bg-surface-alt/50 border-t border-border flex flex-wrap items-center justify-between gap-4">
 
-        {/* Izquierda: total + selector de filas + exportar */}
-        <div className="flex items-center gap-5">
+        {/* Izquierda: total + selector de filas + exportación */}
+        <div className="flex items-center gap-5 flex-wrap">
           <p className="text-xs text-faint">
             Total: <b className="text-main font-black">{totalItems}</b> registro{totalItems !== 1 ? 's' : ''}
           </p>
@@ -400,7 +526,8 @@ export default function BienesTabla({ items = [], loading, error, refetch, onVer
             </select>
           </div>
 
-          <ExportMenu items={items} totalFiltrados={totalItems} />
+          {/* Íconos individuales de exportación */}
+          <ExportButtons items={items} totalFiltrados={totalItems} />
         </div>
 
         {/* Derecha: paginación */}
@@ -409,7 +536,6 @@ export default function BienesTabla({ items = [], loading, error, refetch, onVer
             Pág. <b className="text-main">{pagActual}</b> de <b className="text-main">{totalPages}</b>
           </span>
 
-          {/* Botón anterior */}
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={pagActual === 1}
@@ -418,7 +544,6 @@ export default function BienesTabla({ items = [], loading, error, refetch, onVer
             <Icon name="chevron_left" className="text-[18px]" />
           </button>
 
-          {/* Números de página */}
           <div className="flex items-center gap-1">
             {Array.from({ length: totalPages }, (_, i) => i + 1)
               .filter(p => p === 1 || p === totalPages || Math.abs(p - pagActual) <= 1)
@@ -440,7 +565,6 @@ export default function BienesTabla({ items = [], loading, error, refetch, onVer
               ))}
           </div>
 
-          {/* Botón siguiente */}
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={pagActual === totalPages}

@@ -20,6 +20,7 @@ function FiltroChip({ label, onRemove }) {
     </span>
   );
 }
+
 function SearchSelect({ placeholder, items = [], labelKey = 'nombre', valueKey = 'id', value, onSelect, onClear }) {
   const [query,   setQuery]   = useState('');
   const [open,    setOpen]    = useState(false);
@@ -29,12 +30,15 @@ function SearchSelect({ placeholder, items = [], labelKey = 'nombre', valueKey =
   const inputRef   = useRef(null);
   const dropRef    = useRef(null);
   const selected = items.find(i => String(i[valueKey]) === String(value));
+
   const calcCoords = () => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     setCoords({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width });
   };
+
   const openDropdown = () => { calcCoords(); setOpen(true); inputRef.current?.focus(); };
+
   useEffect(() => {
     if (!open) return;
     const onDown = e => {
@@ -97,7 +101,6 @@ function SearchSelect({ placeholder, items = [], labelKey = 'nombre', valueKey =
           style={{ color: 'var(--color-text-faint)', transform: open ? 'rotate(180deg)' : '', transition: 'transform .2s' }} />
       </div>
 
-      {/* Dropdown en posición fixed para escapar de cualquier overflow:hidden */}
       {open && (
         <div ref={dropRef}
           style={{
@@ -150,8 +153,7 @@ export default function BienesFiltros({
   const tipoSel    = tiposBien.find(t => String(t.id) === String(filtros.tipo_bien_id));
   const estBienSel = estadosBien.find(e => String(e.id) === String(filtros.estado_bien_id));
   const estFuncSel = estadosFuncionamiento.find(e => String(e.id) === String(filtros.estado_funcionamiento_id));
-  console.log('estadosFuncionamiento= ',estadosFuncionamiento)
-  console.log('estadosBien= ',estadosBien)
+
   return (
     <div className="card shadow-sm overflow-visible">
       <div className="p-4 space-y-3">
@@ -180,7 +182,7 @@ export default function BienesFiltros({
             </div>
           </div>
 
-          {/* Sede — SearchSelect con dropdown portal */}
+          {/* Sede — SearchSelect */}
           <div className="md:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-[0.15em] mb-1.5 block"
               style={{ color: 'var(--color-text-muted)' }}>Sede</label>
@@ -280,10 +282,10 @@ export default function BienesFiltros({
             style={{ borderTop: '1px solid var(--color-border-light)' }}>
             <span className="text-[9px] font-black uppercase tracking-widest mr-1"
               style={{ color: 'var(--color-text-faint)' }}>Filtros activos:</span>
-            {filtros.search        && <FiltroChip label={`"${filtros.search}"`}                            onRemove={() => onFiltroChange('search', '')} />}
-            {filtros.sede_id       && <FiltroChip label={sedeSel?.nombre ?? `Sede #${filtros.sede_id}`}     onRemove={() => onFiltroChange('sede_id', '')} />}
-            {filtros.custodio_q    && <FiltroChip label={`Custodio: "${filtros.custodio_q}"`}              onRemove={() => onFiltroChange('custodio_q', '')} />}
-            {filtros.tipo_bien_id  && <FiltroChip label={tipoSel?.nombre ?? 'Tipo'}                        onRemove={() => onFiltroChange('tipo_bien_id', '')} />}
+            {filtros.search       && <FiltroChip label={`"${filtros.search}"`}                          onRemove={() => onFiltroChange('search', '')} />}
+            {filtros.sede_id      && <FiltroChip label={sedeSel?.nombre ?? `Sede #${filtros.sede_id}`}   onRemove={() => onFiltroChange('sede_id', '')} />}
+            {filtros.custodio_q   && <FiltroChip label={`Custodio: "${filtros.custodio_q}"`}            onRemove={() => onFiltroChange('custodio_q', '')} />}
+            {filtros.tipo_bien_id && <FiltroChip label={tipoSel?.nombre ?? 'Tipo'}                      onRemove={() => onFiltroChange('tipo_bien_id', '')} />}
             {filtros.estado_bien_id && (
               <FiltroChip label={estBienSel?.nombre ?? 'Estado bien'} onRemove={() => onFiltroChange('estado_bien_id', '')} />
             )}
@@ -298,8 +300,8 @@ export default function BienesFiltros({
 }
 
 function resolverEstadoBienId(b) {
-  if (b.estado_bien_id != null)   return String(b.estado_bien_id);
-  if (b.estado_bien?.id != null)  return String(b.estado_bien.id);
+  if (b.estado_bien_id != null)  return String(b.estado_bien_id);
+  if (b.estado_bien?.id != null) return String(b.estado_bien.id);
   return '';
 }
 
@@ -309,9 +311,11 @@ function resolverEstadoFuncId(b) {
   return '';
 }
 
-export function useFiltradoLocal(bienes = [], filtros = {}) {
+export function useFiltradoLocal(bienes = [], filtros = {}, catalogos = {}) {
+  const { estadosBien = [], estadosFuncionamiento = [] } = catalogos;
+
   return useMemo(() => {
-    let res = bienes;    
+    let res = bienes;
     if (filtros.search?.trim()) {
       const q = filtros.search.trim().toLowerCase();
       res = res.filter(b =>
@@ -335,13 +339,30 @@ export function useFiltradoLocal(bienes = [], filtros = {}) {
     if (filtros.tipo_bien_id) {
       res = res.filter(b => String(b.tipo_bien_id) === String(filtros.tipo_bien_id));
     }
+
     if (filtros.estado_bien_id) {
-      res = res.filter(b => resolverEstadoBienId(b) === String(filtros.estado_bien_id));
+      const catalogoItem = estadosBien.find(e => String(e.id) === String(filtros.estado_bien_id));
+      const nombreBuscado = catalogoItem?.nombre?.toUpperCase() ?? '';
+
+      res = res.filter(b => {
+        const idBien = resolverEstadoBienId(b);
+        if (idBien) return idBien === String(filtros.estado_bien_id);
+        return nombreBuscado && b.estado_bien_nombre?.toUpperCase() === nombreBuscado;
+      });
     }
+
     if (filtros.estado_funcionamiento_id) {
-      res = res.filter(b => resolverEstadoFuncId(b) === String(filtros.estado_funcionamiento_id));
-    }    
-    return res;    
+      const catalogoItem = estadosFuncionamiento.find(e => String(e.id) === String(filtros.estado_funcionamiento_id));
+      const nombreBuscado = catalogoItem?.nombre?.toUpperCase() ?? '';
+
+      res = res.filter(b => {
+        const idBien = resolverEstadoFuncId(b);
+        if (idBien) return idBien === String(filtros.estado_funcionamiento_id);
+        return nombreBuscado && b.estado_funcionamiento_nombre?.toUpperCase() === nombreBuscado;
+      });
+    }
+
+    return res;
   }, [
     bienes,
     filtros.search,
@@ -351,5 +372,7 @@ export function useFiltradoLocal(bienes = [], filtros = {}) {
     filtros.tipo_bien_id,
     filtros.estado_bien_id,
     filtros.estado_funcionamiento_id,
+    estadosBien,
+    estadosFuncionamiento,
   ]);
 }

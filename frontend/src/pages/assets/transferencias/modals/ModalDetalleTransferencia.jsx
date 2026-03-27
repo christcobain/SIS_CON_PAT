@@ -344,7 +344,7 @@ export default function ModalDetalleTransferencia({
                 <div className="flex items-center gap-2 p-2.5 rounded-xl"
                   style={{ background: 'rgb(22 163 74 / 0.08)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
                   <Icon name="task_alt" className="text-[15px]" style={{ color: '#16a34a' }} />
-                  <p className="text-[10px] font-black" style={{ color: '#16a34a' }}>Acta firmada subida</p>
+                  <p className="text-[10px] font-black" style={{ color: '#16a34a' }}>Acta firmada y subida</p>
                 </div>
               )}
             </div>

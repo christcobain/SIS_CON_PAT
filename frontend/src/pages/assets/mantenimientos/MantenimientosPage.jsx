@@ -34,6 +34,7 @@ export default function MantenimientosPage() {
     aprobar,
     devolver,
     cancelar,
+    descargarPDF
   } = useMantenimientos(filtros);
   const [itemEditar, setItemEditar] = useState(null);
 
@@ -166,6 +167,7 @@ export default function MantenimientosPage() {
           onEnviar={handleEnviar}
           onCancelar={handleCancelar}
           onEditar={handleEditar}
+          onDescargarPDF={descargarPDF}
         />
       </div>
 
@@ -196,7 +198,6 @@ export default function MantenimientosPage() {
             onEnviar={handleEnviar}
             onConformar={handleConformar}
             onCancelar={handleCancelar}
-            onSubirFirmado={handleAccionExitosa}
             puedeAccionesTecnicas={can('ms-bienes:mantenimientos:add_mantenimiento')}
             puedeAccionesAdmin={can('ms-bienes:mantenimientos:change_mantenimiento')}
           />

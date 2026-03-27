@@ -163,12 +163,12 @@ function TarjetaMantenimiento({ m, role, onDetalle }) {
 
   const handleDevolver = async(motivo) => {
     setModalDv(false);
-    await mantenimientosService.devolver(m.id, motivo);
     try{
       const result = await mantenimientosService.devolver(m.id, motivo);
-      toast.success(result?.message || 'Mant. Devuelto correctamente.');
-
+      toast.success(result?.message||result?.response?.data?.message|| 'Mant. Devuelto.');
     }catch (err) {
+      console.log(err?.response?.data?.error)
+      console.log(err?.response?.data)
       toast.error(err?.response?.data?.error || 'Error al subir el acta.');
     }finally {
       setBusy(false);

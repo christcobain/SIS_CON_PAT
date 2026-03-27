@@ -135,7 +135,7 @@ function TabBienes({ detalles = [] }) {
                 <span className="text-[9px] font-black px-2 py-1 rounded bg-surface-alt border border-border uppercase"
                 style={{ background: 'rgb(22 163 74 / 0.1)', color: '#16a34a' }}
                 >
-                Estado Func. Final: {d.estado_funcionamiento_inicial_nombre || 'Sin estado'}
+                Estado Func. Final: {d.estado_funcionamiento_final_nombre || 'Sin estado'}
               </span>
               )}
             </div>
@@ -246,13 +246,14 @@ function TabHistorial({ aprobaciones = [] }) {
 
 export default function ModalDetalleMantenimiento({
   open, onClose, item,
-  onAprobar, onDevolver, onEnviar, onConformar, onCancelar, onSubirFirmado,
+  onAprobar, onDevolver, onEnviar, onConformar, onCancelar
 }) {
   const [tab,     setTab]     = useState('info');
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(false);
   const { obtener, descargarPDF, subirFirmadoMant, subirImagen } = useMantenimientos();
   const role  = useAuthStore(s => s.role);
+  const user  = useAuthStore(u=> u.user.id);
   const toast = useToast();
   const fileImgRef  = useRef();
   const fileFirmRef = useRef();
@@ -297,8 +298,9 @@ export default function ModalDetalleMantenimiento({
     try {
       const result=await subirFirmadoMant(item.id, archivo);
       toast.success(result?.message ||'Acta firmada subida exitosamente.');
-      onSubirFirmado?.();
-    } catch { toast.error('Error al subir el acta firmada.'); }
+      onClose();
+    } catch { 
+      toast.error('Error al subir el acta firmada.'); }
   };
 
   return (
@@ -361,14 +363,14 @@ export default function ModalDetalleMantenimiento({
 
               <div className="space-y-2">
                 <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
-                {estado === 'APROBADO'&& !m.pdf_path && (
+                {estado === 'APROBADO'&& m.pdf_path && m.usuario_realiza_id==user && (
                   <button onClick={handleDescargar}
                     className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase cursor-pointer"
                     style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
                     <Icon name="download" className="text-[15px]" />Descargar PDF
                   </button>
                 )}
-                {estado === 'APROBADO' && !m.pdf_firmado_path && (
+                {estado === 'APROBADO' && !m.pdf_firmado_path && m.usuario_realiza_id==user &&(
                   <>
                     <input ref={fileFirmRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirFirmado} />
                     <button onClick={() => fileFirmRef.current?.click()}
@@ -382,9 +384,14 @@ export default function ModalDetalleMantenimiento({
                   <div className="flex items-center gap-2 p-2.5 rounded-xl"
                     style={{ background: 'rgb(22 163 74 / 0.08)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
                     <Icon name="task_alt" className="text-[14px]" style={{ color: '#16a34a' }} />
-                    <span className="text-[10px] font-black" style={{ color: '#16a34a' }}>Acta firmada</span>
+                    <span className="text-[10px] font-black" style={{ color: '#16a34a' }}>Acta firmada y subida</span>
                   </div>
                 )}
+                {m.fecha_pdf && (
+              <p className="text-[9px]" style={{ color: 'var(--color-text-faint)' }}>PDF generado: {fmtT(m.fecha_pdf)}</p>
+            )}
+
+
                 {(estado === 'EN_PROCESO' || estado === 'DEVUELTO') && (
                   <>
                     <input ref={fileImgRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden" onChange={handleSubirImagen} />

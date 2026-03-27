@@ -215,7 +215,6 @@ class MantenimientoService:
             MantenimientoService._enriquecer(tr, token)
             _ = list(tr.detalles.all()) 
         return lista
-    
     @staticmethod
     def _validar_acceso_aprobador(m: Mantenimiento, sede_id: int, modulo_id: Optional[int]) -> None:
         if m.sede_id == sede_id:
@@ -261,7 +260,6 @@ class MantenimientoService:
                 'y subir el documento firmado para cerrar el proceso.'
             ),
         }
-
     @staticmethod
     @transaction.atomic
     def devolver(
@@ -291,12 +289,7 @@ class MantenimientoService:
         return {'success': True, 'message': 'Mantenimiento devuelto para corrección.'}
     @staticmethod
     @transaction.atomic
-    def subir_pdf_firmado(
-        pk: int,
-        archivo,
-        usuario_id: int,
-        role: str,
-    ) -> Dict[str, Any]:
+    def subir_pdf_firmado(pk: int,archivo,usuario_id: int,role: str,) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento != 'APROBADO':
             raise ValidationError(
@@ -320,7 +313,9 @@ class MantenimientoService:
             if det.estado_funcionamiento_final_id:
                 updates['estado_funcionamiento_id'] = det.estado_funcionamiento_final_id
             BienRepository.update_fields(bien, updates)
-        TransferenciaService._restaurar_estado_bienes(m, 'ACTIVO')
+        detalles = m.detalles.all()
+        lista_bienes = [d.bien for d in detalles]
+        TransferenciaService._cambiar_estado_bienes(lista_bienes, 'ACTIVO')
         MantenimientoRepository.update_fields(m, {
             'pdf_firmado_path':   os.path.join('mantenimientos', 'pdfs', 'firmados', nombre),
             'fecha_pdf_firmado':  now,

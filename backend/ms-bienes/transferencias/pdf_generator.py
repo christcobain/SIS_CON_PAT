@@ -219,10 +219,6 @@ def _generar_tabla_od_mej(transferencia, sede_origen, sede_destino, modulo_orige
 # ── FUNCIÓN PRINCIPAL MEJORADA ───────────────────────────────────────────────
 
 def generar_pdf_transferencia(transferencia, cookie: str = '') -> bytes:
-    """
-    Genera el PDF oficial de una transferencia (estado == 'EN_ESPERA_CONFORMIDAD')
-    con diseño mejorado y el nuevo logo institucional.
-    """
     # ── 1. RESOLVER NOMBRES DESDE MS-USUARIOS ─────────────────────────────────
     sede_origen    = _get_sede(transferencia.sede_origen_id,     cookie)
     sede_destino   = _get_sede(transferencia.sede_destino_id,    cookie)

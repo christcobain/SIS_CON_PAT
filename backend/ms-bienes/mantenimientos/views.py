@@ -125,7 +125,7 @@ class MantenimientoViewSet(ViewSet):
             'pendientes_aprobacion': [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
             'subir_imagen':       [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimientoimagen')],
             'aprobar':            [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
-            'devolver':           [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
+            'devolver':           [HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')],
             'cancelar':           [HasJWTPermission('ms-bienes:mantenimientos:delete_mantenimiento')],
             'subir_pdf_firmado':  [HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')],
             'documento':          [HasJWTPermission('ms-bienes:mantenimientos:view_mantenimientoimagen')],
