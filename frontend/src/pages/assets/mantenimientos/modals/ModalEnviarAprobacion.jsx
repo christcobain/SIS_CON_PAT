@@ -81,10 +81,7 @@ export default function ModalEnviarAprobacion({ open, onClose, item, onEnviar })
         }))
       };
 
-      const result=await onEnviar(item.id, payload);
-      console.log(result?.response.data.message)
-      console.log(result?.message)
-      // toast.success(result?.message||'Enviado para aprobacion.');
+      await onEnviar(item.id, payload);
       onClose();
     } catch (e) {
       console.error("Error al enviar aprobación:", e);

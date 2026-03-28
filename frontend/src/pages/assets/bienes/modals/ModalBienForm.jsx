@@ -491,10 +491,10 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
   const { fetchCatalogos, ...catalogos }   = useCatalogos();
 
   const empresaId          = useAuthStore(s => s.empresaId);
-  const empresaNombre      = useAuthStore(s => s.empresaNombre);
+
   const sedes_auth         = useAuthStore(s => s.sedes);
   const modulo_id_auth     = useAuthStore(s => s.modulo_id);
-  const modulo_nombre_auth = useAuthStore(s => s.modulo_nombre);
+
   const sedeDefault        = sedes_auth?.[0];
 
   const [form,      setForm]      = useState({ ...FORM_VACIO });

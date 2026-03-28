@@ -17,6 +17,7 @@ const CatalogosPage    = lazy(() => import('../pages/assets/catalogos/CatalogosP
 const BienesPage       = lazy(() => import('../pages/assets/bienes/BienesPage'));
 const TransferenciasPage  = lazy(() => import('../pages/assets/transferencias/TransferenciasPage'));
 const MantenimientosPage  = lazy(() => import('../pages/assets/mantenimientos/MantenimientosPage'));
+const BajasPage =lazy(()=> import('../pages/assets/bajas/BajasPage')); 
 
 export default function AppRouter() {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
@@ -73,6 +74,12 @@ export default function AppRouter() {
               <Route element={<PermissionRoute perm="ms-bienes:mantenimientos:view_mantenimiento" />}>
                 <Route path="mantenimientos" element={<MantenimientosPage />} />
               </Route>
+              <Route element={<PermissionRoute perm="ms-bienes:bajas:view_baja" />}>
+                <Route path="bajas" element={<BajasPage />} />
+              </Route>
+
+
+
             </Route>
           </Route>
 

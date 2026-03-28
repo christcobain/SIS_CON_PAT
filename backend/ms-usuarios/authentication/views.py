@@ -1,3 +1,4 @@
+from django.contrib import auth
 from django.conf import settings
 from rest_framework import status
 from rest_framework.viewsets import ViewSet
@@ -193,8 +194,12 @@ class LogoutViewSet(ViewSet):
             status=status.HTTP_200_OK if result['success'] else status.HTTP_400_BAD_REQUEST,
         )
         if result['success']:
+            auth.logout(request)
             response.delete_cookie(settings.JWT_AUTH_COOKIE, path='/')
             response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path='/')
+            session_cookie_name = getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid')
+            response.delete_cookie(session_cookie_name, path='/')            
+            response.delete_cookie('csrftoken', path='/')
         return response
 
 class RefreshTokenViewSet(ViewSet):
@@ -341,7 +346,6 @@ class chancePasswordUserViewSet(ViewSet):
         response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path="/")
         return response
     
-
 class PasswordPolicyView(ViewSet):
     def get_permissions(self):
         perms = {            

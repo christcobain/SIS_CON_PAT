@@ -43,8 +43,13 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'shared.middleware.AdminAutoLoginMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+AUTHENTICATION_BACKENDS = [
+    'shared.backends.AdminJWTAuthBackend',  
+    'django.contrib.auth.backends.ModelBackend',
 ]
 ROOT_URLCONF = 'config.urls'
 TEMPLATES = [{
@@ -84,6 +89,9 @@ JWT_AUTH_REFRESH_COOKIE = 'sisconpat_refresh'
 JWT_AUTH_COOKIE_SECURE  = os.getenv('JWT_COOKIE_SECURE', 'False').lower() == 'true'
 JWT_AUTH_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
 MS_USUARIOS_BASE_URL = os.getenv('MS_USUARIOS_BASE_URL', 'http://127.0.0.1:8000/api/v1')
+SESSION_COOKIE_DOMAIN = None 
+SESSION_COOKIE_PATH = '/'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
