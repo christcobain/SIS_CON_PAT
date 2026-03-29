@@ -64,8 +64,13 @@ class BajaListSerializer(serializers.ModelSerializer):
             'nombre_destino',
             'fecha_registro',
             'fecha_aprobacion',
+            'aprobado_por_coordsistema_id',
+            'nombre_coordsistema',
             'motivo_cancelacion_nombre',
             'pdf_path',
+            'pdf_firmado_path',
+            'fecha_pdf_firmado',
+            'subido_por_id',
             'total_bienes',
         ]
 
@@ -114,6 +119,10 @@ class BajaDetailSerializer(serializers.ModelSerializer):
             'docx_path',
             'pdf_path',
             'fecha_doc',
+
+            'pdf_firmado_path',
+            'fecha_pdf_firmado',
+            'subido_por_id',
             'total_bienes',
             'detalles',
             'aprobaciones',

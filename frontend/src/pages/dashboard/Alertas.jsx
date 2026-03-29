@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense,useMemo } from 'react';
+import { useState, lazy, Suspense, useMemo } from 'react';
 import { useTransferencias }             from '../../hooks/useTransferencias';
 import { useMantenimientos }             from '../../hooks/useMantenimientos';
 import { useNotificaciones,
@@ -6,10 +6,11 @@ import { useNotificaciones,
 import { useAuth }                       from '../../hooks/useAuth';
 import { useToast }                      from '../../hooks/useToast';
 import { usePermission }                 from '../../hooks/usePermission';
-import AlertasStats                    from './components/AlertasStats';
-import AlertasMantenimientos           from './components/AlertasMantenimientos';
-import AlertasHistorial                from './components/AlertasHistorial';
-import AlertasPendientesTransferencias from './components/AlertasPendientesTransferencias';
+import AlertasStats                      from './components/AlertasStats';
+import AlertasMantenimientos             from './components/AlertasMantenimientos';
+import AlertasHistorial                  from './components/AlertasHistorial';
+import AlertasPendientesTransferencias   from './components/AlertasPendientesTransferencias';
+import AlertasBajas                      from './components/AlertasBajas';
 
 const ModalDetalleTransferencia = lazy(() =>
   import('../assets/transferencias/modals/ModalDetalleTransferencia')
@@ -23,6 +24,12 @@ const ModalAprobacionMantenimiento = lazy(() =>
 const ModalEnviarAprobacion = lazy(() =>
   import('../assets/mantenimientos/modals/ModalEnviarAprobacion')
 );
+const ModalDetalleBaja = lazy(() =>
+  import('../assets/bajas/modals/ModalDetalleBaja')
+);
+const ModalGestionarBaja = lazy(() =>
+  import('../assets/bajas/modals/ModalGestionarBaja')
+);
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
@@ -31,32 +38,41 @@ const Icon = ({ name, className = '' }) => (
 export default function Alertas() {
   const { user } = useAuth();
   const toast    = useToast();
-  const { canAny,can } = usePermission();
+  const { canAny, can } = usePermission();
   const [activeTab,   setActiveTab]   = useState('pendientes');
   const [loadingSync, setLoadingSync] = useState(false);
 
-const TABS = useMemo(() => {
+  const TABS = useMemo(() => {
     const allTabs = [
-      { 
-        id: 'pendientes', 
-        label: 'transferencias', 
+      {
+        id: 'pendientes',
+        label: 'Transferencias',
         icon: 'bolt',
-        visible: canAny('ms-bienes:transferencias:view_transferencia', 'ms-bienes:transferencias:view_transferenciadetalle')
+        visible: canAny(
+          'ms-bienes:transferencias:view_transferencia',
+          'ms-bienes:transferencias:view_transferenciadetalle'
+        ),
       },
-      { 
-        id: 'mantenimiento', 
-        label: 'Mantenimientos', 
+      {
+        id: 'mantenimiento',
+        label: 'Mantenimientos',
         icon: 'build',
-        visible: can('ms-bienes:mantenimientos:view_mantenimiento')
+        visible: can('ms-bienes:mantenimientos:view_mantenimiento'),
       },
-      { 
-        id: 'historial', 
-        label: 'Historial', 
+      {
+        id: 'bajas',
+        label: 'Bajas',
+        icon: 'delete_sweep',
+        visible: can('ms-bienes:bajas:view_baja'),
+      },
+      {
+        id: 'historial',
+        label: 'Historial',
         icon: 'history',
-        visible: true 
+        visible: true,
       },
     ];
-    return allTabs.filter(tab => tab.visible);
+    return allTabs.filter((tab) => tab.visible);
   }, [can, canAny]);
 
   const {
@@ -69,14 +85,9 @@ const TABS = useMemo(() => {
     refetch:         refetchNotif,
   } = useNotificaciones();
 
+  // ── Transferencias ────────────────────────────────────────────────────────
   const [modalDetalleTransf, setModalDetalleTransf] = useState(false);
   const [itemDetalleTransf,  setItemDetalleTransf]  = useState(null);
-
-  const [modalDetalleMant, setModalDetalleMant] = useState(false);
-  const [modalEnviar,      setModalEnviar]      = useState(false);
-  const [modalAprobacion,  setModalAprobacion]  = useState(false);
-  const [modoAprobacion,   setModoAprobacion]   = useState('aprobar');
-  const [itemActivoMant,   setItemActivoMant]   = useState(null);
 
   const {
     actualizando,
@@ -86,36 +97,37 @@ const TABS = useMemo(() => {
     aprobarEntradaSeguridad,
     retornoSalida,
     retornoEntrada,
-    descargarPDF,
+    descargarPDF: descargarPDFTransf,
     subirFirmado,
     refetch: refetchTransf,
   } = useTransferencias('TRASLADO_SEDE', { misTransferencias: false, usuarioId: user?.id });
 
+  // ── Mantenimientos ────────────────────────────────────────────────────────
+  const [modalDetalleMant, setModalDetalleMant] = useState(false);
+  const [modalEnviar,      setModalEnviar]      = useState(false);
+  const [modalAprobacion,  setModalAprobacion]  = useState(false);
+  const [modoAprobacion,   setModoAprobacion]   = useState('aprobar');
+  const [itemActivoMant,   setItemActivoMant]   = useState(null);
+
   const {
     refetchMant,
     enviarAprobacion,
-    aprobar,
-    devolver,
+    aprobar:             aprobarMant,
+    devolver:            devolverMant,
     confirmarConformidad,
-    cancelar,
+    cancelar:            cancelarMant,
   } = useMantenimientos({});
 
+  // ── Bajas ─────────────────────────────────────────────────────────────────
+  const [modalDetalleBaja,  setModalDetalleBaja]  = useState(false);
+  const [modalGestionarBaja, setModalGestionarBaja] = useState(false);
+  const [modoGestionBaja,   setModoGestionBaja]   = useState('aprobar');
+  const [itemActivoBaja,    setItemActivoBaja]    = useState(null);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const notificarYRefrescar = () => {
     refetchNotif();
     dispararRefetchNotificaciones();
-  };
-
-  const handleVerDetalleTransf = (item) => {
-    setItemDetalleTransf(item);
-    setModalDetalleTransf(true);
-  };
-
-  const handleDownloadTransf = async (id) => {
-    try {
-      await descargarPDF(id);
-    } catch (e) {
-      toast.error(e?.response?.data?.error || 'No se pudo generar el documento');
-    }
   };
 
   const handleSync = () => {
@@ -124,65 +136,50 @@ const TABS = useMemo(() => {
     setTimeout(() => setLoadingSync(false), 600);
   };
 
-  const handleVerDetalleMant = (item) => {
-    setItemActivoMant(item);
-    setModalDetalleMant(true);
+  // ── Transferencias handlers ───────────────────────────────────────────────
+  const handleVerDetalleTransf = (item) => { setItemDetalleTransf(item); setModalDetalleTransf(true); };
+  const handleDownloadTransf   = async (id) => {
+    try { await descargarPDFTransf(id); }
+    catch (e) { toast.error(e?.response?.data?.error || 'No se pudo generar el documento'); }
   };
 
-  const handleAprobarMant = (item) => {
-    setItemActivoMant(item);
-    setModoAprobacion('aprobar');
-    setModalDetalleMant(false);
-    setModalAprobacion(true);
-  };
-
-  const handleDevolverMant = (item) => {
-    setItemActivoMant(item);
-    setModoAprobacion('devolver');
-    setModalDetalleMant(false);
-    setModalAprobacion(true);
-  };
-
-  const handleEnviarMant = (item) => {
-    setItemActivoMant(item);
-    setModalDetalleMant(false);
-    setModalEnviar(true);
-  };
-
-  const handleConformarMant = (item) => {
-    setItemActivoMant(item);
-    setModoAprobacion('conformidad');
-    setModalDetalleMant(false);
-    setModalAprobacion(true);
-  };
-
-  const handleCancelarMant = async (item) => {
+  // ── Mantenimientos handlers ───────────────────────────────────────────────
+  const handleVerDetalleMant = (item) => { setItemActivoMant(item); setModalDetalleMant(true); };
+  const handleAprobarMant    = (item) => { setItemActivoMant(item); setModoAprobacion('aprobar'); setModalDetalleMant(false); setModalAprobacion(true); };
+  const handleDevolverMant   = (item) => { setItemActivoMant(item); setModoAprobacion('devolver'); setModalDetalleMant(false); setModalAprobacion(true); };
+  const handleEnviarMant     = (item) => { setItemActivoMant(item); setModalDetalleMant(false); setModalEnviar(true); };
+  const handleConformarMant  = (item) => { setItemActivoMant(item); setModoAprobacion('conformidad'); setModalDetalleMant(false); setModalAprobacion(true); };
+  const handleCancelarMant   = async (item) => {
     try {
-      await cancelar(item.id, {
-        motivo_cancelacion_id: 1,
-        detalle_cancelacion: 'Cancelado desde alertas',
-      });
+      await cancelarMant(item.id, { motivo_cancelacion_id: 1, detalle_cancelacion: 'Cancelado desde alertas' });
       toast.success('Mantenimiento cancelado.');
-      refetchMant();
-      notificarYRefrescar();
-    } catch (e) {
-      toast.error(e?.response?.data?.error || 'Error al cancelar.');
-    }
+      refetchMant(); notificarYRefrescar();
+    } catch (e) { toast.error(e?.response?.data?.error || 'Error al cancelar.'); }
+  };
+  const handleAccionMantExitosa = () => {
+    setModalAprobacion(false); setModalEnviar(false); setModalDetalleMant(false); setItemActivoMant(null);
+    toast.success('Proceso actualizado exitosamente.');
+    refetchMant(); notificarYRefrescar();
   };
 
-  const handleAccionMantExitosa = () => {
-    setModalAprobacion(false);
-    setModalEnviar(false);
-    setModalDetalleMant(false);
-    setItemActivoMant(null);
-    toast.success('Proceso actualizado exitosamente.');
-    refetchMant();
+  // ── Bajas handlers ────────────────────────────────────────────────────────
+  const handleVerDetalleBaja = (item) => { setItemActivoBaja(item); setModalDetalleBaja(true); };
+  const handleGestionarBaja  = (item, modo) => {
+    setItemActivoBaja(item);
+    setModoGestionBaja(modo);
+    setModalDetalleBaja(false);
+    setModalGestionarBaja(true);
+  };
+  const handleAccionBajaExitosa = (res) => {
+    setModalGestionarBaja(false); setModalDetalleBaja(false); setItemActivoBaja(null);
+    toast.success(res?.message || 'Operación realizada con éxito.');
     notificarYRefrescar();
   };
 
   return (
     <div className="p-4 max-w-[1600px] animate-in fade-in duration-500 pb-20">
 
+      {/* ── Cabecera ── */}
       <div className="card p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-1">
           <div className="flex items-center gap-2">
@@ -191,9 +188,7 @@ const TABS = useMemo(() => {
             </div>
             <div>
               <h1 className="page-title">Centro de Notificaciones</h1>
-              <p className="page-subtitle">
-                Aprobaciones pendientes, mantenimientos y actividad reciente.
-              </p>
+              <p className="page-subtitle">Aprobaciones pendientes, mantenimientos y actividad reciente.</p>
             </div>
           </div>
           <button
@@ -202,13 +197,11 @@ const TABS = useMemo(() => {
             className="btn-icon bg-surface border border-border"
             title="Sincronizar"
           >
-            <Icon
-              name="sync"
-              className={`text-[18px] ${loadingSync ? 'animate-spin text-primary' : 'text-faint'}`}
-            />
+            <Icon name="sync" className={`text-[18px] ${loadingSync ? 'animate-spin text-primary' : 'text-faint'}`} />
           </button>
         </div>
 
+        {/* ── Tabs ── */}
         <div className="flex gap-6 mt-4 pt-3 border-t border-border">
           {TABS.map(({ id, label, icon }) => (
             <button
@@ -227,6 +220,7 @@ const TABS = useMemo(() => {
         </div>
       </div>
 
+      {/* ── Contenido ── */}
       <div className="page-content mt-6">
         <AlertasStats
           loading={loadingSync || loadingNotif}
@@ -238,6 +232,7 @@ const TABS = useMemo(() => {
 
         <div className="mt-6">
 
+          {/* Transferencias */}
           {activeTab === 'pendientes' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
@@ -255,7 +250,8 @@ const TABS = useMemo(() => {
             </div>
           )}
 
-          {activeTab === 'mantenimiento'&& can('ms-bienes:mantenimientos:view_mantenimiento')  && (
+          {/* Mantenimientos */}
+          {activeTab === 'mantenimiento' && can('ms-bienes:mantenimientos:view_mantenimiento') && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
                 <Icon name="engineering" className="text-[18px]" />
@@ -267,6 +263,20 @@ const TABS = useMemo(() => {
             </div>
           )}
 
+          {/* Bajas */}
+          {activeTab === 'bajas' && can('ms-bienes:bajas:view_baja') && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
+                <Icon name="delete_sweep" className="text-[18px]" />
+                <p className="text-[10px] font-black uppercase tracking-[0.2em]">
+                  Informes de baja que requieren tu aprobación
+                </p>
+              </div>
+              <AlertasBajas onVerDetalle={handleVerDetalleBaja} />
+            </div>
+          )}
+
+          {/* Historial */}
           {activeTab === 'historial' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
@@ -282,6 +292,7 @@ const TABS = useMemo(() => {
         </div>
       </div>
 
+      {/* ── Modales Transferencias ── */}
       <Suspense fallback={null}>
         {modalDetalleTransf && (
           <ModalDetalleTransferencia
@@ -290,24 +301,16 @@ const TABS = useMemo(() => {
             item={itemDetalleTransf}
             actualizando={actualizando}
             acciones={{
-              aprobarAdminSede,
-              aprobarSalidaSeguridad,
-              aprobarEntradaSeguridad,
-              retornoSalida,
-              retornoEntrada,
-              devolverAprobacion,
-              descargarPDF,
-              subirFirmado,
+              aprobarAdminSede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
+              retornoSalida, retornoEntrada, devolverAprobacion,
+              descargarPDF: descargarPDFTransf, subirFirmado,
             }}
-            onAccionExitosa={() => {
-              setModalDetalleTransf(false);
-              refetchTransf();
-              notificarYRefrescar();
-            }}
+            onAccionExitosa={() => { setModalDetalleTransf(false); refetchTransf(); notificarYRefrescar(); }}
           />
         )}
       </Suspense>
 
+      {/* ── Modales Mantenimientos ── */}
       <Suspense fallback={null}>
         {modalDetalleMant && (
           <ModalDetalleMantenimiento
@@ -322,28 +325,70 @@ const TABS = useMemo(() => {
             onSubirFirmado={handleAccionMantExitosa}
           />
         )}
-
         {modalEnviar && (
           <ModalEnviarAprobacion
             open={modalEnviar}
             onClose={() => { setModalEnviar(false); setItemActivoMant(null); }}
             item={itemActivoMant}
-            onEnviar={async (id, data) => {
-              await enviarAprobacion(id, data);
-              handleAccionMantExitosa();
-            }}
+            onEnviar={async (id, data) => { await enviarAprobacion(id, data); handleAccionMantExitosa(); }}
           />
         )}
-
         {modalAprobacion && (
           <ModalAprobacionMantenimiento
             open={modalAprobacion}
             onClose={() => { setModalAprobacion(false); setItemActivoMant(null); }}
             item={itemActivoMant}
             modo={modoAprobacion}
-            onAprobar={async (id, obs) => { await aprobar(id, obs); handleAccionMantExitosa(); }}
-            onDevolver={async (id, motivo) => { await devolver(id, motivo); handleAccionMantExitosa(); }}
+            onAprobar={async (id, obs) => { await aprobarMant(id, obs); handleAccionMantExitosa(); }}
+            onDevolver={async (id, motivo) => { await devolverMant(id, motivo); handleAccionMantExitosa(); }}
             onConformar={async (id) => { await confirmarConformidad(id); handleAccionMantExitosa(); }}
+          />
+        )}
+      </Suspense>
+
+      {/* ── Modales Bajas ── */}
+      <Suspense fallback={null}>
+        {modalDetalleBaja && (
+          <ModalDetalleBaja
+            open={modalDetalleBaja}
+            onClose={() => { setModalDetalleBaja(false); setItemActivoBaja(null); }}
+            item={itemActivoBaja}
+            onGestionar={handleGestionarBaja}
+            onCancelar={() => {}}
+            puedeAccionesRegistrador={false}
+            puedeAccionesAprobador={can('ms-bienes:bajas:change_baja')}
+            onUser={user?.id}
+            descargarPDF={async (id, firmado) => {
+              const { default: bajasService } = await import('../../services/bajas.service');
+              const blob = await bajasService.descargarPDF(id, firmado);
+              const url  = window.URL.createObjectURL(new Blob([blob]));
+              const link = document.createElement('a');
+              link.href  = url;
+              link.setAttribute('download', 'baja.pdf');
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+            }}
+            pdfFirmado={null}
+          />
+        )}
+        {modalGestionarBaja && (
+          <ModalGestionarBaja
+            open={modalGestionarBaja}
+            onClose={() => { setModalGestionarBaja(false); setItemActivoBaja(null); }}
+            item={itemActivoBaja}
+            modo={modoGestionBaja}
+            onAprobar={async (id) => {
+              const { default: bajasService } = await import('../../services/bajas.service');
+              const res = await bajasService.aprobar(id);
+              handleAccionBajaExitosa(res);
+            }}
+            onDevolver={async (id, motivo) => {
+              const { default: bajasService } = await import('../../services/bajas.service');
+              const res = await bajasService.devolver(id, motivo);
+              handleAccionBajaExitosa(res);
+            }}
+            onReenviar={() => {}}
           />
         )}
       </Suspense>

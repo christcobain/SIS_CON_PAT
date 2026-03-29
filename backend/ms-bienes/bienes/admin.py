@@ -4,10 +4,8 @@ from .models import (
     BienDetalleImpresora, BienDetalleScanner, BienDetalleSwitch
 )
 
-# Configuración del encabezado
 admin.site.site_header = "SISTEMA CONTROL PATRIMONIAL - ms-bienes"
 
-# --- CONFIGURACIÓN DE INLINES (Detalles técnicos específicos) ---
 
 class BienDetalleCpuInline(admin.StackedInline):
     model = BienDetalleCpu
@@ -30,11 +28,9 @@ class BienDetalleSwitchInline(admin.StackedInline):
     model = BienDetalleSwitch
     can_delete = False
 
-# --- CONFIGURACIÓN DEL MODELO PRINCIPAL BIEN ---
 
 @admin.register(Bien)
 class BienAdmin(admin.ModelAdmin):
-    # 1. Columnas de la tabla principal
     list_display = (
         'codigo_patrimonial', 
         'tipo_bien', 
@@ -45,8 +41,6 @@ class BienAdmin(admin.ModelAdmin):
         'is_active',
         'sede_id'
     )
-    
-    # 2. Filtros laterales
     list_filter = (
         'is_active', 
         'categoria_bien', 
@@ -56,11 +50,7 @@ class BienAdmin(admin.ModelAdmin):
         'sede_id',
         'corte'
     )
-    
-    # 3. Buscador superior
     search_fields = ('codigo_patrimonial', 'numero_serie', 'modelo', 'detalle_tecnico')
-
-    # 4. Organización del Formulario por secciones
     fieldsets = (
         ('Identificación del Activo', {
             'fields': (
@@ -88,13 +78,11 @@ class BienAdmin(admin.ModelAdmin):
         }),
         ('Auditoría', {
             'fields': ('fecha_registro', 'fecha_actualizacion'),
-            'classes': ('collapse',) # Esta sección aparece contraída por defecto
+            'classes': ('collapse',) 
         }),
     )
 
     readonly_fields = ('fecha_registro', 'fecha_actualizacion')
-
-    # 5. Inyectamos todos los posibles detalles técnicos
     inlines = [
         BienDetalleCpuInline,
         BienDetalleMonitorInline,
@@ -102,8 +90,6 @@ class BienAdmin(admin.ModelAdmin):
         BienDetalleScannerInline,
         BienDetalleSwitchInline
     ]
-
-# --- REGISTRO DE DETALLES (Opcional, por si quieres verlos por separado) ---
 
 @admin.register(BienDetalleCpu)
 class BienDetalleCpuAdmin(admin.ModelAdmin):

@@ -73,6 +73,7 @@ class LoginViewSet(ViewSet):
             'username':            result['username'],
             'nombres':                  result['nombres'],
             'apellidos':                result['apellidos'],
+            'cargo':                    result['cargo'],
             'role':                     result['role'],
             'permissions':              result['permissions'],
             'permissions_flat':         result['permissions_flat'],

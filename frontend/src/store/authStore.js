@@ -24,6 +24,7 @@ const useAuthStore = create(
             username: data.username,
             nombres: data.nombres,
             apellidos: data.apellidos,
+            cargo:  data.cargo,
           },
           role: data.role,
           permissions: data.permissions || {},

@@ -157,28 +157,33 @@ class UserService:
         return {"success": True, "data": result}
     @staticmethod
     def filter_users(filters: Dict[str, Any]) -> Dict[str, Any]:
-        dni             = filters.get("dni")
-        cargo           = filters.get("cargo")
-        role_id         = filters.get("role_id")
-        sede_ids        = filters.get("sede_ids")
-        dependencia_id  = filters.get("dependencia_id")
-        empresa_id      = filters.get("empresa_id")  
-        modulo_id   = filters.get('modulo_id')
+        dni            = filters.get("dni")
+        cargo          = filters.get("cargo")
+        role_id        = filters.get("role_id")
+        sede_ids       = filters.get("sede_ids")
+        dependencia_id = filters.get("dependencia_id")
+        empresa_id     = filters.get("empresa_id")
+        modulo_id      = filters.get("modulo_id")
         es_usuario_sistema = filters.get("es_usuario_sistema")
-        fecha_desde     = filters.get("fecha_desde")
-        fecha_hasta     = filters.get("fecha_hasta")
-        search          = filters.get("search")
-
-        if dni and len(dni) < 3:
-            raise NotFound('El DNI debe tener al menos 3 caracteres.')
-        if fecha_desde:
+        fecha_desde    = filters.get("fecha_desde")
+        fecha_hasta    = filters.get("fecha_hasta")
+        search         = filters.get("search")
+ 
+        if dni and len(str(dni)) < 3:
+            raise ValidationError('El DNI debe tener al menos 3 caracteres.')
+ 
+        if fecha_desde and isinstance(fecha_desde, str):
             fecha_desde = datetime.strptime(fecha_desde, "%Y-%m-%d").date()
-        if fecha_hasta:
+        if fecha_hasta and isinstance(fecha_hasta, str):
             fecha_hasta = datetime.strptime(fecha_hasta, "%Y-%m-%d").date()
         if fecha_desde and fecha_hasta and fecha_desde > fecha_hasta:
-            raise NotFound('La fecha inicial no puede ser mayor que la final.')
-        if sede_ids and isinstance(sede_ids, str):
+            raise ValidationError('La fecha inicial no puede ser mayor que la final.')
+ 
+        if sede_ids and isinstance(sede_ids, (list, tuple)):
+            sede_ids = [int(x) for x in sede_ids if str(x).isdigit()]
+        elif sede_ids and isinstance(sede_ids, str):
             sede_ids = [int(x) for x in sede_ids.split(",") if x.isdigit()]
+ 
         if role_id:
             role_id = int(role_id)
         if dependencia_id:
@@ -187,24 +192,22 @@ class UserService:
             empresa_id = int(empresa_id)
         if modulo_id:
             modulo_id = int(modulo_id)
-        if es_usuario_sistema is not None:
-            if isinstance(es_usuario_sistema, str):
-                es_usuario_sistema = es_usuario_sistema.lower() == "true"
+        if es_usuario_sistema is not None and isinstance(es_usuario_sistema, str):
+            es_usuario_sistema = es_usuario_sistema.lower() == "true"
+ 
         usuarios = UserRepository.filter_users(
             dni=dni,
             cargo=cargo,
             role_id=role_id,
-            sede_ids=sede_ids,
+            sede_ids=sede_ids if sede_ids else None,
             dependencia_id=dependencia_id,
-            empresa_id=empresa_id,  
-            modulo_id=modulo_id,       
+            empresa_id=empresa_id,
+            modulo_id=modulo_id,
             es_usuario_sistema=es_usuario_sistema,
             fecha_desde=fecha_desde,
             fecha_hasta=fecha_hasta,
             search=search,
         )
-        if not usuarios:
-            raise NotFound('No hay usuarios registrados.')
         return {"success": True, "data": usuarios}
     @staticmethod
     @transaction.atomic

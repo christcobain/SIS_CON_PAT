@@ -23,6 +23,22 @@ export function useUsuarios(filtrosIniciales = {}) {
   useEffect(() => {
     fetchUsuarios();
   }, [fetchUsuarios]);
+  
+   const filtrarUsuarios = useCallback(async (params = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await usuariosService.filtrar(params);
+      const lista = Array.isArray(data) ? data : (data?.results ?? []);
+      setUsuarios(lista);
+      return lista;
+    } catch (e) {
+      setError(e?.response?.data?.error || 'Error al filtrar usuarios');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
   // ── Helper para acciones que requieren refrescar la lista ─────────────────
   const ejecutarYRefrescar = async (fn, ...args) => {
     setActualizando(true);
@@ -63,7 +79,7 @@ export function useUsuarios(filtrosIniciales = {}) {
     actualizar: (id, data) => ejecutarYRefrescar(usuariosService.actualizar, id, data),
     activar: (id) => ejecutarYRefrescar(usuariosService.activar, id),
     desactivar: (id) =>ejecutarYRefrescar(usuariosService.desactivar, id),
-    filtrarUsuarios: (params) => usuariosService.filtrarUsuarios(params),
+    filtrarUsuarios: filtrarUsuarios,
     listarDependencias: () => usuariosService.listarDependencias(),
     obtenerDependencias: (id) => usuariosService.obtenerDependencia(id),
     crearDependencia: (data) => usuariosService.crearDependencia(data),

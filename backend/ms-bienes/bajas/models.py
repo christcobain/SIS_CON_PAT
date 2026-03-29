@@ -41,16 +41,17 @@ class Baja(models.Model):
     cargo_coordsistema           = models.CharField(max_length=200, blank=True, default='')
     fecha_aprobacion             = models.DateTimeField(null=True, blank=True)
 
-    motivo_cancelacion  = models.ForeignKey(
-        CatMotivoCancelacion, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='bajas_canceladas',
-    )
+    motivo_cancelacion  = models.ForeignKey(CatMotivoCancelacion, on_delete=models.SET_NULL,null=True, blank=True, related_name='bajas_canceladas',)
     detalle_cancelacion = models.TextField(null=True, blank=True)
     fecha_cancelacion   = models.DateTimeField(null=True, blank=True)
 
     docx_path = models.CharField(max_length=500, null=True, blank=True)
     pdf_path  = models.CharField(max_length=500, null=True, blank=True)
     fecha_doc = models.DateTimeField(null=True, blank=True)
+
+    pdf_firmado_path  = models.CharField(max_length=500, null=True, blank=True)
+    fecha_pdf_firmado = models.DateTimeField(null=True, blank=True)
+    subido_por_id     = models.IntegerField(null=True, blank=True)   
 
     class Meta:
         db_table            = 'bienes_baja'
@@ -71,10 +72,7 @@ class BajaDetalle(models.Model):
     baja          = models.ForeignKey(Baja, on_delete=models.CASCADE, related_name='detalles')
     bien          = models.ForeignKey(Bien, on_delete=models.PROTECT, related_name='bajas')
     motivo_baja   = models.ForeignKey(CatMotivoBaja, on_delete=models.PROTECT)
-    mantenimiento = models.ForeignKey(
-        Mantenimiento, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='bajas',
-    )
+    mantenimiento = models.ForeignKey(Mantenimiento, on_delete=models.SET_NULL,null=True, blank=True, related_name='bajas',)
 
     tipo_bien_nombre      = models.CharField(max_length=150, blank=True, default='')
     marca_nombre          = models.CharField(max_length=150, blank=True, default='')
@@ -89,11 +87,9 @@ class BajaDetalle(models.Model):
     observacion_tecnica = models.TextField(null=True, blank=True)
 
     imagenes_incluidas = models.JSONField(default=list, blank=True)
-
     class Meta:
         db_table        = 'bienes_baja_detalle'
         unique_together = [('baja', 'bien')]
-
     def __str__(self):
         return f'{self.tipo_bien_nombre} — {self.codigo_patrimonial}'
 
@@ -103,6 +99,7 @@ class BajaAprobacion(models.Model):
         ('REGISTRADO', 'Registrado y derivado para aprobación'),
         ('ENVIADO',    'Reenviado a aprobación con correcciones'),
         ('APROBADO',   'Aprobado — bienes dados de baja'),
+        ('ATENDIDO',   'Atendido con PDF subido'),
         ('DEVUELTO',   'Devuelto para corrección'),
         ('CANCELADO',  'Cancelado'),
     ]
@@ -111,17 +108,16 @@ class BajaAprobacion(models.Model):
         ('coordSistema', 'Coordinador de Sistemas'),
         ('SYSADMIN',     'Administrador del Sistema'),
     ]
-
     baja          = models.ForeignKey(Baja, on_delete=models.CASCADE, related_name='aprobaciones')
     rol_aprobador = models.CharField(max_length=30, choices=ROL_CHOICES)
     accion        = models.CharField(max_length=20, choices=ACCION_CHOICES)
     usuario_id    = models.IntegerField()
     observacion   = models.TextField(null=True, blank=True)
     fecha         = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         db_table = 'bienes_baja_aprobacion'
         ordering = ['fecha']
-
     def __str__(self):
         return f'{self.baja.numero_informe} | {self.accion} | {self.rol_aprobador}'
+    
+    

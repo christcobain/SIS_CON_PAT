@@ -3,15 +3,16 @@ import { useBajas } from '../../../hooks/useBajas';
 import { useLocaciones } from '../../../hooks/useLocaciones';
 import { useToast } from '../../../hooks/useToast';
 import { usePermission } from '../../../hooks/usePermission';
+import { useAuthStore } from '../../../store/authStore'
 import Can from '../../../components/auth/Can';
 import BajasStats from './components/BajasStats';
 import BajasFiltros from './components/BajasFiltros';
 import BajasTabla from './components/BajasTabla';
 
-const ModalCrearBaja = lazy(() => import('./modals/ModalCrearBaja'));
-const ModalDetalleBaja = lazy(() => import('./modals/ModalDetalleBaja'));
+const ModalCrearBaja    = lazy(() => import('./modals/ModalCrearBaja'));
+const ModalDetalleBaja  = lazy(() => import('./modals/ModalDetalleBaja'));
 const ModalGestionarBaja = lazy(() => import('./modals/ModalGestionarBaja'));
-const ModalCancelarBaja = lazy(() => import('./modals/ModalCancelarBaja'));
+const ModalCancelarBaja  = lazy(() => import('./modals/ModalCancelarBaja'));
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
@@ -21,39 +22,23 @@ export default function BajasPage() {
   const toast = useToast();
   const { sedes } = useLocaciones();
   const { can } = usePermission();
-
+  const userId = useAuthStore((state) => state.user?.id);
   const {
-    bajas,
-    loading,
-    error,
-    refetch,
-    filtros,
-    aplicarFiltros,
-    aprobar,
-    devolver,
-    cancelar,
-    descargarPDF,
+    bajas, loading, error,
+    refetch, filtros, aplicarFiltros,
+    aprobar, devolver, cancelar, reenviar, descargarPDF,pdfFirmado,
   } = useBajas({});
-
-  const [modalCrear, setModalCrear] = useState(false);
-  const [modalDetalle, setModalDetalle] = useState(false);
+  const [modalCrear,    setModalCrear]    = useState(false);
+  const [modalDetalle,  setModalDetalle]  = useState(false);
   const [modalGestionar, setModalGestionar] = useState(false);
   const [modalCancelar, setModalCancelar] = useState(false);
-  const [itemActivo, setItemActivo] = useState(null);
-  const [modoGestion, setModoGestion] = useState('aprobar');
+  const [itemActivo,    setItemActivo]    = useState(null);
+  const [modoGestion,   setModoGestion]   = useState('aprobar');
 
-  const onFiltroChange = (key, val) => {
-    aplicarFiltros({ [key]: val });
-  };
+  const onFiltroChange = (key, val) => aplicarFiltros({ [key]: val });
+  const onLimpiarFiltros = () => aplicarFiltros({ estado_baja: '', sede_elabora_id: '', misInformes: false });
 
-  const onLimpiarFiltros = () => {
-    aplicarFiltros({ estado_baja: '', sede_elabora_id: '', misInformes: false });
-  };
-
-  const handleVerDetalle = (item) => {
-    setItemActivo(item);
-    setModalDetalle(true);
-  };
+  const handleVerDetalle = (item) => { setItemActivo(item); setModalDetalle(true); };
 
   const handleGestionar = (item, modo) => {
     setItemActivo(item);
@@ -100,17 +85,10 @@ export default function BajasPage() {
               className="size-9 flex items-center justify-center rounded-xl transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95"
               style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
             >
-              <Icon
-                name="refresh"
-                className={`text-[20px] ${loading ? 'animate-spin text-primary' : 'text-faint'}`}
-              />
+              <Icon name="refresh" className={`text-[20px] ${loading ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
-
             <Can perform="ms-bienes:bajas:add_baja">
-              <button
-                onClick={() => setModalCrear(true)}
-                className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
-              >
+              <button onClick={() => setModalCrear(true)} className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm">
                 <Icon name="add_circle" className="text-[18px]" />
                 <span className="font-black uppercase tracking-widest text-[10px]">Nuevo Informe</span>
               </button>
@@ -121,22 +99,14 @@ export default function BajasPage() {
 
       <div className="page-content">
         <BajasStats items={bajas} loading={loading} />
-
-        <BajasFiltros
-          filtros={filtros}
-          onChange={onFiltroChange}
-          onLimpiar={onLimpiarFiltros}
-          sedes={sedes}
-        />
-
+        <BajasFiltros filtros={filtros} onChange={onFiltroChange} onLimpiar={onLimpiarFiltros} sedes={sedes} />
         <BajasTabla
-          items={bajas}
-          loading={loading}
-          error={error}
+          items={bajas} loading={loading} error={error}
           onVerDetalle={handleVerDetalle}
           onGestionar={handleGestionar}
           onCancelar={handleCancelar}
           onDescargarPDF={descargarPDF}
+          onUser={userId}
         />
       </div>
 
@@ -144,12 +114,7 @@ export default function BajasPage() {
         {modalCrear && (
           <ModalCrearBaja
             open={modalCrear}
-            onClose={() => setModalCrear(false)}
-            onGuardado={(res) => {
-              setModalCrear(false);
-              toast.success(res?.message || 'Informe de baja registrado');
-              refetch();
-            }}
+            onClose={() => { setModalCrear(false); refetch(); }}
           />
         )}
 
@@ -162,6 +127,9 @@ export default function BajasPage() {
             onCancelar={handleCancelar}
             puedeAccionesRegistrador={can('ms-bienes:bajas:add_baja')}
             puedeAccionesAprobador={can('ms-bienes:bajas:change_baja')}
+            onUser={userId}
+            onDescargarPDF={descargarPDF}
+            pdfFirmado={pdfFirmado}
           />
         )}
 
@@ -177,6 +145,10 @@ export default function BajasPage() {
             }}
             onDevolver={async (id, motivo) => {
               const res = await devolver(id, motivo);
+              handleAccionExitosa(res);
+            }}
+            onReenviar={async (id, data) => {
+              const res = await reenviar(id, data);
               handleAccionExitosa(res);
             }}
           />

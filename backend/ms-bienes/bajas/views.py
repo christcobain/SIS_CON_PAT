@@ -35,51 +35,43 @@ from .serializers import (
 )
 
 
+
 def _get_sede_id_from_token(request) -> int:
     sedes = request.auth.get('sedes_ids', []) if request.auth else []
     if not sedes:
         raise ValidationError('El usuario no tiene sede asignada en el token JWT.')
-    return int(sedes[0])
-
-
+    return int(sedes[0]) 
+ 
 def _get_sede_nombre_from_token(request) -> str:
     sedes = request.auth.get('sedes', []) if request.auth else []
-    if not sedes:
-        return ''
-    sede = sedes[0]
-    return sede.get('nombre', '') if isinstance(sede, dict) else ''
-
-
+    if sedes and isinstance(sedes[0], dict):
+        return sedes[0].get('nombre', '')
+    return ''
+ 
 def _get_modulo_id_from_token(request):
-    return request.auth.get('modulo_id') if request.auth else None
-
-
+    return request.auth.get('modulo_id') if request.auth else None 
+ 
 def _get_modulo_nombre_from_token(request) -> str:
     return request.auth.get('modulo_nombre', '') if request.auth else ''
-
-
+ 
 def _get_nombre_completo(request) -> str:
-    user = request.user
-    fn   = getattr(user, 'first_name', '') or ''
-    ln   = getattr(user, 'last_name',  '') or ''
-    return f'{fn} {ln}'.strip() or getattr(user, 'username', '')
-
-
+    if request.auth:
+        nombres = request.auth.get('nombres', '')
+        apellidos = request.auth.get('apellidos', '')
+        return f"{nombres} {apellidos}".strip()
+    return "Usuario Desconocido"
+ 
 def _get_cargo_from_token(request) -> str:
-    return request.auth.get('cargo', '') if request.auth else ''
-
-
+    return request.auth.get('cargo', '') if request.auth else '' 
+ 
 def _get_role(request) -> str:
     return request.auth.get('role', '') if request.auth else ''
-
-
 _R400 = {400: OpenApiTypes.OBJECT}
 _R404 = {404: OpenApiTypes.OBJECT}
 
 
 class BajaViewSet(ViewSet):
     authentication_classes = [CookieJWTAuthentication]
-
     def get_permissions(self):
         mapa = {
             'list':                    [HasJWTPermission('ms-bienes:bajas:view_baja')],
@@ -90,7 +82,7 @@ class BajaViewSet(ViewSet):
             'devolver':                [HasJWTPermission('ms-bienes:bajas:change_baja')],
             'cancelar':                [HasJWTPermission('ms-bienes:bajas:delete_baja')],
             'descargar_pdf':           [HasJWTPermission('ms-bienes:bajas:view_baja')],
-            'subir_pdf_firmado':       [HasJWTPermission('ms-bienes:bajas:change_baja')],
+            'subir_pdf_firmado':       [HasJWTPermission('ms-bienes:bajas:add_baja')],
             'bienes_para_baja':        [HasJWTPermission('ms-bienes:bajas:add_baja')],
             'mantenimientos_del_bien': [HasJWTPermission('ms-bienes:bajas:add_baja')],
         }
@@ -127,13 +119,8 @@ class BajaViewSet(ViewSet):
                     filters[key] = int(filters[key])
                 except ValueError:
                     filters[key] = None
-
         result = BajaService.listar(filters)
-        return Response(
-            {'success': True, 'data': BajaListSerializer(result['data'], many=True).data},
-            status=status.HTTP_200_OK,
-        )
-
+        return Response(BajaListSerializer(result['data'], many=True).data, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Bajas'],
         operation_id='bajas_retrieve',
@@ -154,10 +141,7 @@ class BajaViewSet(ViewSet):
     )
     def retrieve(self, request, pk=None):
         result = BajaService.obtener(int(pk))
-        return Response(
-            {'success': True, 'data': BajaDetailSerializer(result['data']).data},
-            status=status.HTTP_200_OK,
-        )
+        return Response(BajaDetailSerializer(result['data']).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         tags=['Bajas'],
@@ -185,25 +169,19 @@ class BajaViewSet(ViewSet):
     )
     def create(self, request):
         ser = BajaCreateSerializer(data=request.data)
-        ser.is_valid(raise_exception=True)
+        ser.is_valid(raise_exception=True)  
         result = BajaService.crear(
             data=ser.validated_data,
             usuario_elabora_id=request.user.id,
-            sede_elabora_id=_get_sede_id_from_token(request),
             nombre_elabora=_get_nombre_completo(request),
             cargo_elabora_token=_get_cargo_from_token(request),
+            sede_elabora_id=_get_sede_id_from_token(request),
             sede_nombre=_get_sede_nombre_from_token(request),
             modulo_elabora_id=_get_modulo_id_from_token(request),
             modulo_elabora_nombre=_get_modulo_nombre_from_token(request),
+            rol=_get_role(request),
         )
-        return Response(
-            {
-                'success': True,
-                'message': result['message'],
-                'data':    BajaDetailSerializer(result['data']).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        return Response(result, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         tags=['Bajas'],
@@ -233,13 +211,12 @@ class BajaViewSet(ViewSet):
             request.user.id,
         )
         return Response(
-            {
-                'success': True,
-                'message': result['message'],
-                'data':    BajaDetailSerializer(result['data']).data,
-            },
-            status=status.HTTP_200_OK,
-        )
+    {
+        'success': True,
+        'message': result['message'],
+        'data':    BajaDetailSerializer(result['data']).data
+    }
+)
 
     @extend_schema(
         tags=['Bajas'],
@@ -329,33 +306,39 @@ class BajaViewSet(ViewSet):
             request.user.id,
         )
         return Response(result, status=status.HTTP_200_OK)
-
     @extend_schema(
         tags=['Bajas'],
         operation_id='bajas_descargar_pdf',
         summary='Descargar PDF del informe de baja',
         description=(
-            'Devuelve el archivo PDF generado automáticamente al registrar o reenviar.\n\n'
-            'El documento incluye: encabezado institucional, bloques A/De/Asunto/Referencia, '
-            'cargo y módulo-sede del elaborador, tabla de bienes con snapshot técnico, '
-            'diagnósticos del mantenimiento asociado y las cuatro secciones del informe.\n\n'
+            'Descarga el PDF del informe.\n\n'
+            '- Sin parámetros: devuelve el PDF generado automáticamente (`pdf_path`).\n'
+            '- Con `?firmado=1`: devuelve el PDF firmado (`pdf_firmado_path`), si existe.\n\n'
             'Retorna `Content-Type: application/pdf` con `Content-Disposition: attachment`.'
         ),
         parameters=[
-            OpenApiParameter('id', OpenApiTypes.INT, location=OpenApiParameter.PATH),
+            OpenApiParameter('id',      OpenApiTypes.INT,  location=OpenApiParameter.PATH),
+            OpenApiParameter('firmado', OpenApiTypes.INT,  location=OpenApiParameter.QUERY,
+                             required=False, description='1 para descargar el PDF firmado'),
         ],
         responses={200: OpenApiTypes.BINARY, 404: OpenApiTypes.OBJECT},
     )
     @action(detail=True, methods=['get'], url_path='descargar-pdf')
     def descargar_pdf(self, request, pk=None):
         baja    = BajaService.descargar_pdf(int(pk))
-        pdf_abs = Path(settings.MEDIA_ROOT) / baja.pdf_path
+        firmado = request.query_params.get('firmado') == '1' 
+        if firmado:
+            if not baja.pdf_firmado_path:
+                raise Http404('No existe PDF firmado para esta baja.')
+            ruta_rel = baja.pdf_firmado_path
+        else:
+            if not baja.pdf_path:
+                raise Http404('Archivo PDF no encontrado en el servidor.')
+            ruta_rel = baja.pdf_path 
+        pdf_abs = Path(settings.MEDIA_ROOT) / ruta_rel
         if not pdf_abs.exists():
-            raise Http404('Archivo PDF no encontrado en el servidor.')
-        response = FileResponse(
-            open(str(pdf_abs), 'rb'),
-            content_type='application/pdf',
-        )
+            raise Http404('Archivo PDF no encontrado en el servidor.') 
+        response = FileResponse(open(str(pdf_abs), 'rb'),content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{pdf_abs.name}"'
         return response
     @extend_schema(

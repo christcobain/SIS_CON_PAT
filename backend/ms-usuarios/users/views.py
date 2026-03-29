@@ -140,6 +140,22 @@ class UserViewSet(ViewSet):
             'deactivate': [HasJWTPermission('ms-usuarios:users:change_user')],
         }
         return perms.get(self.action, [IsAuthenticated()])
+    def _build_filters(self, request) -> dict:
+        p = request.query_params
+        sede_ids = p.getlist('sedes') or p.getlist('sede_ids')
+        return {
+            'search':             p.get('search'),
+            'dni':                p.get('dni'),
+            'cargo':              p.get('cargo'),
+            'role_id':            p.get('role') or p.get('role_id'),
+            'sede_ids':           sede_ids if sede_ids else None,
+            'dependencia_id':     p.get('dependencia') or p.get('dependencia_id'),
+            'empresa_id':         p.get('empresa_id'),
+            'modulo_id':          p.get('modulo_id'),
+            'es_usuario_sistema': p.get('es_usuario_sistema'),
+            'fecha_desde':        p.get('fecha_desde'),
+            'fecha_hasta':        p.get('fecha_hasta'),
+        }
     @extend_schema(
         tags=['Users'],
         summary="Listar usuarios con filtros",
@@ -163,12 +179,10 @@ class UserViewSet(ViewSet):
     )
     @action(detail=False, methods=["get"])
     def filters(self, request):
-        filters = request.query_params.dict()
-        result = UserService.filter_users(filters)
+        result = UserService.filter_users(self._build_filters(request))
         if not result["success"]:
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
-        serializer = UserListSerializer(result["data"], many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(UserListSerializer(result["data"], many=True).data, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Users'],
         summary="Listar usuarios",
@@ -184,19 +198,17 @@ class UserViewSet(ViewSet):
         responses={200: UserListSerializer(many=True)},
     )
     def list(self, request):
-        result = UserService.list_users()
+        result = UserService.filter_users(self._build_filters(request))
         if not result["success"]:
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
-        serializer = UserListSerializer(result["data"], many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(UserListSerializer(result["data"], many=True).data, status=status.HTTP_200_OK)
     @extend_schema(tags=['Users'], summary="Obtener usuario por ID",
                    responses={200: UserDetailSerializer})
     def retrieve(self, request, pk=None):
-        user = UserService.get_user_by_id(pk)
-        if not user['success']:
-            return Response(user, status=status.HTTP_400_BAD_REQUEST)
-        serializer = UserDetailSerializer(user["data"])
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        result = UserService.get_user_by_id(pk)
+        if not result['success']:
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(UserDetailSerializer(result["data"]).data, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Users'],
         summary="Crear usuario",

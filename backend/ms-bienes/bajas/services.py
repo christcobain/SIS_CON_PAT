@@ -1,11 +1,10 @@
 import os
+import logging
 from typing import Dict, Any, List
-
 from django.db import transaction
 from django.utils import timezone
 from django.conf import settings
 from rest_framework.exceptions import ValidationError, NotFound
-
 from .repositories import (
     BajaRepository,
     BajaDetalleRepository,
@@ -16,7 +15,9 @@ from .document_generator import generar_documentos_baja
 from bienes.repositories import BienRepository
 from bienes.models import Bien
 from mantenimientos.models import Mantenimiento, MantenimientoImagen
+from transferencias.services import TransferenciaService
 
+logger = logging.getLogger(__name__)
 
 ESTADOS_FUNCIONAMIENTO_BAJA = {'INOPERATIVO', 'OBSOLETO', 'IRRECUPERABLE'}
 
@@ -48,10 +49,10 @@ class BajaService:
                 'bien_id': (
                     f'El bien "{bien.codigo_patrimonial or bien.pk}" tiene estado '
                     f'"{estado_func}". Solo se pueden dar de baja bienes con estado '
-                    f'INOPERATIVO, OBSOLETO o IRRECUPERABLE. '
-                    f'Complete primero el proceso de mantenimiento que deje constancia del estado definitivo.'
+                    f'INOPERATIVO, OBSOLETO o IRRECUPERABLE.'
                 )
             })
+
         mant_data        = {}
         mantenimiento_id = item.get('mantenimiento_id')
         if mantenimiento_id:
@@ -113,7 +114,7 @@ class BajaService:
         }
 
     @staticmethod
-    def _regenerar_documentos(baja) -> None:
+    def _regenerar_documentos(baja) -> bool:
         try:
             docs = generar_documentos_baja(baja)
             BajaRepository.update_fields(baja, {
@@ -121,13 +122,20 @@ class BajaService:
                 'pdf_path':  docs['pdf_path'],
                 'fecha_doc': timezone.now(),
             })
-        except Exception:
-            pass
+            return True
+        except Exception as exc:
+            logger.error(
+                'Error generando documentos para Baja id=%s: %s',
+                getattr(baja, 'pk', '?'),
+                str(exc),
+                exc_info=True,
+            )
+            return False
 
     @staticmethod
     def listar(filters: Dict[str, Any]) -> Dict[str, Any]:
         qs = BajaRepository.filter(filters)
-        return {'data': list(qs)}
+        return {'success': True, 'data': qs}
 
     @staticmethod
     def obtener(pk: int) -> Dict[str, Any]:
@@ -139,18 +147,18 @@ class BajaService:
     def crear(
         data: Dict[str, Any],
         usuario_elabora_id: int,
-        sede_elabora_id: int,
         nombre_elabora: str,
-        cargo_elabora_token: str,
-        sede_nombre: str,
+        cargo_elabora_token: str,  
+        sede_elabora_id: int,
+        sede_nombre: str = '',              
         modulo_elabora_id: int = None,
         modulo_elabora_nombre: str = '',
+        rol: str = '',
     ) -> Dict[str, Any]:
         items_raw = data.pop('items', [])
         items     = [BajaService._validar_item(item) for item in items_raw]
-
         numero_informe = BajaRepository.generate_numero_informe()
-        baja = BajaRepository.create({
+        datos_baja = {
             **data,
             'numero_informe':        numero_informe,
             'estado_baja':           'PENDIENTE_APROBACION',
@@ -158,28 +166,29 @@ class BajaService:
             'nombre_elabora':        nombre_elabora,
             'cargo_elabora':         data.get('cargo_elabora') or cargo_elabora_token,
             'sede_elabora_id':       sede_elabora_id,
-            'sede_elabora_nombre':   sede_nombre,
+            'sede_elabora_nombre':   sede_nombre, 
             'modulo_elabora_id':     modulo_elabora_id,
-            'modulo_elabora_nombre': modulo_elabora_nombre,
-        })
+            'modulo_elabora_nombre': modulo_elabora_nombre, 
+        }
+        baja = BajaRepository.create(datos_baja)
         BajaDetalleRepository.bulk_create(baja, items)
-
+        bienes = [it['bien'] for it in items]
+        TransferenciaService._cambiar_estado_bienes(bienes, 'PENDIENTE_BAJA')
         baja = BajaRepository.get_by_id(baja.pk)
-        BajaService._regenerar_documentos(baja)
-
+        doc_ok = BajaService._regenerar_documentos(baja)
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='REGISTRADO',
-            rol='asistSistema',
+            rol=rol or 'asistSistema',
             usuario_id=usuario_elabora_id,
-            observacion=f'Informe {numero_informe} registrado y enviado a aprobación de coordSistema.',
+            observacion=f'Informe {numero_informe} registrado y enviado a aprobación.',
         )
-
-        baja = BajaRepository.get_by_id(baja.pk)
+        msg = f'Informe {numero_informe} registrado. Pendiente de aprobación.'
+        if not doc_ok:
+            msg += ' (El documento PDF no pudo generarse; revise los logs del servidor.)'
         return {
             'success': True,
-            'message': f'Informe {numero_informe} registrado. Pendiente de aprobación.',
-            'data':    baja,
+            'message': msg,
         }
 
     @staticmethod
@@ -290,10 +299,10 @@ class BajaService:
                 f'No se puede cancelar una baja en estado "{baja.estado_baja}".'
             )
         BajaRepository.update_fields(baja, {
-            'estado_baja':            'CANCELADO',
-            'motivo_cancelacion_id':  motivo_cancelacion_id,
-            'detalle_cancelacion':    detalle,
-            'fecha_cancelacion':      timezone.now(),
+            'estado_baja':           'CANCELADO',
+            'motivo_cancelacion_id': motivo_cancelacion_id,
+            'detalle_cancelacion':   detalle,
+            'fecha_cancelacion':     timezone.now(),
         })
         BajaAprobacionRepository.registrar(
             baja=baja,
@@ -319,33 +328,34 @@ class BajaService:
             raise ValidationError(
                 'Solo se puede subir el documento firmado cuando el estado es ATENDIDO.'
             )
+        if baja.pdf_firmado_path:
+            raise ValidationError(
+                'Ya existe un documento firmado para esta baja. No se puede reemplazar.'
+            ) 
         media_root = getattr(settings, 'MEDIA_ROOT', 'media')
         carpeta    = os.path.join(media_root, 'bajas', 'pdfs', 'firmados')
-        os.makedirs(carpeta, exist_ok=True)
-
+        os.makedirs(carpeta, exist_ok=True) 
         ext    = os.path.splitext(getattr(archivo, 'name', '.pdf'))[-1].lower() or '.pdf'
         nombre = f'BAJ-{baja.pk}-FIRMADO-{timezone.now().strftime("%Y%m%d%H%M%S")}{ext}'
         ruta   = os.path.join(carpeta, nombre)
         with open(ruta, 'wb') as f:
             for chunk in archivo.chunks():
-                f.write(chunk)
-
+                f.write(chunk) 
         BajaRepository.update_fields(baja, {
-            'pdf_path':  os.path.join('bajas', 'pdfs', 'firmados', nombre),
-            'fecha_doc': timezone.now(),
+            'pdf_firmado_path':  os.path.join('bajas', 'pdfs', 'firmados', nombre),
+            'fecha_pdf_firmado': timezone.now(),
+            'subido_por_id':     usuario_id,
         })
+        bienes = [det.bien for det in baja.detalles.select_related('bien')]
+        TransferenciaService._cambiar_estado_bienes(bienes, 'INACTIVO')
         BajaAprobacionRepository.registrar(
             baja=baja,
-            accion='APROBADO',
+            accion='ATENDIDO',
             rol=role,
             usuario_id=usuario_id,
-            observacion='Documento firmado subido y registrado.',
+            observacion='Documento firmado subido y archivado.',
         )
-        return {
-            'success': True,
-            'message': 'Documento firmado subido correctamente.',
-        }
-
+        return {'success': True, 'message': 'Documento firmado subido correctamente.'}
     @staticmethod
     def obtener_bienes_para_baja(sede_id: int) -> List[Dict[str, Any]]:
         bienes = (
@@ -362,17 +372,17 @@ class BajaService:
         for bien in bienes:
             mantenimientos = MantenimientoParaBajaRepository.get_mantenimientos_atendidos_por_bien(bien.pk)
             resultado.append({
-                'bien_id':                     bien.pk,
-                'tipo_bien_nombre':            getattr(bien.tipo_bien, 'nombre', ''),
-                'marca_nombre':                getattr(bien.marca, 'nombre', ''),
-                'modelo':                      bien.modelo or '',
-                'numero_serie':                bien.numero_serie or 'S/N',
-                'codigo_patrimonial':          bien.codigo_patrimonial or 'S/C',
+                'bien_id':                      bien.pk,
+                'tipo_bien_nombre':             getattr(bien.tipo_bien, 'nombre', ''),
+                'marca_nombre':                 getattr(bien.marca, 'nombre', ''),
+                'modelo':                       bien.modelo or '',
+                'numero_serie':                 bien.numero_serie or 'S/N',
+                'codigo_patrimonial':           bien.codigo_patrimonial or 'S/C',
                 'estado_funcionamiento_nombre': getattr(bien.estado_funcionamiento, 'nombre', ''),
-                'sede_id':                     bien.sede_id,
-                'modulo_id':                   bien.modulo_id,
-                'usuario_asignado_id':         bien.usuario_asignado_id,
-                'mantenimientos_disponibles':  mantenimientos,
+                'sede_id':                      bien.sede_id,
+                'modulo_id':                    bien.modulo_id,
+                'usuario_asignado_id':          bien.usuario_asignado_id,
+                'mantenimientos_disponibles':   mantenimientos,
             })
         return resultado
 

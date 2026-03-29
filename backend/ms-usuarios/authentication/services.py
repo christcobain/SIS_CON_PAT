@@ -304,12 +304,17 @@ class LoginSessionService:
             ]
         sedes = list(user.sedes.values('id', 'nombre'))
         extra_claims = {
-                'role':             user.role.name if user.role else None,
-                'permissions':      permissions_grouped,
-                'permissions_flat': permissions_flat,
-                'sedes_ids':        [s['id'] for s in sedes],
-                'modulo_id':        user.modulo_id,                   
-            }
+            'role':             user.role.name if user.role else None,
+            'permissions':      permissions_grouped,
+            'permissions_flat': permissions_flat,
+            'sedes_ids':        [s['id'] for s in sedes],
+            'sedes':            sedes, 
+            'modulo_id':        user.modulo_id,
+            'modulo_nombre':    user.modulo.nombre if user.modulo else '', 
+            'nombres':          user.first_name, 
+            'apellidos':        user.last_name,  
+            'cargo':            user.cargo,      
+        }
         for key, value in extra_claims.items():
                 refresh[key]              = value
                 refresh.access_token[key] = value
@@ -324,6 +329,7 @@ class LoginSessionService:
                 'username':                 user.username,
                 'nombres':                  user.first_name,
                 'apellidos':                user.last_name,
+                'cargo':                    user.cargo,
                 'role':                     user.role.name if user.role else None,
                 'permissions':              permissions_grouped,
                 'permissions_flat':         permissions_flat,
@@ -366,11 +372,16 @@ class LoginSessionService:
         sedes = list(user.sedes.values('id', 'nombre'))
         new_refresh = RFToken.for_user(user)
         extra_claims = {
-            'role': user.role.name if user.role else None,
-            'permissions': permissions_grouped,
+            'role':             user.role.name if user.role else None,
+            'permissions':      permissions_grouped,
             'permissions_flat': permissions_flat,
-            'sedes_ids': [s['id'] for s in sedes],
-            'modulo_id': user.modulo_id,
+            'sedes_ids':        [s['id'] for s in sedes],
+            'sedes':            sedes, 
+            'modulo_id':        user.modulo_id,
+            'modulo_nombre':    user.modulo.nombre if user.modulo else '', 
+            'nombres':          user.first_name, 
+            'apellidos':        user.last_name, 
+            'cargo':            user.cargo,    
         }
         for key, value in extra_claims.items():
             new_refresh[key] = value

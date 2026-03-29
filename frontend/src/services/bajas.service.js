@@ -6,7 +6,7 @@ const bajasService = {
       Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined)
     );
     const response = await axiosBienes.get('/bajas/', { params: limpio });
-    return response.data?.data ?? [];
+    return response.data;
   },
 
   crear: async (data) => {
@@ -41,9 +41,25 @@ const bajasService = {
     return response.data;
   },
 
-  descargarPDF: async (id) => {
+//   descargarPDF: async (id) => {
+//     const response = await axiosBienes.get(`/bajas/${id}/descargar-pdf/`, {
+//       responseType: 'blob',
+//     });
+//     return response.data;
+//   },
+  descargarPDF: async (id, firmado = false) => {
     const response = await axiosBienes.get(`/bajas/${id}/descargar-pdf/`, {
+      params: { 
+        firmado: firmado ? '1' : '0' 
+      },
       responseType: 'blob',
+    });
+    return response.data;
+  },
+  
+  pdfFirmado: async (id, formData) => {
+    const response = await axiosBienes.post(`/bajas/${id}/pdf-firmado/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   },
@@ -56,6 +72,12 @@ const bajasService = {
   mantenimientosDelBien: async (bienId) => {
     const response = await axiosBienes.get('/bajas/mantenimientos-del-bien/', {
       params: { bien_id: bienId },
+    });
+    return response.data;
+  },
+  pendientesAprobacion: async () => {
+    const response = await axiosBienes.get('/bajas/', {
+      params: { estado_baja: 'PENDIENTE_APROBACION' },
     });
     return response.data;
   },

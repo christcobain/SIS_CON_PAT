@@ -7,13 +7,23 @@ const usuariosService = {
     return response.data;
   },
   listar: async (params = {}) => {
-    const response = await axiosUsuarios.get('/users/users/', { params });
+    const limpio = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+    );
+    const response = await axiosUsuarios.get('/users/users/', { params: limpio });
+    return response.data;
+  },
+  filtrar: async (params = {}) => {
+    const limpio = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+    );
+    const response = await axiosUsuarios.get('/users/users/filters/', { params: limpio });
     return response.data;
   },
   obtener: async (id) => {
     const response = await axiosUsuarios.get(`/users/users/${id}/`);
     return response.data;
-  },  
+  },
   crear: async (data) => {
     const response = await axiosUsuarios.post('/users/users/', data);
     return response.data;
@@ -28,10 +38,6 @@ const usuariosService = {
   },
   desactivar: async (id) => {
     const response = await axiosUsuarios.patch(`/users/users/${id}/deactivate/`);
-    return response.data;
-  },
-  filtrarUsuarios: async (params = {}) => {
-    const response = await axiosUsuarios.get('/users/users/users/filters/', { params }); 
     return response.data;
   },
   listarDependencias: async () => {
