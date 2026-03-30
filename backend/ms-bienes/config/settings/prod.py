@@ -20,7 +20,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT     = False
 
 JWT_AUTH_COOKIE_SECURE   = True
-JWT_AUTH_COOKIE_SAMESITE = 'None'
+JWT_AUTH_COOKIE_SAMESITE = 'Lax'
 
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost').split(',')]
