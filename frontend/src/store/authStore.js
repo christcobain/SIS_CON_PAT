@@ -57,8 +57,22 @@ const useAuthStore = create(
         }),
     }),
     {
-      name: 'sisconpat-auth-storage', 
-      storage: createJSONStorage(() => localStorage), 
+      name: 'sisconpat-auth-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        user:                 state.user,
+        role:                 state.role,
+        permissions:          state.permissions,
+        permissionsFlat:      state.permissionsFlat,
+        modulo_id:            state.modulo_id,
+        modulo_nombre:        state.modulo_nombre,
+        sedes:                state.sedes,
+        empresaId:            state.empresaId,
+        empresaNombre:        state.empresaNombre,
+        passwordExpiresInDays: state.passwordExpiresInDays,
+        needsPasswordWarning: state.needsPasswordWarning,
+        isAuthenticated:      state.isAuthenticated,
+      }),
     }
   )
 );
