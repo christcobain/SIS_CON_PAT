@@ -16,6 +16,7 @@ const useAuthStore = create(
       passwordExpiresInDays: null,
       needsPasswordWarning: false,
       isAuthenticated: false,
+      accessToken: null,
 
       setAuth: (data) =>
         set({
@@ -37,6 +38,7 @@ const useAuthStore = create(
           passwordExpiresInDays: data.password_expires_in_days ?? null,
           needsPasswordWarning: data.needs_password_warning || false,
           isAuthenticated: true,
+          accessToken: data.access ?? null,
         }),
 
       clearAuth: () =>
@@ -51,6 +53,7 @@ const useAuthStore = create(
           passwordExpiresInDays: null,
           needsPasswordWarning: false,
           isAuthenticated: false,
+          accessToken: null 
         }),
     }),
     {

@@ -84,6 +84,7 @@ class LoginViewSet(ViewSet):
             'empresa_nombre':           result.get('empresa_nombre'), 
             'password_expires_in_days': result.get('password_expires_in_days'),
             'needs_password_warning':   result.get('needs_password_warning', False),
+            'access':                   result['access'],
         }
         response = Response(user_data, status=status.HTTP_200_OK)
         return _set_cookies(response, result['access'], result['refresh'])
