@@ -61,7 +61,6 @@ function KpiCard({ icon, colorClass, label, value, loading, trend }) {
 export default function BienesStats({ bienes = [], loading = false }) {
   const total      = bienes.length;
   const activos    = bienes.filter((b) => b.is_active).length;
-  console.log(bienes)
   const inactivos  = total - activos;
   const operativos = bienes.filter(
     (b) => b.estado_funcionamiento_nombre?.toUpperCase().includes('OPERATIVO')

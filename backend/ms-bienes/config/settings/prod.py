@@ -1,7 +1,9 @@
 from .base import *
 import os
 
+
 DEBUG = False
+CORS_ALLOW_CREDENTIALS = True
 SECURE_BROWSER_XSS_FILTER     = True
 SECURE_CONTENT_TYPE_NOSNIFF   = True
 SESSION_COOKIE_SECURE          = True
@@ -42,4 +44,6 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ===== RAILWAY — SSL manejado por el proxy =====
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = False  # Railway maneja SSL por su cuenta
+SECURE_SSL_REDIRECT = False  
+import os
+os.makedirs(BASE_DIR / 'staticfiles', exist_ok=True)
