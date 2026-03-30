@@ -3,6 +3,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 import os
 
+# ===== PATH =====
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env_file = BASE_DIR / '.env'
 if env_file.exists():
@@ -36,6 +37,7 @@ LOCAL_APPS = [
     'catalogos.apps.CatalogosConfig',
 ]
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -48,10 +50,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 AUTHENTICATION_BACKENDS = [
-    'shared.backends.AdminJWTAuthBackend',  
+    'shared.backends.AdminJWTAuthBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 ROOT_URLCONF = 'config.urls'
+
 TEMPLATES = [{
     'BACKEND': 'django.template.backends.django.DjangoTemplates',
     'DIRS': [BASE_DIR / 'templates'],
@@ -63,9 +66,11 @@ TEMPLATES = [{
         'django.contrib.messages.context_processors.messages',
     ]},
 }]
+
+
 DATABASES = {
     'default': {
-        'ENGINE':   os.getenv('DB_ENGINE'),
+        'ENGINE':   os.getenv('DB_ENGINE', 'django.db.backends.postgresql'),
         'NAME':     os.getenv('DB_NAME'),
         'USER':     os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
@@ -74,10 +79,12 @@ DATABASES = {
         'CONN_MAX_AGE': 600,
         'OPTIONS': {
             'connect_timeout': 10,
-            'sslmode': 'require',   
+
+            'sslmode': 'prefer',
         },
     }
 }
+
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME':  timedelta(minutes=int(os.getenv('JWT_ACCESS_TOKEN_LIFETIME_MINUTES', '480'))),
@@ -85,15 +92,18 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
+    # CRÍTICO: debe coincidir exactamente con la SECRET_KEY de ms-usuarios
     'SIGNING_KEY': os.getenv('JWT_SHARED_SECRET', os.getenv('SECRET_KEY', '')),
 }
-JWT_AUTH_COOKIE         = 'sisconpat_access'
-JWT_AUTH_REFRESH_COOKIE = 'sisconpat_refresh'
-JWT_AUTH_COOKIE_SECURE  = os.getenv('JWT_COOKIE_SECURE', 'False').lower() == 'true'
+JWT_AUTH_COOKIE          = 'sisconpat_access'
+JWT_AUTH_REFRESH_COOKIE  = 'sisconpat_refresh'
+JWT_AUTH_COOKIE_SECURE   = os.getenv('JWT_COOKIE_SECURE', 'False').lower() == 'true'
 JWT_AUTH_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
+
+
 MS_USUARIOS_BASE_URL = os.getenv('MS_USUARIOS_BASE_URL', 'http://127.0.0.1:8000/api/v1')
-SESSION_COOKIE_DOMAIN = None 
-SESSION_COOKIE_PATH = '/'
+MS_SERVICE_NAME      = os.getenv('MS_SERVICE_NAME', 'ms-bienes')
+SERVICE_SYNC_KEY     = os.getenv('SERVICE_SYNC_KEY', '')
 
 
 REST_FRAMEWORK = {
@@ -109,25 +119,30 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 15,
     'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer'],
 }
+
+
 CORS_ALLOWED_ORIGINS   = [o.strip() for o in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')]
 CORS_ALLOW_CREDENTIALS = True
+
+
 LANGUAGE_CODE = 'es-pe'
 TIME_ZONE     = 'America/Lima'
 USE_I18N = True
 USE_TZ   = True
+
 STATIC_URL  = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL   = '/media/'
 MEDIA_ROOT  = BASE_DIR / 'media'
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-MS_SERVICE_NAME  = os.getenv('MS_SERVICE_NAME', 'ms-bienes')
-SERVICE_SYNC_KEY = os.getenv('SERVICE_SYNC_KEY', '')
+
 INSTITUCION = {
     'nombre': 'Poder Judicial del Perú',
     'corte':  'Corte Superior de Justicia de Lima Norte',
     'codigo': 'CSJLN',
 }
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'API Bienes — Sistema de Control Patrimonial CSJLN',
     'DESCRIPTION': 'ms-bienes: registro, mantenimiento, transferencias y bajas de activos',
@@ -135,3 +150,7 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': True,
     'SCHEMA_PATH_PREFIX': '/api/v1/',
 }
+
+
+SESSION_COOKIE_DOMAIN = None
+SESSION_COOKIE_PATH   = '/'
