@@ -92,7 +92,7 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-    'SIGNING_KEY': os.getenv('JWT_SHARED_SECRET', os.getenv('SECRET_KEY', '')),
+    'SIGNING_KEY': os.getenv('JWT_SHARED_SECRET','SECRET_KEY'),
 }
 JWT_AUTH_COOKIE          = 'sisconpat_access'
 JWT_AUTH_REFRESH_COOKIE  = 'sisconpat_refresh'
