@@ -280,7 +280,7 @@ class MultipleSessionViewSet(ViewSet):
 class ChangePasswordViewSet(ViewSet):
     def get_permissions(self):
         perms = {            
-            'create':  [HasJWTPermission('ms-usuarios:authentication:add_credential')],          
+            'create':  [AllowAny()],          
         }
         return perms.get(self.action, [IsAuthenticated()])
     @extend_schema(

@@ -134,7 +134,7 @@ class UserViewSet(ViewSet):
             'filters':    [HasJWTPermission('ms-usuarios:users:view_user')],
             'list':       [HasJWTPermission('ms-usuarios:users:view_user')],
             'retrieve':   [HasJWTPermission('ms-usuarios:users:view_user')],
-            'create':     [HasJWTPermission('ms-usuarios:users:add_user')],
+            'create':     [HasJWTPermission('ms-usuarios:users:view_user')],
             'update':     [HasJWTPermission('ms-usuarios:users:change_user')],
             'activate':   [HasJWTPermission('ms-usuarios:users:change_user')],
             'deactivate': [HasJWTPermission('ms-usuarios:users:change_user')],

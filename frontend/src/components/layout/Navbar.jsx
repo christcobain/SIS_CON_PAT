@@ -172,8 +172,8 @@ export default function Navbar({ onToggleSidebar }) {
   const clearAuth  = useAuthStore((s) => s.clearAuth);
   const user       = useAuthStore((s) => s.user);
   const role       = useAuthStore((s) => s.role);
-  const sedes      = useAuthStore((s) => s.sedes[0].nombre);
-
+  const sedes      = useAuthStore((s) => s.sedes?.[0]?.nombre);
+ 
   const [seccion, pagina] = BREADCRUMB_MAP[location.pathname] ?? ['Sistema', 'Página'];
   const roleName  = getRoleName(user?.role ?? role);
   const initials  = getInitials(user?.nombres, user?.apellidos);

@@ -72,7 +72,10 @@ DATABASES = {
         'HOST':     os.getenv('DB_HOST', 'localhost'),
         'PORT':     os.getenv('DB_PORT', '5432'),
         'CONN_MAX_AGE': 600,
-        'OPTIONS': {'connect_timeout': 10},
+        'OPTIONS': {
+            'connect_timeout': 10,
+            'sslmode': 'require',   
+        },
     }
 }
 

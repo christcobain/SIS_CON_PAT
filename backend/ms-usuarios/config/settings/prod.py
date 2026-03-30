@@ -49,6 +49,14 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# ===== WHITENOISE — Archivos estáticos en producción =====
+MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# ===== SEGURIDAD ADICIONAL RAILWAY =====
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = False  # Railway maneja el SSL por su cuenta
+
 
 
 
