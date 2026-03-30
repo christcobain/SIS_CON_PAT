@@ -53,7 +53,7 @@ def _resolve(slug: str):
     return entry
 
 class CatalogoViewSet(ViewSet):
-    authentication_classes = [AllowAny]
+    permission_classes = [AllowAny]
     # def get_permissions(self):
     #     perms = {
     #         'list':       [HasJWTPermission('ms-bienes:catalogos:view_catcategoriabien')],
