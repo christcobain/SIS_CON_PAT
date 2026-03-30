@@ -52,17 +52,7 @@
 //       //     isRefreshing = false;
 //       //   }
 //       // }
-//       if (status === 401) {
-//         // DETENIDO: Ya no intentamos refrescar el token.
-//         console.error("Error 401 detectado. Redirigiendo al login para evitar bucle.");
-        
-//         useAuthStore.getState().clearAuth();
-        
-//         if (!window.location.pathname.startsWith('/login')) {
-//           window.location.href = '/login';
-//         }
-//         return Promise.reject(error);
-//       }
+
 //       if (status === 403) {
 //         window.dispatchEvent(new CustomEvent('sisconpat:toast', {
 //           detail: { type: 'error', message: 'No tienes permisos para esta acción.' },
