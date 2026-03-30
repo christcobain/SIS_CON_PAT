@@ -37,8 +37,9 @@ class AdminJWTAuthBackend:
                     username=token_username, 
                     role__name='SYSADMIN', 
                     is_staff=True
-                ).first()                
+                ).first()    
                 return user
+            
         except Exception:
             return None
         return None
