@@ -13,7 +13,7 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD            = True
 
 JWT_AUTH_COOKIE_SECURE   = True
-JWT_AUTH_COOKIE_SAMESITE = 'Strict'
+JWT_AUTH_COOKIE_SAMESITE = 'None'
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost').split(',')]
 
