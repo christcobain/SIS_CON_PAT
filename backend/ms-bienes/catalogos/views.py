@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,AllowAny
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from shared.permissions import HasJWTPermission
 from .services import CatalogoService
@@ -53,6 +53,7 @@ def _resolve(slug: str):
     return entry
 
 class CatalogoViewSet(ViewSet):
+    authentication_classes = [AllowAny]
     # def get_permissions(self):
     #     perms = {
     #         'list':       [HasJWTPermission('ms-bienes:catalogos:view_catcategoriabien')],
