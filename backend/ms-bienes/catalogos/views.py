@@ -90,7 +90,7 @@ class CatalogoViewSet(ViewSet):
         responses={200: CatalogoWriteSerializer(many=True)},
     )
     def list(self, request, **kwargs):
-        print('catalogo== ')
+        print('catalogo== ',request.auth)
         slug = self._get_slug(request, **kwargs)
         model, serializer_class = _resolve(slug)
         if not model:
