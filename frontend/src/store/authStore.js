@@ -62,6 +62,7 @@ const useAuthStore = create(
       partialize: (state) => ({
         user:                 state.user,
         role:                 state.role,
+        accessToken:         state.accessToken,
         permissions:          state.permissions,
         permissionsFlat:      state.permissionsFlat,
         modulo_id:            state.modulo_id,
