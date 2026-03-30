@@ -53,16 +53,16 @@ def _resolve(slug: str):
     return entry
 
 class CatalogoViewSet(ViewSet):
-    def get_permissions(self):
-        perms = {
-            'list':       [HasJWTPermission('ms-bienes:catalogos:view_catcategoriabien')],
-            'retrieve':   [HasJWTPermission('ms-bienes:catalogos:view_catcategoriabien')],
-            'create':     [HasJWTPermission('ms-bienes:catalogos:vadd_catcategoriabien')],
-            'update':     [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
-            'activate':   [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
-            'deactivate': [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
-        }
-        return perms.get(self.action, [IsAuthenticated()])
+    # def get_permissions(self):
+    #     perms = {
+    #         'list':       [HasJWTPermission('ms-bienes:catalogos:view_catcategoriabien')],
+    #         'retrieve':   [HasJWTPermission('ms-bienes:catalogos:view_catcategoriabien')],
+    #         'create':     [HasJWTPermission('ms-bienes:catalogos:vadd_catcategoriabien')],
+    #         'update':     [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
+    #         'activate':   [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
+    #         'deactivate': [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
+    #     }
+    #     return perms.get(self.action, [IsAuthenticated()])
     def _get_slug(self, request, **kwargs) -> str:
         return (
             kwargs.get('catalogo_slug')

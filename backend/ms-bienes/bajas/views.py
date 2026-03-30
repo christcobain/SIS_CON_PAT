@@ -71,7 +71,6 @@ _R404 = {404: OpenApiTypes.OBJECT}
 
 
 class BajaViewSet(ViewSet):
-    authentication_classes = [CookieJWTAuthentication]
     def get_permissions(self):
         mapa = {
             'list':                    [HasJWTPermission('ms-bienes:bajas:view_baja')],
