@@ -205,7 +205,7 @@ class LogoutViewSet(ViewSet):
         return response
 
 class RefreshTokenViewSet(ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     @extend_schema(
         tags=['Autenticación'],
         summary='Renovar token',
