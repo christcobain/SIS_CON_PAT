@@ -30,8 +30,8 @@ def _get_client_ip(request) -> str:
 def _get_device_info(request) -> str:
     return request.META.get('HTTP_USER_AGENT', 'Unknown')[:500]
 def _set_cookies(response, access_token: str, refresh_token: str) -> Response:
-    secure   = getattr(settings, 'JWT_AUTH_COOKIE_SECURE', False)
-    samesite = getattr(settings, 'JWT_AUTH_COOKIE_SAMESITE', 'Lax')
+    secure   = getattr(settings, 'JWT_AUTH_COOKIE_SECURE')
+    samesite = getattr(settings, 'JWT_AUTH_COOKIE_SAMESITE')
     access_lifetime  = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
     refresh_lifetime = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
     kwargs = {'httponly': True, 'secure': secure, 'samesite': samesite, 'path': '/'}
