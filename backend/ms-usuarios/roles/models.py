@@ -76,3 +76,5 @@ class RolePermission(models.Model):
         verbose_name    = 'Permiso de rol'
     def __str__(self):
         return f'{self.role.name} → {self.permission}'
+    
+    

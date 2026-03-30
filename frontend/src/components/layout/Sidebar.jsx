@@ -28,7 +28,7 @@ const MENU = [
         to: '/transferencias', 
         perm: ['ms-bienes:transferencias:view_transferencia'] 
       },
-      { label: 'Bajas de Activos', icon: 'delete_sweep', to: '/bajas', perm: 'ms-bienes:bienes:view_bien' },
+      { label: 'Bajas de Activos', icon: 'delete_sweep', to: '/bajas', perm: 'ms-bienes:bajas:view_baja' },
     ],
   },
   {

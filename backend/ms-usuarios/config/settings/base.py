@@ -157,32 +157,7 @@ INSTITUCION = {
 MS_SERVICE_NAME = os.getenv('MS_SERVICE_NAME', 'ms-usuarios')
 REGISTERED_MICROSERVICES = os.getenv('REGISTERED_MICROSERVICES', '')
 SERVICE_SYNC_KEY = os.getenv('SERVICE_SYNC_KEY', '')
-# ===== API DOCUMENTATION (SPECTACULAR) =====
-# SPECTACULAR_SETTINGS = {
-#     'TITLE': 'API de Autenticación - Sistema de Control Patrimonial',
-#     'DESCRIPTION': 'Servicio de autenticación, autorización y gestión de usuarios',
-#     'VERSION': '1.0.0',
-#     'SERVE_INCLUDE_SCHEMA': True,
-#     'SCHEMA_PATH_PREFIX': '/api/v1/',
-#     'SWAGGER_UI_SETTINGS': {
-#         'deepLinking': True,
-#         'persistAuthorization': True,
-#         'displayOperationId': True,
-#     },
-#     'SECURITY': [
-#         {'jwtAuth': []}
-#     ],
-#     'COMPONENTS': {
-#         'securitySchemes': {
-#             'jwtAuth': {
-#                 'type': 'http',
-#                 'scheme': 'bearer',
-#                 'bearerFormat': 'JWT',
-#                 'description': 'Token JWT para autenticación',
-#             }
-#         }
-#     },
-# }
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'API Autenticación — Sistema de Control Patrimonial CSJLN',
     'DESCRIPTION': 'ms-usuarios: autenticación, roles y usuarios',

@@ -1,4 +1,3 @@
-## ms-bienes/shared/
 from rest_framework.permissions import BasePermission
 
 class IsSysAdmin(BasePermission):

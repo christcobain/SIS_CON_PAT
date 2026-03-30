@@ -30,10 +30,6 @@ from .serializers import (
 )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Constantes de documentación OpenAPI
-# ─────────────────────────────────────────────────────────────────────────────
-
 _PK  = OpenApiParameter(
     'id', OpenApiTypes.INT,
     location=OpenApiParameter.PATH,
@@ -53,10 +49,6 @@ _ESTADO_ENUM = [
     'CANCELADO',
 ]
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ViewSet
-# ─────────────────────────────────────────────────────────────────────────────
 
 @extend_schema_view(
     list=extend_schema(

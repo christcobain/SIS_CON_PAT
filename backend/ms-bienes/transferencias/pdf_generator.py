@@ -31,7 +31,7 @@ NEGRO           = colors.black
 def _logo_path() -> str | None:
     base = Path(getattr(settings, 'BASE_DIR', ''))
     for p in [
-        base / 'static'      / 'img' / 'pj_logo.png', # Ruta configurada para el nuevo logo
+        base / 'static'      / 'img' / 'pj_logo.png', 
         base / 'staticfiles' / 'img' / 'pj_logo.png',
         base / 'assets'               / 'pj_logo.png',
     ]:
@@ -40,7 +40,6 @@ def _logo_path() -> str | None:
     return None
 
 
-# ── STAMPS MEJORADOS DE V°B° (TIPO SELLO MANUAL) ────────────────────────────────
 
 def _sello_manual(label: str, aprobado: bool, size_h: float = 3.5 * cm, size_v: float = 1.6 * cm) -> Drawing:
     """Sello rectangular: azul 'estampado' con label, V°B°, ✓ o — y borde."""
@@ -328,8 +327,8 @@ def generar_pdf_transferencia(transferencia, cookie: str = '') -> bytes:
 
     story.append(Table(
         [[_P('', st['s_val']),
-          _P(f'<b>Total bienes:</b>  {transferencia.detalles.count()}'
-            )]],
+          _P(f'<b>Total bienes:</b>  {transferencia.detalles.count()}', st['s_val_b'])
+            ]],
         colWidths=[18 * cm, 8.6 * cm],
         style=[('TOPPADDING', (0, 0), (-1, -1), 3),
                ('BOTTOMPADDING', (0, 0), (-1, -1), 2)],

@@ -8,7 +8,6 @@ TIPOS_CON_DETALLE = {'CPU', 'MONITOR', 'IMPRESORA', 'SCANNER', 'SWITCH'}
 
 # -----------------------------------------------------------------------------
 # 1. READ SERIALIZERS (DETALLES TÉCNICOS)
-# -----------------------------------------------------------------------------
 class BienDetalleCpuSerializer(serializers.ModelSerializer):
     tipo_computadora_nombre  = serializers.CharField(source='tipo_computadora.nombre',  read_only=True)
     tipo_disco_nombre        = serializers.CharField(source='tipo_disco.nombre',        read_only=True)
@@ -45,7 +44,6 @@ class BienDetalleSwitchSerializer(serializers.ModelSerializer):
 
 # -----------------------------------------------------------------------------
 # 2. BIEN LIST SERIALIZER (USADO PARA LIST Y RETRIEVE)
-# -----------------------------------------------------------------------------
 class BienListSerializer(serializers.ModelSerializer):
     categoria_bien_nombre        = serializers.CharField(source='categoria_bien.nombre',    read_only=True, default=None)
     tipo_bien_nombre             = serializers.CharField(source='tipo_bien.nombre',             read_only=True)
@@ -90,7 +88,6 @@ class BienListSerializer(serializers.ModelSerializer):
 
 # -----------------------------------------------------------------------------
 # 3. WRITE SERIALIZER (PARA CREAR Y ACTUALIZAR)
-# -----------------------------------------------------------------------------
 class BienWriteSerializer(serializers.Serializer):
     categoria_bien_id          = serializers.IntegerField(required=False, allow_null=True)
     tipo_bien_id               = serializers.IntegerField()

@@ -82,7 +82,7 @@ class Sede(models.Model):
             models.Index(fields=['is_active']),   ]
     def __str__(self):
         return self.nombre  
-##-NCPP,CIVIL,LFAGRANCIA,--
+##-NCPP,CIVIL,flagrancia,--
 class Modulo(models.Model):
     nombre = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
@@ -112,4 +112,3 @@ class Ubicacion(models.Model):
         ordering = ['nombre']
     def __str__(self):
         return f"{self.nombre} - {self.descripcion} "
-    

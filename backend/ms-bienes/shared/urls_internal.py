@@ -1,4 +1,3 @@
-## ms-bienes/shared/
 from django.urls import path
 from .internal_views import InternalPermissionsView
 

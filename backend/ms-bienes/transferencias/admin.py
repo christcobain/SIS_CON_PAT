@@ -1,14 +1,12 @@
 from django.contrib import admin
 from .models import Transferencia, TransferenciaDetalle, TransferenciaAprobacion
 
-# Configuración del título en el panel
 admin.site.site_header = "SISTEMA CONTROL PATRIMONIAL - ms-bienes"
 
 class TransferenciaDetalleInline(admin.TabularInline):
     """Muestra los bienes incluidos en la transferencia"""
     model = TransferenciaDetalle
     extra = 0
-    # Campos basados estrictamente en tu clase TransferenciaDetalle
     fields = (
         'bien', 
         'codigo_patrimonial', 
@@ -27,7 +25,6 @@ class TransferenciaAprobacionInline(admin.TabularInline):
 
 @admin.register(Transferencia)
 class TransferenciaAdmin(admin.ModelAdmin):
-    # 1. Vista de lista tipo "PostgreSQL table"
     list_display = (
         'numero_orden', 
         'tipo', 
@@ -36,14 +33,9 @@ class TransferenciaAdmin(admin.ModelAdmin):
         'sede_destino_id', 
         'fecha_registro'
     )
-    
-    # Filtros laterales
     list_filter = ('estado_transferencia', 'tipo', 'fecha_registro', 'sede_origen_id')
-    
-    # Buscador por número de orden e IDs de usuario
     search_fields = ('numero_orden', 'usuario_origen_id', 'usuario_destino_id')
 
-    # 2. Organización del formulario (Fieldsets) con tus campos REALES
     fieldsets = (
         ('Información General', {
             'fields': ('numero_orden', 'tipo', 'estado_transferencia', 'fecha_registro')
@@ -81,11 +73,8 @@ class TransferenciaAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = ('fecha_registro',)
-
-    # Tablas hijas
     inlines = [TransferenciaDetalleInline, TransferenciaAprobacionInline]
 
-# Registro de modelos secundarios para acceso rápido
 @admin.register(TransferenciaDetalle)
 class TransferenciaDetalleAdmin(admin.ModelAdmin):
     list_display = ('transferencia', 'bien', 'codigo_patrimonial', 'tipo_bien_nombre')

@@ -1,11 +1,8 @@
 from .base import *
 import os
 
-# ===== DESARROLLO =====
 DEBUG = True
-# Permitir acceso desde frontend en desarrollo
 CORS_ALLOW_ALL_ORIGINS = False
-# Logging para desarrollo
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
