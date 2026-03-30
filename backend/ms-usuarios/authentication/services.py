@@ -100,7 +100,7 @@ class CredentialService:
         user = credential.user         
         password_to_set = new_password if new_password else user.username
         user.set_password(password_to_set)
-        user.save(update_fields=["password"])
+        user.save()
         if not credential:
             raise ValidationError("Usuario sin credenciales configuradas.")
         credential.force_password_change = True
@@ -138,7 +138,7 @@ class CredentialService:
         if PasswordHistoryService.is_password_in_history(user, new_password):
             raise ValidationError(f'La contraseña no puede ser igual a las ${cantidad} últimas usadas.')
         user.set_password(new_password)
-        user.save(update_fields=["password"])
+        user.save()
         PasswordHistoryService.create(user, new_password)
         credential = CredentialRepository.get_by_user(user)
         if credential:
@@ -252,8 +252,7 @@ class LoginSessionService:
                 username, ip_address, device_info,
                 'locked', False, 'Cuenta bloqueada'
             )
-            raise ValidationError('Cuenta bloqueada. Contacte al administrador.') 
-        
+            raise ValidationError('Cuenta bloqueada. Contacte al administrador.')         
         authenticated_user = authenticate(username=username, password=password) 
         if not authenticated_user:
             if role_name != "SYSADMIN":
@@ -311,6 +310,7 @@ class LoginSessionService:
             'sedes':            sedes, 
             'modulo_id':        user.modulo_id,
             'modulo_nombre':    user.modulo.nombre if user.modulo else '', 
+            'username':          user.username,
             'nombres':          user.first_name, 
             'apellidos':        user.last_name,  
             'cargo':            user.cargo,      
@@ -381,6 +381,7 @@ class LoginSessionService:
             'modulo_nombre':    user.modulo.nombre if user.modulo else '', 
             'nombres':          user.first_name, 
             'apellidos':        user.last_name, 
+            'username':          user.username,
             'cargo':            user.cargo,    
         }
         for key, value in extra_claims.items():

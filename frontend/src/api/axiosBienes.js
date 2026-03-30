@@ -9,3 +9,5 @@ const axiosBienes = axios.create({
 });
 export default axiosBienes;
 
+
+

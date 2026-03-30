@@ -80,9 +80,9 @@ class TransferenciaService:
         for item in bienes:
             bien = getattr(item, 'bien', item) 
             BienRepository.update_fields(bien, {'estado_bien_id': estado.id})
+            
     @staticmethod
     def _restaurar_estado_bienes(transferencia, nombre_estado: str = 'ACTIVO') -> None:
-        """Restaura el estado_bien de todos los bienes de una transferencia."""
         estado = CatEstadoBien.objects.filter(
             nombre__iexact=nombre_estado, is_active=True
         ).first()

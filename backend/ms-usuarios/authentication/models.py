@@ -58,7 +58,6 @@ class Credential(models.Model):
     allow_multiple_sessions = models.BooleanField(default=False)
     is_locked = models.BooleanField(default=False)
     failed_attempts = models.PositiveSmallIntegerField(default=0)
-    # lock_until = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     class Meta:

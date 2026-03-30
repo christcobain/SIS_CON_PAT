@@ -246,7 +246,7 @@ function TabHistorial({ aprobaciones = [] }) {
 
 export default function ModalDetalleMantenimiento({
   open, onClose, item,
-  onAprobar, onDevolver, onEnviar, onConformar, onCancelar
+  onAprobar, onDevolver, onEnviar, onConformar, onCancelar,refetchMant
 }) {
   const [tab,     setTab]     = useState('info');
   const [data,    setData]    = useState(null);
@@ -298,6 +298,7 @@ export default function ModalDetalleMantenimiento({
     try {
       const result=await subirFirmadoMant(item.id, archivo);
       toast.success(result?.message ||'Acta firmada subida exitosamente.');
+      refetchMant();
       onClose();
     } catch { 
       toast.error('Error al subir el acta firmada.'); }

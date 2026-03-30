@@ -47,10 +47,15 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',    
+    'django.contrib.auth.middleware.AuthenticationMiddleware',    
+    'shared.middleware.AdminAutoLoginMiddleware',    
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+AUTHENTICATION_BACKENDS = [
+    'shared.backends.AdminJWTAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 # ===== URL CONFIGURATION =====
@@ -125,6 +130,8 @@ JWT_AUTH_REFRESH_COOKIE = 'sisconpat_refresh'
 JWT_AUTH_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', 'False').lower() == 'true'
 JWT_AUTH_COOKIE_HTTP_ONLY = True
 JWT_AUTH_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
+SESSION_COOKIE_DOMAIN = None 
+SESSION_COOKIE_PATH = '/'
 # ===== CORS CONFIGURATION =====
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True

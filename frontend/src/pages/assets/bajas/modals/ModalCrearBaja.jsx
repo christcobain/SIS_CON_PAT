@@ -379,6 +379,7 @@ export default function ModalCrearBaja({ open, onClose }) {
       };
       const res = await crear(payload);
       toast.success(res?.message || 'Informe de baja registrado correctamente.');
+      onClose();
     } catch (err) {
       toast.error(
         err?.response?.data?.error ||

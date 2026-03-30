@@ -198,6 +198,7 @@ export default function MantenimientosPage() {
             onEnviar={handleEnviar}
             onConformar={handleConformar}
             onCancelar={handleCancelar}
+            refetchMant={refetchMant}
             puedeAccionesTecnicas={can('ms-bienes:mantenimientos:add_mantenimiento')}
             puedeAccionesAdmin={can('ms-bienes:mantenimientos:change_mantenimiento')}
           />

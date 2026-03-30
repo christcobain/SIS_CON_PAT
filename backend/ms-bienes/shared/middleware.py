@@ -5,7 +5,6 @@ from django.http import HttpResponseRedirect
 
 class AdminAutoLoginMiddleware(MiddlewareMixin):
     def process_request(self, request):
-
         if '/admin/logout/' in request.path or request.GET.get('next') == '/admin/':
             response = HttpResponseRedirect('/admin/login/') 
             response.delete_cookie(
@@ -13,8 +12,6 @@ class AdminAutoLoginMiddleware(MiddlewareMixin):
                 path='/' 
             )
             return response
-
-        # 2. LOGUIN AUTOMÁTICO (Tu código actual)
         if request.path.startswith('/admin/') and not request.user.is_authenticated:
             user = auth.authenticate(request)
             if user:
