@@ -1,9 +1,9 @@
 from .base import *
 import os
 
-# ===== PRODUCCIÓN =====
+
 DEBUG = False
-# Seguridad en Producción
+CORS_ALLOW_CREDENTIALS = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_SSL_REDIRECT = True
