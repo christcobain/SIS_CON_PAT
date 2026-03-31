@@ -14,8 +14,6 @@ class BDEmpleadosService:
         response=BDEmpleadosRepository.get_by_dni(dni)    
         if not response:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')    
-        if response.status_code != 200:
-                raise ValidationError(f'Error consultando el sistema RRHH.')
         return response       
 class BDEmpleadosClient:    
     BASE_URL = getattr(settings, 'MS_USUARIOS_BASE_URL', 'http://127.0.0.1:8000/api/v1')
