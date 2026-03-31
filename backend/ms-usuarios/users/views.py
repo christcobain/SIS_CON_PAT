@@ -198,10 +198,6 @@ class UserViewSet(ViewSet):
         responses={200: UserListSerializer(many=True)},
     )
     def list(self, request):
-        print(f"--- DEBUG CATALOGO ---")
-        print(f"Usuario: {request.user}")
-        print(f"¿Está autenticado?: {request.user.is_authenticated}")
-        print(f"Auth (Token Payload): {request.auth}")
         result = UserService.filter_users(self._build_filters(request))
         if not result["success"]:
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
