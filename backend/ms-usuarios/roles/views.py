@@ -113,7 +113,6 @@ class RoleViewSet(ViewSet):
         tags=["Roles"]
     )
     def list(self, request):
-        print('roles== ',request.auth)
         result = RoleService().listar()
         if not result['success']:
             return Response(result, status=status.HTTP_400_BAD_REQUEST)        
