@@ -12,7 +12,7 @@ class BDEmpleadosService:
     @staticmethod
     def get_by_dni(dni: str) -> Optional[Any]:
         response=BDEmpleadosRepository.get_by_dni(dni)    
-        if response.status_code == 404:
+        if not response:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')    
         if response.status_code != 200:
                 raise ValidationError(f'Error consultando el sistema RRHH.')
