@@ -16,8 +16,7 @@ class BDEmpleadosService:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')    
         return response       
 class BDEmpleadosClient:    
-    BASE_URL= getattr(settings, 'MS_USUARIOS_BASE_URL'+ '/users/empleados', 'http://127.0.0.1:8000/api/v1/users/empleados') 
-    # BASE_URL = "http://127.0.0.1:8000/api/v1/users/empleados"    
+    BASE_URL = f"{getattr(settings, 'MS_USUARIOS_BASE_URL', 'http://127.0.0.1:8000/api/v1')}/users/empleados"
     @classmethod
     def get_by_dni(cls, dni: str) -> dict:
         try:
