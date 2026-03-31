@@ -16,32 +16,24 @@ class BDEmpleadosService:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')    
         return response       
 class BDEmpleadosClient:    
-    BASE_URL = getattr(settings, 'MS_USUARIOS_BASE_URL', 'http://127.0.0.1:8000/api/v1')
+    @classmethod
+    def _base_url(cls):
+        from django.conf import settings
+        return getattr(settings, 'MS_USUARIOS_BASE_URL', 'http://127.0.0.1:8000/api/v1') + '/users/empleados'    
     @classmethod
     def get_by_dni(cls, dni: str) -> dict:
         try:
-            response = requests.get(f"{cls.BASE_URL}/users/empleados/{dni}/", timeout=5)
-            print(f"DEBUG: Consultando a: {response.url} - Status: {response.status_code }")
+            response = requests.get(f"{cls._base_url()}/{dni}/", timeout=5)
             if response.status_code == 404:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos.')
             if response.status_code != 200:
-                raise ValidationError(f'Error consultando el sistema RRHH.')
+                raise ValidationError('Error consultando el sistema RRHH.')
             data = response.json()
             if not data.get("is_active", False):
-                return {
-                    "success": False,
-                    "error": "Empleado inactivo."
-                }
-
-            return {
-                "success": True,
-                "data": data
-            }
+                return {"success": False, "error": "Empleado inactivo."}
+            return {"success": True, "data": data}
         except requests.RequestException:
-            return {
-                "success": False,
-                "error": "Error de conexión con el sistema RRHH."
-            }
+            return {"success": False, "error": "Error de conexión con el sistema RRHH."}
             
 class DependencyService:
     @staticmethod
@@ -215,10 +207,12 @@ class UserService:
     @transaction.atomic
     def create_user(data: Dict[str, Any], sede_ids=None,created_by=None) -> Dict[str, Any]:
         dni = data.get("dni")
-        empleado_response = BDEmpleadosService.get_by_dni(dni)
-        if not empleado_response.get("success"):
-            return empleado_response
-        empleado = empleado_response.get("data")
+        empleado_response = BDEmpleadosRepository.get_by_dni(dni)
+        if not empleado_response:
+            raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')
+        if not empleado_response.is_active:
+            raise ValidationError('El empleado está inactivo.')
+
         usuario = UserRepository.get_by_dni(dni)
         if usuario:
             if usuario.is_active:
@@ -228,15 +222,15 @@ class UserService:
                     'Ya existe un usuario Inactivo con el mismo DNI. '
                     'Por favor active el usuario o use otro DNI.'
                 )
-        empresa_obj = UserService._resolver_empresa(empleado.get("empresa", ""))
+        empresa_obj = UserService._resolver_empresa(empleado_response.get("empresa", ""))
         data.update({
             "username":    dni,
             "password":    dni,
-            "dni":         empleado.get("dni") or "",
-            "first_name":  empleado.get("first_name") or "",
-            "last_name":   empleado.get("last_name") or "",
-            "cargo":       empleado.get("cargo") or "",
-            "modulo_rrhh": empleado.get("modulo") or "",
+            "dni":         empleado_response.get("dni") or "",
+            "first_name":  empleado_response.get("first_name") or "",
+            "last_name":   empleado_response.get("last_name") or "",
+            "cargo":       empleado_response.get("cargo") or "",
+            "modulo_rrhh": empleado_response.get("modulo") or "",
             "empresa":     empresa_obj,   
             "created_by":   created_by
         })
