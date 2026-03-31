@@ -12,8 +12,10 @@ class BDEmpleadosService:
     @staticmethod
     def get_by_dni(dni: str) -> Optional[Any]:
         response=BDEmpleadosRepository.get_by_dni(dni)    
-        if not response:
+        if response.status_code == 404:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')    
+        if response.status_code != 200:
+                raise ValidationError(f'Error consultando el sistema RRHH.')
         return response       
 class BDEmpleadosClient:    
     BASE_URL = getattr(settings, 'MS_USUARIOS_BASE_URL', 'http://127.0.0.1:8000/api/v1')
@@ -215,7 +217,7 @@ class UserService:
     @transaction.atomic
     def create_user(data: Dict[str, Any], sede_ids=None,created_by=None) -> Dict[str, Any]:
         dni = data.get("dni")
-        empleado_response = BDEmpleadosClient.get_by_dni(dni)
+        empleado_response = BDEmpleadosService.get_by_dni(dni)
         if not empleado_response.get("success"):
             return empleado_response
         empleado = empleado_response.get("data")
