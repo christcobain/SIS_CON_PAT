@@ -16,11 +16,11 @@ class BDEmpleadosService:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')    
         return response       
 class BDEmpleadosClient:    
-    BASE_URL = f"{getattr(settings, 'MS_USUARIOS_BASE_URL', 'http://127.0.0.1:8000/api/v1')}/users/empleados"
+    BASE_URL = {getattr(settings, 'MS_USUARIOS_BASE_URL', 'http://127.0.0.1:8000/api/v1')}
     @classmethod
     def get_by_dni(cls, dni: str) -> dict:
         try:
-            response = requests.get(f"{cls.BASE_URL}/{dni}/", timeout=5)
+            response = requests.get(f"{cls.BASE_URL}/users/empleados/{dni}/", timeout=5)
             print(f"DEBUG: Consultando a: {response.url} - Status: {response.status_code }")
             if response.status_code == 404:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos.')
