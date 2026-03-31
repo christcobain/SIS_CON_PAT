@@ -626,13 +626,13 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
         fecha_instalacion:        null,
         detalle:                  detallePayload,
       };
-
+      let result;
       if (modoEditar) {
-        await actualizar(item.id, payload);
-        toast.success('Bien actualizado correctamente.');
+        result=await actualizar(item.id, payload);
+        toast.success(result?.message||'Bien actualizado correctamente.');
       } else {
-        await crear(payload);
-        toast.success('Bien registrado correctamente.');
+        result=await crear(payload);
+        toast.success(result?.message||'Bien registrado correctamente.');
       }
       onGuardado?.();
       onClose();

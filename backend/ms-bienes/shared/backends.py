@@ -88,13 +88,34 @@ class CookieJWTAuthentication(JWTAuthentication):
         return user
 
 
+# class AdminJWTAuthBackend:
+#     def authenticate(self, request, **kwargs):
+#         if not request:
+#             return None
+#         raw_token = request.COOKIES.get(getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access'))
+#         if not raw_token:
+#             return None
+#         try:
+#             auth = JWTAuthentication()
+#             validated_token = auth.get_validated_token(raw_token)
+#             if validated_token.get('role') == 'SYSADMIN':
+#                 return User.objects.filter(username='SYSADMIN', is_staff=True).first()
+#         except Exception:
+#             return None
+#         return None
+
+#     def get_user(self, user_id):
+#         try:
+#             return User.objects.get(pk=user_id)
+#         except User.DoesNotExist:
+#             return None
+        
+        
 class AdminJWTAuthBackend:
     def authenticate(self, request, **kwargs):
         if not request:
             return None
-        raw_token = request.COOKIES.get(
-            getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
-        )
+        raw_token = request.COOKIES.get(getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access'))
         if not raw_token:
             return None
         try:

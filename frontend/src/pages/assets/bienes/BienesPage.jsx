@@ -64,7 +64,6 @@ export default function BienesPage() {
   const handleGuardado = () => {
     setModalForm(false);
     setItemEditar(null);
-    toast.success(itemEditar ? 'Bien actualizado.' : 'Bien registrado.');
     refetch();
   };
 
