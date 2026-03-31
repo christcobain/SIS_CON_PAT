@@ -4,6 +4,7 @@ from .repositories import UserRepository,DependenciaRepository,BDEmpleadosReposi
 from datetime import datetime
 from rest_framework.exceptions import ValidationError, NotFound
 import requests
+from django.conf import settings
 from authentication.services import CredentialService
 
 
@@ -15,7 +16,8 @@ class BDEmpleadosService:
                 raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')    
         return response       
 class BDEmpleadosClient:    
-    BASE_URL = "http://127.0.0.1:8000/api/v1/users/empleados"    
+    BASE_URL= getattr(settings, 'MS_USUARIOS_BASE_URL'+ '/users/empleados', 'http://127.0.0.1:8000/api/v1/users/empleados') 
+    # BASE_URL = "http://127.0.0.1:8000/api/v1/users/empleados"    
     @classmethod
     def get_by_dni(cls, dni: str) -> dict:
         try:
