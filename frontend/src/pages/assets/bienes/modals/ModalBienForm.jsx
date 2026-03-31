@@ -564,7 +564,7 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
   const norm = (str = '') => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 
   const categoriaSel  = categorias.find(c => String(c.id) === String(form.categoria_bien_id));
-  const esInformatico = norm(categoriaSel?.nombre ?? '').includes('INFORMATICO');
+  const esInformatico = norm(categoriaSel?.nombre ?? '').includes('INFORMATICA');
 
   const tipoSel     = tiposBien.find(t => String(t.id) === String(form.tipo_bien_id));
   const tipoTecnico = esInformatico ? detectarTipoTecnico(tipoSel?.nombre ?? '') : null;
