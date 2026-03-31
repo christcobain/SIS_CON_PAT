@@ -52,7 +52,7 @@ class BienService:
         return bien
     @staticmethod
     def listar(filters: Dict[str, Any], token: str = '', role: str = None, sede_id: int = None) -> Dict[str, Any]:
-        ROLES_VE_TODOS = {'SYSADMIN', 'analistaSistema', 'coordSistema'}
+        ROLES_VE_TODOS = {'SYSADMIN', 'ANALISTASISTEMA', 'COORDSISTEMA'}
         if role not in ROLES_VE_TODOS and sede_id:
             filters['sede_id'] = sede_id
 

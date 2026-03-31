@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
         migrations.RenameField(
             model_name='mantenimiento',
             old_name='fecha_aprobacion',
-            new_name='fecha_aprobacion_adminsede',
+            new_name='fecha_aprobacion_ADMINSEDE',
         ),
         migrations.RenameField(
             model_name='mantenimiento',
@@ -88,7 +88,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mantenimientoaprobacion',
             name='rol_aprobador',
-            field=models.CharField(choices=[('asistSistema', 'Asistente de Sistemas'), ('adminSede', 'Administrador de Sede'), ('userCorte', 'Usuario Propietario del Bien')], max_length=20),
+            field=models.CharField(choices=[('ASISTSISTEMA', 'Asistente de Sistemas'), ('ADMINSEDE', 'Administrador de Sede'), ('userCorte', 'Usuario Propietario del Bien')], max_length=20),
         ),
         migrations.AddIndex(
             model_name='mantenimiento',

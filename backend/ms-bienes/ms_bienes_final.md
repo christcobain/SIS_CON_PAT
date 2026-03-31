@@ -118,22 +118,22 @@ SYSADMIN o perfil con add_bienes registra el bien
   → Otros tipos         → bien + detalle_tecnico libre
 ```
 
-### Fase 2 — Traslado entre sedes (analistaSistema/coordSistema/SYSADMIN → asistSistema destino)
+### Fase 2 — Traslado entre sedes (analistaSistema/COORDSISTEMA/SYSADMIN → ASISTSISTEMA destino)
 
 ```
-analistaSistema/coordSistema crea transferencia tipo TRASLADO_SEDE
-  ├── usuario_destino_id = asistSistema de la sede destino
+analistaSistema/COORDSISTEMA crea transferencia tipo TRASLADO_SEDE
+  ├── usuario_destino_id = ASISTSISTEMA de la sede destino
   ├── sede_destino_id    = sede destino
   ├── modulo_destino_id  = módulo destino
   ├── ubicacion_destino_id = ubicación destino
   └── piso_destino       = piso destino
 
-Notificación → asistSistema + ADMINSEDE de sede origen
-adminSede/coordSistema sede origen aprueba/rechaza salida lógica
-segurSede sede origen aprueba/rechaza salida física
-segurSede sede destino aprueba/rechaza entrada física
+Notificación → ASISTSISTEMA + ADMINSEDE de sede origen
+ADMINSEDE/COORDSISTEMA sede origen aprueba/rechaza salida lógica
+SEGURSEDE sede origen aprueba/rechaza salida física
+SEGURSEDE sede destino aprueba/rechaza entrada física
 → estado = ATENDIDO :
-  ├── bien.usuario_asignado_id  = asistSistema destino
+  ├── bien.usuario_asignado_id  = ASISTSISTEMA destino
   ├── bien.sede_id              = sede destino
   ├── bien.modulo_id            = módulo destino
   ├── bien.ubicacion_id         = ubicación destino
@@ -416,14 +416,14 @@ bienes_transferencia
 │
 │   ── APROBACIÓN ADMINSEDE ──────────────────────────────────────────
 ├── aprobado_por_adminsede_id   INTEGER nullable   -- users_user.id
-├── fecha_aprobacion_adminsede  TIMESTAMP nullable
+├── fecha_aprobacion_ADMINSEDE  TIMESTAMP nullable
 │
 │   ── APROBACIÓN SEGURSEDE (solo TRASLADO_SEDE) ─────────────────────
 ├── aprobado_segur_salida_id    INTEGER nullable   -- SEGURSEDE sede origen
 ├── fecha_aprobacion_segur_salida TIMESTAMP nullable
 ├── aprobado_segur_entrada_id   INTEGER nullable   -- SEGURSEDE sede destino
 ├── fecha_aprobacion_segur_entrada TIMESTAMP nullable
-└── observacion_segursede       TEXT nullable
+└── observacion_SEGURSEDE       TEXT nullable
 ```
 
 ### 7.2 `bienes_transferencia_detalle` — Bienes incluidos en la transferencia

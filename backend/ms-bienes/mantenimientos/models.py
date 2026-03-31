@@ -91,9 +91,9 @@ class MantenimientoAprobacion(models.Model):
         ('ATENDIDO','Atendido con PDF subido'),
     ]
     ROL_CHOICES = [
-        ('asistSistema', 'Asistente de Sistemas'),
-        ('adminSede',    'Administrador de Sede'),
-        ('coordSistema', 'Coordinador de Sistemas'),
+        ('ASISTSISTEMA', 'Asistente de Sistemas'),
+        ('ADMINSEDE',    'Administrador de Sede'),
+        ('COORDSISTEMA', 'Coordinador de Sistemas'),
         ('SYSADMIN',     'Administrador del Sistema'),
     ]
     mantenimiento = models.ForeignKey(Mantenimiento, on_delete=models.CASCADE, related_name='aprobaciones')

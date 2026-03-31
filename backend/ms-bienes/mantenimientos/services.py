@@ -135,7 +135,7 @@ class MantenimientoService:
         MantenimientoDetalleRepository.bulk_create(mantenimiento, bienes)
         TransferenciaService._cambiar_estado_bienes(bienes, 'EN_MANTENIMIENTO')
         MantenimientoAprobacionRepository.registrar(
-            mantenimiento, 'asistSistema', 'REGISTRADO', usuario_realiza_id,
+            mantenimiento, 'ASISTSISTEMA', 'REGISTRADO', usuario_realiza_id,
             observacion='Mantenimiento registrado.',
         )
         return {
@@ -190,7 +190,7 @@ class MantenimientoService:
             'fecha_termino_mant':   timezone.now().date(),
         })
         MantenimientoAprobacionRepository.registrar(
-            m, 'asistSistema', 'ENVIADO', usuario_id,
+            m, 'ASISTSISTEMA', 'ENVIADO', usuario_id,
             observacion='Informe técnico completado. Enviado a aprobación.',
         )
         return {'success': True, 'message': 'Mantenimiento enviado a aprobación.'}
@@ -200,7 +200,7 @@ class MantenimientoService:
         if role == 'SYSADMIN':
             qs = MantenimientoRepository.filter({})
             qs = qs.exclude(estado_mantenimiento__in=ESTADOS_EXCLUIDOS) 
-        elif role in ('coordSistema', 'adminSede'):
+        elif role in ('COORDSISTEMA', 'ADMINSEDE'):
             filtros = Q()
             filtros |= Q(
                 estado_mantenimiento='PENDIENTE_APROBACION',

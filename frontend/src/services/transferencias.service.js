@@ -43,8 +43,8 @@ const transferenciasService = {
     return response.data;
   },
   // ==========================================
-   aprobarAdminSede: async (id) => {
-    const response = await axiosBienes.patch(`/transferencias/${id}/aprobar-adminsede/`);
+   aprobarADMINSEDE: async (id) => {
+    const response = await axiosBienes.patch(`/transferencias/${id}/aprobar-ADMINSEDE/`);
     return response.data;
   },
   devolver: async (id, data) => {

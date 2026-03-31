@@ -56,9 +56,9 @@ _ESTADO_ENUM = [
         summary='Listar mantenimientos',
         description=(
             'Retorna mantenimientos filtrados según el rol del usuario autenticado.\n\n'
-            '- **SYSADMIN / coordSistema**: todos los mantenimientos de todas las sedes.\n'
-            '- **adminSede**: solo los de su propia sede.\n'
-            '- **asistSistema**: los que registró dentro de su sede.\n'
+            '- **SYSADMIN / COORDSISTEMA**: todos los mantenimientos de todas las sedes.\n'
+            '- **ADMINSEDE**: solo los de su propia sede.\n'
+            '- **ASISTSISTEMA**: los que registró dentro de su sede.\n'
             '- **userCorte**: solo los mantenimientos donde es propietario de los bienes.'
         ),
         parameters=[
@@ -88,7 +88,7 @@ _ESTADO_ENUM = [
         tags=['Mantenimientos'],
         summary='Registrar nuevo mantenimiento',
         description=(
-            'asistSistema registra un mantenimiento en estado **EN_PROCESO**.\n\n'
+            'ASISTSISTEMA registra un mantenimiento en estado **EN_PROCESO**.\n\n'
             '**Validaciones críticas:**\n'
             '- Todos los bienes deben estar activos (`is_active=True`).\n'
             '- Todos los bienes deben pertenecer al mismo `usuario_asignado_id`.\n\n'
@@ -174,9 +174,9 @@ class MantenimientoViewSet(ViewSet):
         summary='Mis mantenimientos',
         description=(
             'Retorna solo los mantenimientos relevantes para el rol del usuario:\n\n'
-            '- **coordSistema / SYSADMIN**: todos.\n'
-            '- **adminSede**: los de su sede.\n'
-            '- **asistSistema**: los que registró o los de su sede.\n'
+            '- **COORDSISTEMA / SYSADMIN**: todos.\n'
+            '- **ADMINSEDE**: los de su sede.\n'
+            '- **ASISTSISTEMA**: los que registró o los de su sede.\n'
             '- **userCorte**: solo los de sus propios bienes.'
         ),
         parameters=[
@@ -203,9 +203,9 @@ class MantenimientoViewSet(ViewSet):
         )
     @extend_schema(
         tags=['Mantenimientos'],
-        summary='Enviar a aprobación (asistSistema)',
+        summary='Enviar a aprobación (ASISTSISTEMA)',
         description=(
-            'asistSistema completa el informe técnico de cada bien y envía a aprobación.\n\n'
+            'ASISTSISTEMA completa el informe técnico de cada bien y envía a aprobación.\n\n'
             '**Estados válidos:** `EN_PROCESO` → `PENDIENTE_APROBACION` '
             '| `DEVUELTO` → `PENDIENTE_APROBACION`\n\n'
             'Para cada bien en `detalles_tecnicos` debe indicar:\n'
@@ -248,7 +248,7 @@ class MantenimientoViewSet(ViewSet):
         return Response(MantenimientoListSerializer(qs, many=True).data)
     @extend_schema(
         tags=['Mantenimientos'],
-        summary='Aprobar mantenimiento (adminSede / coordSistema)',
+        summary='Aprobar mantenimiento (ADMINSEDE / COORDSISTEMA)',
         description=(
             'El aprobador revisa el informe técnico y lo aprueba.\n\n'
             '**Estado:** `PENDIENTE_APROBACION` → `APROBADO`\n\n'
@@ -257,8 +257,8 @@ class MantenimientoViewSet(ViewSet):
             'Una vez aprobado, el endpoint `GET /{id}/documento/` estará disponible '
             'para descargar el PDF y proceder con la firma física.\n\n'
             '**Restricciones de rol:**\n'
-            '- `adminSede`: solo puede aprobar mantenimientos de su propia sede.\n'
-            '- `coordSistema` / `SYSADMIN`: pueden aprobar de cualquier sede.'
+            '- `ADMINSEDE`: solo puede aprobar mantenimientos de su propia sede.\n'
+            '- `COORDSISTEMA` / `SYSADMIN`: pueden aprobar de cualquier sede.'
         ),
         parameters=[_PK],
         request=AprobacionSerializer,
@@ -280,11 +280,11 @@ class MantenimientoViewSet(ViewSet):
         return Response(result, status=status.HTTP_200_OK)
     @extend_schema(
         tags=['Mantenimientos'],
-        summary='Devolver mantenimiento (adminSede desaprueba)',
+        summary='Devolver mantenimiento (ADMINSEDE desaprueba)',
         description=(
             'El aprobador devuelve el informe con un motivo detallado.\n\n'
             '**Estado:** `PENDIENTE_APROBACION` → `DEVUELTO`\n\n'
-            'El `asistSistema` puede corregir el informe técnico y '
+            'El `ASISTSISTEMA` puede corregir el informe técnico y '
             'reenviar usando `PATCH /{id}/enviar-aprobacion/`.\n\n'
             '**Restricciones de rol:** mismas que en aprobar.'
         ),
@@ -367,10 +367,10 @@ class MantenimientoViewSet(ViewSet):
             'Retorna el PDF del acta de mantenimiento para impresión y firma.\n\n'
             '**Disponible cuando:** estado = `APROBADO` o `ATENDIDO`.\n\n'
             '**Flujo de uso:**\n'
-            '1. El `adminSede` aprueba el mantenimiento → el PDF se genera automáticamente.\n'
-            '2. El `asistSistema` descarga el PDF con este endpoint.\n'
+            '1. El `ADMINSEDE` aprueba el mantenimiento → el PDF se genera automáticamente.\n'
+            '2. El `ASISTSISTEMA` descarga el PDF con este endpoint.\n'
             '3. El PDF se imprime y el propietario de los bienes lo firma físicamente.\n'
-            '4. El `asistSistema` escanea el documento firmado y lo sube con '
+            '4. El `ASISTSISTEMA` escanea el documento firmado y lo sube con '
             '`POST /{id}/pdf-firmado/`.\n'
             '5. Al subir el PDF firmado el proceso cierra automáticamente (estado → ATENDIDO).\n\n'
             '**Prioridad de archivo retornado:**\n'
@@ -401,9 +401,9 @@ class MantenimientoViewSet(ViewSet):
 
     @extend_schema(
         tags=['Mantenimientos'],
-        summary='Subir PDF firmado y cerrar proceso (asistSistema)',
+        summary='Subir PDF firmado y cerrar proceso (ASISTSISTEMA)',
         description=(
-            'asistSistema sube el PDF del acta firmado físicamente por el propietario.\n\n'
+            'ASISTSISTEMA sube el PDF del acta firmado físicamente por el propietario.\n\n'
             '**Solo disponible cuando:** estado = `APROBADO`.\n\n'
             '**Formato:** `multipart/form-data`\n\n'
             '**Campo requerido:** `archivo` (PDF, JPG o PNG del documento firmado).\n\n'

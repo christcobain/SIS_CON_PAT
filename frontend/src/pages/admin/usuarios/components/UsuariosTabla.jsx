@@ -272,11 +272,11 @@ function RolBadge({ rol }) {
   const rolKey = typeof rol === 'object' && rol !== null ? rol.name : rol;
   const cfg = {
     SYSADMIN:      { cls: 'bg-primary/10 text-primary-hover ',     label: 'SysAdmin'      },
-    coordSistema:  { cls: 'bg-blue-500/10 text-blue-600',   label: 'Coord. Sistema' },
-    adminede:      { cls: 'bg-purple-500/10 text-purple-600', label: 'Admin Sede'     },
-    asistSistema:  { cls: 'bg-amber-500/10 text-amber-600', label: 'Asist. Sistema' },
-    segurSede:     { cls: 'bg-orange-500/10 text-orange-600', label: 'Segur. Sede'    },
-    userCorte:     { cls: 'bg-slate-500/10 text-slate-500', label: 'Usuario Final'  },
+    COORDSISTEMA:  { cls: 'bg-blue-500/10 text-blue-600',   label: 'Coord. Sistema' },
+    ADMINSEDE:      { cls: 'bg-purple-500/10 text-purple-600', label: 'Admin Sede'     },
+    ASISTSISTEMA:  { cls: 'bg-amber-500/10 text-amber-600', label: 'Asist. Sistema' },
+    SEGURSEDE:     { cls: 'bg-orange-500/10 text-orange-600', label: 'Segur. Sede'    },
+    USUARIOCORTE:     { cls: 'bg-slate-500/10 text-slate-500', label: 'Usuario Final'  },
   };
   const c = cfg[rolKey] ?? { cls: 'bg-slate-500/10 text-slate-500', label: rolKey ?? '—' };
   return (

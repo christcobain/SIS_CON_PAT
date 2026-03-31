@@ -18,9 +18,9 @@ export function useNotificaciones() {
   const [historial,                setHistorial]                = useState([]);
   const [loading,                  setLoading]                  = useState(false);
 
-  const esAprobadorTransf = ['adminSede', 'coordSistema', 'SYSADMIN', 'asistSistema'].includes(role);
-  const esSegur           = role === 'segurSede';
-  const esAprobadorMant   = ['adminSede', 'coordSistema', 'SYSADMIN'].includes(role);
+  const esAprobadorTransf = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN', 'ASISTSISTEMA'].includes(role);
+  const esSegur           = role === 'SEGURSEDE';
+  const esAprobadorMant   = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
 
   const fetchAll = useCallback(async () => {
     if (!user) return;

@@ -255,7 +255,7 @@ export default function AlertasBajas({ onVerDetalle, onRefreshTabla }) {
   const [pendientes, setPendientes] = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [recargar,   setRecargar]   = useState(0);
-  const esAprobador = ['coordSistema', 'SYSADMIN'].includes(role);
+  const esAprobador = ['COORDSISTEMA', 'SYSADMIN'].includes(role);
 
   const cargar = useCallback(async () => {
     if (!esAprobador) { setPendientes([]); return; }

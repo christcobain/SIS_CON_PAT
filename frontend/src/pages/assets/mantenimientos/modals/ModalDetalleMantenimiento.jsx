@@ -23,8 +23,8 @@ const BADGE = {
 };
 
 const ROL_LABEL = {
-  asistSistema: 'Asist. Sistemas',
-  adminSede:    'Admin Sede',
+  ASISTSISTEMA: 'Asist. Sistemas',
+  ADMINSEDE:    'Admin Sede',
 };
 const ACCION_CFG = {
   ENVIADO:   { icon: 'check_circle',  color: '#16a34a' },
@@ -421,7 +421,7 @@ export default function ModalDetalleMantenimiento({
               {estado === 'DEVUELTO' ? 'Reenviar a aprobación' : 'Enviar a aprobación'}
             </button>
           )}
-          {estado === 'PENDIENTE_APROBACION' && ['SYSADMIN','coordSistema','adminSede'].includes(role) && (
+          {estado === 'PENDIENTE_APROBACION' && ['SYSADMIN','COORDSISTEMA','ADMINSEDE'].includes(role) && (
             <>
               <button onClick={() => onDevolver(m)}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
@@ -438,7 +438,7 @@ export default function ModalDetalleMantenimiento({
               <Icon name="front_hand" className="text-[16px]" />Confirmar conformidad
             </button>
           )}
-          {estado !== 'ATENDIDO' && estado !== 'CANCELADO' && ['SYSADMIN','coordSistema','asistSistema'].includes(role) && (
+          {estado !== 'ATENDIDO' && estado !== 'CANCELADO' && ['SYSADMIN','COORDSISTEMA','ASISTSISTEMA'].includes(role) && (
             <button onClick={() => onCancelar(m)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
               style={{ background: 'rgb(220 38 38 / 0.08)', color: '#dc2626', border: '1px solid rgb(220 38 38 / 0.2)' }}>

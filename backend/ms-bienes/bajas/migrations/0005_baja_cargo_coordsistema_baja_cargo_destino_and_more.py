@@ -130,7 +130,7 @@ class Migration(migrations.Migration):
             name='BajaAprobacion',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('rol_aprobador', models.CharField(choices=[('asistSistema', 'Asistente de Sistemas'), ('coordSistema', 'Coordinador de Sistemas'), ('SYSADMIN', 'Administrador del Sistema')], max_length=30)),
+                ('rol_aprobador', models.CharField(choices=[('ASISTSISTEMA', 'Asistente de Sistemas'), ('COORDSISTEMA', 'Coordinador de Sistemas'), ('SYSADMIN', 'Administrador del Sistema')], max_length=30)),
                 ('accion', models.CharField(choices=[('REGISTRADO', 'Registrado y derivado para aprobación'), ('ENVIADO', 'Enviado a aprobación'), ('APROBADO', 'Aprobado'), ('ATENDIDO', 'Atendido — documento firmado subido'), ('DEVUELTO', 'Devuelto para corrección'), ('CANCELADO', 'Cancelado')], max_length=20)),
                 ('usuario_id', models.IntegerField()),
                 ('observacion', models.TextField(blank=True, null=True)),

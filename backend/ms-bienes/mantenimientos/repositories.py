@@ -61,11 +61,11 @@ class MantenimientoRepository:
             .prefetch_related('detalles')
             .select_related('motivo_cancelacion')
         )
-        if role in ('SYSADMIN', 'coordSistema'):
+        if role in ('SYSADMIN', 'COORDSISTEMA'):
             return qs.all()
-        if role == 'adminSede':
+        if role == 'ADMINSEDE':
             return qs.filter(sede_id=sede_id)
-        if role == 'asistSistema':
+        if role == 'ASISTSISTEMA':
             return qs.filter(
                 Q(usuario_realiza_id=usuario_id) | Q(sede_id=sede_id)
             )

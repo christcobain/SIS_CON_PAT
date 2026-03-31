@@ -355,7 +355,7 @@ def generar_pdf_transferencia(transferencia, cookie: str = '') -> bytes:
 
     if es_traslado:
         ap_reg  = _get_ap(aps, 'REGISTRADOR')
-        ap_auto = _get_ap(aps, 'COORDSISTEMA') or _get_ap(aps, 'ADMINSEDE') or _get_ap(aps, 'coordSistema') or _get_ap(aps, 'adminSede')
+        ap_auto = _get_ap(aps, 'COORDSISTEMA') or _get_ap(aps, 'ADMINSEDE') or _get_ap(aps, 'COORDSISTEMA') or _get_ap(aps, 'ADMINSEDE')
         ap_sal  = _get_ap(aps, 'SEGUR_SALIDA')
         ap_ent  = _get_ap(aps, 'SEGUR_ENTRADA')
         ap_dest = _get_ap(aps, 'USUARIO_DESTINO')     
@@ -375,7 +375,7 @@ def generar_pdf_transferencia(transferencia, cookie: str = '') -> bytes:
         col_widths = [5.3*cm, 5.3*cm, 5.3*cm, 5.3*cm, 5.4*cm] 
     elif es_asignacion:
         ap_reg  = _get_ap(aps, 'REGISTRADOR')
-        ap_auto = _get_ap(aps, 'adminSede') or _get_ap(aps, 'coordSistema') or _get_ap(aps, 'ADMINSEDE') or _get_ap(aps, 'COORDSISTEMA') 
+        ap_auto = _get_ap(aps, 'ADMINSEDE') or _get_ap(aps, 'COORDSISTEMA') or _get_ap(aps, 'ADMINSEDE') or _get_ap(aps, 'COORDSISTEMA') 
 
         columnas = [
             _bloque_firma_estampado('Usuario Asigna',

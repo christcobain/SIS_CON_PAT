@@ -179,7 +179,7 @@ class BajaService:
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='REGISTRADO',
-            rol=rol or 'asistSistema',
+            rol=rol or 'ASISTSISTEMA',
             usuario_id=usuario_elabora_id,
             observacion=f'Informe {numero_informe} registrado y enviado a aprobación.',
         )
@@ -210,7 +210,7 @@ class BajaService:
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='ENVIADO',
-            rol='asistSistema',
+            rol='ASISTSISTEMA',
             usuario_id=usuario_id,
             observacion='Informe corregido y reenviado a aprobación.',
         )
@@ -251,7 +251,7 @@ class BajaService:
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='APROBADO',
-            rol='coordSistema',
+            rol='COORDSISTEMA',
             usuario_id=coordsistema_id,
             observacion='Baja aprobada. Bienes dados de baja en el sistema.',
         )
@@ -279,7 +279,7 @@ class BajaService:
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='DEVUELTO',
-            rol='coordSistema',
+            rol='COORDSISTEMA',
             usuario_id=usuario_id,
             observacion=motivo,
         )
@@ -307,7 +307,7 @@ class BajaService:
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='CANCELADO',
-            rol='asistSistema',
+            rol='ASISTSISTEMA',
             usuario_id=usuario_id,
             observacion=detalle or 'Baja cancelada.',
         )

@@ -17,7 +17,7 @@ const BADGE = {
 
 function AccionesFila({ item, role, onVerDetalle, onEnviar, onGestionar, onCancelar, onDescargarPDF }) {
   const isOwner = true; 
-  const canApprove = ['adminSede', 'coordSistema', 'SYSADMIN'].includes(role);
+  const canApprove = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
 
   return (
     <div className="flex items-center justify-end gap-1">

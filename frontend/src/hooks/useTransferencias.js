@@ -70,7 +70,7 @@ export function useTransferencias(activeTab, params) {
     descargarPDF,
     crearTraslado:          (data)         => ejecutarYRefrescar(transferenciasService.crearTraslado, data),
     crearAsignacion:        (data)         => ejecutarYRefrescar(transferenciasService.crearAsignacion, data),
-    aprobarAdminSede:       (id)           => ejecutarYRefrescar(transferenciasService.aprobarAdminSede, id),
+    aprobarADMINSEDE:       (id)           => ejecutarYRefrescar(transferenciasService.aprobarADMINSEDE, id),
     devolverAprobacion:     (id, motivo)   => ejecutarYRefrescar(transferenciasService.devolverAprobacion, id, motivo),
     aprobarSalidaSeguridad: (id, data)     => ejecutarYRefrescar(transferenciasService.aprobarSalidaSeguridad, id, data),
     aprobarEntradaSeguridad:(id, data)     => ejecutarYRefrescar(transferenciasService.aprobarEntradaSeguridad, id, data),

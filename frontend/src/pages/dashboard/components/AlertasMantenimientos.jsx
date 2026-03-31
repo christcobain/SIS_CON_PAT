@@ -126,30 +126,14 @@ function TarjetaMantenimiento({ m, role, onDetalle }) {
   const totalBienes = m.total_bienes ?? detalles.length;
 
   // ── Flags de rol ──────────────────────────────────────────────────────────
-  const esAdminAprobador = ['adminSede', 'coordSistema', 'SYSADMIN'].includes(role);
+  const esAdminAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
   const puedeAprobar =
     esAdminAprobador &&
     estado === 'PENDIENTE_APROBACION' &&
     !m.aprobado_por_adminsede_id;
   const puedeDevolver = puedeAprobar; 
   const hayAccion = puedeAprobar || puedeDevolver;
-  // ── Ejecutor genérico ──────────────────────────────────────────────────────
-  // const accion = async (fn, fallbackMsg) => {
-  //   setBusy(true);
-  //   try {
-  //     const res = await fn();
-    
-  //     const successMsg = res?.detail || res?.message || fallbackMsg;
-      
-  //     toast.success(successMsg);
-  //     onAprobado(); 
-  //   } catch (e) {
-  //     toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Error al procesar.');
-  //   } finally {
-  //     setBusy(false);
-  //   }
-  // };
-
+ 
   const handleAprobar = async() =>{    
     try{
       const result = await mantenimientosService.aprobar(m.id, '');
@@ -328,7 +312,7 @@ export default function AlertasMantenimientos({ onVerDetalle }) {
   const [pendientes, setPendientes] = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [recargar,   setRecargar]   = useState(0);
-  const esAprobador = ['adminSede', 'coordSistema', 'SYSADMIN'].includes(role);
+  const esAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
   const cargar = useCallback(async () => {
     if (!esAprobador) { setPendientes([]); return; }
     setLoading(true);

@@ -71,7 +71,7 @@ class MantenimientoListSerializer(serializers.ModelSerializer):
             'fecha_termino_mant',
             'aprobado_por_adminsede_id',
             'aprobado_por_adminsede_nombre',
-            'fecha_aprobacion_adminsede',
+            'fecha_aprobacion_ADMINSEDE',
             'pdf_path',
             'fecha_pdf',
             'pdf_firmado_path',

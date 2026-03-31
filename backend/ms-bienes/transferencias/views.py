@@ -42,10 +42,10 @@ _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
         summary='Listar transferencias con filtros',
         description=(
             'Retorna las transferencias según el rol del usuario autenticado.\n\n'
-            '- **SYSADMIN / analistaSistema / coordSistema**: ven todas las sedes.\n'
-            '- **adminSede**: solo las de su sede origen.\n'
-            '- **segurSede**: traslados de su sede como origen o destino.\n'
-            '- **asistSistema**: las que registró + las que le asignaron.\n'
+            '- **SYSADMIN / analistaSistema / COORDSISTEMA**: ven todas las sedes.\n'
+            '- **ADMINSEDE**: solo las de su sede origen.\n'
+            '- **SEGURSEDE**: traslados de su sede como origen o destino.\n'
+            '- **ASISTSISTEMA**: las que registró + las que le asignaron.\n'
             '- **userCorte**: solo las asignadas a él.'
         ),
         parameters=[
@@ -86,8 +86,8 @@ class TransferenciaViewSet(ViewSet):
             'documento':               [OR(view_t, view_td)],
             'crear_traslado':          [add_t],
             'crear_asignacion':        [OR(add_t, add_td)],
-            'aprobar_adminsede':       [chg_t],
-            'devolver_adminsede':      [chg_t],
+            'aprobar_ADMINSEDE':       [chg_t],
+            'devolver_ADMINSEDE':      [chg_t],
             'pendientes_segur':         [chg_td],
             'pendientes_aprobacion':         [chg_t],
             'reenviar':                [add_t],
@@ -132,10 +132,10 @@ class TransferenciaViewSet(ViewSet):
         summary='Mis transferencias',
         description=(
             'Cada rol ve sus transferencias correspondientes:\n\n'
-            '- **analistaSistema / coordSistema**: las que registraron.\n'
-            '- **adminSede**: todas las de su sede origen (pendientes e historial).\n'
-            '- **segurSede**: traslados de su sede como origen o destino.\n'
-            '- **asistSistema**: las que registró y las que le destinaron.\n'
+            '- **analistaSistema / COORDSISTEMA**: las que registraron.\n'
+            '- **ADMINSEDE**: todas las de su sede origen (pendientes e historial).\n'
+            '- **SEGURSEDE**: traslados de su sede como origen o destino.\n'
+            '- **ASISTSISTEMA**: las que registró y las que le destinaron.\n'
             '- **userCorte**: solo las asignadas a él.'
         ),
         parameters=[
@@ -157,10 +157,10 @@ class TransferenciaViewSet(ViewSet):
         description=(
             'Retorna el PDF del acta de la transferencia.\n\n'
             'Prioridad:\n'
-            '1. **PDF firmado** (scan físico subido por asistSistema), si existe.\n'
+            '1. **PDF firmado** (scan físico subido por ASISTSISTEMA), si existe.\n'
             '2. **PDF oficial** generado automáticamente al completar el proceso.\n\n'
             'Solo disponible cuando `estado = ATENDIDO`.\n\n'
-            '- **ASIGNACION_INTERNA**: PDF generado al aprobar por adminSede.\n'
+            '- **ASIGNACION_INTERNA**: PDF generado al aprobar por ADMINSEDE.\n'
             '- **TRASLADO_SEDE**: PDF generado cuando el usuario destino confirmó recepción.'
         ),
         parameters=[_PK],
@@ -183,7 +183,7 @@ class TransferenciaViewSet(ViewSet):
         summary='Registrar traslado entre sedes',
         description=(
             'Registra un traslado físico de bienes hacia otra sede.\n\n'
-            '**Roles permitidos:** `analistaSistema`, `coordSistema`, `SYSADMIN`\n\n'
+            '**Roles permitidos:** `analistaSistema`, `COORDSISTEMA`, `SYSADMIN`\n\n'
             '**Validaciones:**\n'
             '- Sede destino debe ser distinta a la sede del registrador.\n'
             '- Todos los bienes deben estar en la misma sede y módulo origen.\n'
@@ -210,9 +210,9 @@ class TransferenciaViewSet(ViewSet):
         summary='Registrar asignación interna a usuario final',
         description=(
             'Asigna bienes a un usuario final dentro de la misma sede.\n\n'
-            '**Roles permitidos:** `asistSistema`, `SYSADMIN`\n\n'
+            '**Roles permitidos:** `ASISTSISTEMA`, `SYSADMIN`\n\n'
             '**Validaciones:**\n'
-            '- `sede_destino_id` debe coincidir con la sede del asistSistema.\n'
+            '- `sede_destino_id` debe coincidir con la sede del ASISTSISTEMA.\n'
             '- Los bienes deben estar en estado `ACTIVO` sin transferencias activas.\n\n'
             '**Estado inicial:** `PENDIENTE_APROBACION`'
         ),
@@ -243,14 +243,14 @@ class TransferenciaViewSet(ViewSet):
             '**TRASLADO_SEDE:**\n'
             '- Registra aprobación lógica (estado permanece `PENDIENTE_APROBACION`)\n'
             '- Aún requiere aprobación física de SEGURSEDE\n\n'
-            '**Roles:** `adminSede` (solo su sede), `coordSistema` (sede central), `SYSADMIN`'
+            '**Roles:** `ADMINSEDE` (solo su sede), `COORDSISTEMA` (sede central), `SYSADMIN`'
         ),
         parameters=[_PK],
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
-    @action(detail=True, methods=['patch'], url_path='aprobar-adminsede')
-    def aprobar_adminsede(self, request, pk=None):
-        result = TransferenciaService.aprobar_adminsede(
+    @action(detail=True, methods=['patch'], url_path='aprobar-ADMINSEDE')
+    def aprobar_ADMINSEDE(self, request, pk=None):
+        result = TransferenciaService.aprobar_ADMINSEDE(
             pk,
             request.user.id,
             self._get_role(request),
@@ -300,10 +300,10 @@ class TransferenciaViewSet(ViewSet):
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
     @action(detail=True, methods=['patch'], url_path='devolver')
-    def devolver_adminsede(self, request, pk=None):
+    def devolver_ADMINSEDE(self, request, pk=None):
         ser = DevolucionSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        result = TransferenciaService.devolver_adminsede(
+        result = TransferenciaService.devolver_ADMINSEDE(
             pk,
             request.user.id,
             ser.validated_data['motivo_devolucion'],
@@ -545,7 +545,7 @@ class TransferenciaViewSet(ViewSet):
             '- Estado → `ATENDIDO`\n'
             '- `pdf_firmado_path` guardado en el servidor\n'
             '- `fecha_cierre_documental` registrada\n\n'
-            '**Roles:** registrador original, asistSistema, coordSistema, SYSADMIN\n\n'
+            '**Roles:** registrador original, ASISTSISTEMA, COORDSISTEMA, SYSADMIN\n\n'
             '**Formato:** `multipart/form-data`, campo `archivo` (PDF, JPG, PNG)'
         ),
         parameters=[_PK],

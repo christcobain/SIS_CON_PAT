@@ -210,9 +210,9 @@ export default function ModalDetalleTransferencia({
   const esAsignacion = t.tipo === 'ASIGNACION_INTERNA';
   const badge      = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
   const bienes     = t.bienes ?? [];  
-  const puedeAprobarAdmin = ['SYSADMIN', 'coordSistema', 'adminSede'].includes(role);
-  const puedeAprobarSegur = role === 'segurSede';
-  const esAsistSistema   = ['asistSistema', 'SYSADMIN'].includes(role);
+  const puedeAprobarAdmin = ['SYSADMIN', 'COORDSISTEMA', 'ADMINSEDE'].includes(role);
+  const puedeAprobarSegur = role === 'SEGURSEDE';
+  const esASISTSISTEMA   = ['ASISTSISTEMA', 'SYSADMIN'].includes(role);
 
   const ejecutar = async (fn, ...args) => {
     try {
@@ -245,8 +245,8 @@ export default function ModalDetalleTransferencia({
     }
   };
 
-  const mostrarDescargaPDF =(esAsistSistema ) && estado === 'EN_ESPERA_FIRMA';
-  const mostrarSubirActa = (esAsistSistema ) && estado === 'EN_ESPERA_FIRMA'  && !t.tiene_pdf_firmado;
+  const mostrarDescargaPDF =(esASISTSISTEMA ) && estado === 'EN_ESPERA_FIRMA';
+  const mostrarSubirActa = (esASISTSISTEMA ) && estado === 'EN_ESPERA_FIRMA'  && !t.tiene_pdf_firmado;
  
 
   return (
@@ -369,7 +369,7 @@ export default function ModalDetalleTransferencia({
                 <Icon name="reply" className="text-[16px]" />Devolver
               </button>
               <button
-                onClick={() => ejecutar(acciones.aprobarAdminSede, t.id)}
+                onClick={() => ejecutar(acciones.aprobarADMINSEDE, t.id)}
                 disabled={actualizando}
                 className="btn-primary flex items-center gap-2">
                 {actualizando ? <span className="btn-loading-spin" /> : <Icon name="verified" className="text-[16px]" />}

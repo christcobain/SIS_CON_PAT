@@ -128,9 +128,9 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
   const estado     = t.estado_transferencia;
   const esTraslado = t.tipo === 'TRASLADO_SEDE';
   const bienes     = t.bienes ?? [];
-  const esAdminAprobador = ['adminSede', 'coordSistema', 'SYSADMIN'].includes(role);
-  const esSegur          = ['segurSede', 'SYSADMIN'].includes(role);
-  const esAsistSistema   = ['asistSistema', 'SYSADMIN'].includes(role);
+  const esAdminAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
+  const esSegur          = ['SEGURSEDE', 'SYSADMIN'].includes(role);
+  const esASISTSISTEMA   = ['ASISTSISTEMA', 'SYSADMIN'].includes(role);
   const miSede = String(sedeId);
 
   const adminAprobado   = !!t.aprobado_por_adminsede_id;
@@ -158,17 +158,17 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
     sedeDestino === miSede;
 
   const puedeConfirmarRecepcion =
-    esAsistSistema && esTraslado &&
+    esASISTSISTEMA && esTraslado &&
     estado === 'EN_ESPERA_CONFORMIDAD' &&
     sedeDestino === miSede;
 
   const soloInformativoConformidad =
-    esAdminAprobador && !esAsistSistema && esTraslado &&
+    esAdminAprobador && !esASISTSISTEMA && esTraslado &&
     estado === 'EN_ESPERA_CONFORMIDAD' &&
     sedeDestino === miSede;
 
   const puedeDescargarPDF =
-    (esAsistSistema ) &&
+    (esASISTSISTEMA ) &&
     estado === 'EN_ESPERA_FIRMA' &&
     (
       (esTraslado  && sedeDestino === miSede) ||
@@ -320,7 +320,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
             <ActionBtn icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'}
               color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
               disabled={busy}
-              onClick={() => accion(() => transferenciasService.aprobarAdminSede(t.id), 'Transferencia aprobada.')} />
+              onClick={() => accion(() => transferenciasService.aprobarADMINSEDE(t.id), 'Transferencia aprobada.')} />
             <ActionBtn icon="reply" label="Devolver"
               color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
               disabled={busy} onClick={() => setModalDv('devolver')} />
@@ -425,8 +425,8 @@ export default function AlertasPendientesTransferencias({ onVerDetalle,onDownloa
   const [loading,    setLoading]    = useState(false);
   const [recargar,   setRecargar]   = useState(0);
 
-  const esSegur     = role === 'segurSede';
-  const esAprobador = ['adminSede', 'coordSistema', 'SYSADMIN', 'asistSistema'].includes(role);
+  const esSegur     = role === 'SEGURSEDE';
+  const esAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN', 'ASISTSISTEMA'].includes(role);
 
   const cargar = useCallback(async () => {
     if (!esSegur && !esAprobador) { setPendientes([]); return; }

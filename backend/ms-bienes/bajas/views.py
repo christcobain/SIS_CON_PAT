@@ -94,8 +94,8 @@ class BajaViewSet(ViewSet):
         description=(
             'Retorna la lista de informes de baja con filtros opcionales.\n\n'
             '**Visibilidad por rol:**\n'
-            '- `SYSADMIN` / `coordSistema`: ven todas las sedes.\n'
-            '- `asistSistema` / `adminSede`: deben filtrar por su `sede_elabora_id` '
+            '- `SYSADMIN` / `COORDSISTEMA`: ven todas las sedes.\n'
+            '- `ASISTSISTEMA` / `ADMINSEDE`: deben filtrar por su `sede_elabora_id` '
             'para ver únicamente las bajas de su sede.\n\n'
             '**Estados posibles:** `PENDIENTE_APROBACION`, `ATENDIDO`, `DEVUELTO`, `CANCELADO`.'
         ),
@@ -145,9 +145,9 @@ class BajaViewSet(ViewSet):
     @extend_schema(
         tags=['Bajas'],
         operation_id='bajas_create',
-        summary='Registrar informe de baja (asistSistema)',
+        summary='Registrar informe de baja (ASISTSISTEMA)',
         description=(
-            'asistSistema registra el informe técnico de baja. El sistema:\n\n'
+            'ASISTSISTEMA registra el informe técnico de baja. El sistema:\n\n'
             '1. Valida que cada bien tenga estado de funcionamiento '
             '**INOPERATIVO**, **OBSOLETO** o **IRRECUPERABLE**.\n'
             '2. Si se indica `mantenimiento_id`, verifica que esté ATENDIDO '
@@ -185,9 +185,9 @@ class BajaViewSet(ViewSet):
     @extend_schema(
         tags=['Bajas'],
         operation_id='bajas_reenviar',
-        summary='Reenviar informe a aprobación tras corrección (asistSistema)',
+        summary='Reenviar informe a aprobación tras corrección (ASISTSISTEMA)',
         description=(
-            'asistSistema puede corregir las secciones narrativas y reenviar '
+            'ASISTSISTEMA puede corregir las secciones narrativas y reenviar '
             'el informe cuando está en estado `DEVUELTO`.\n\n'
             '- Solo se actualizan los campos narrativos que se envíen.\n'
             '- El documento DOCX y PDF se regeneran automáticamente.\n'
@@ -220,9 +220,9 @@ class BajaViewSet(ViewSet):
     @extend_schema(
         tags=['Bajas'],
         operation_id='bajas_aprobar',
-        summary='Aprobar informe de baja (coordSistema)',
+        summary='Aprobar informe de baja (COORDSISTEMA)',
         description=(
-            'coordSistema aprueba el informe técnico.\n\n'
+            'COORDSISTEMA aprueba el informe técnico.\n\n'
             '- Estado pasa a `ATENDIDO`.\n'
             '- Cada bien del informe queda con `is_active=False`, `fecha_baja` y `motivo_baja_id`.\n'
             '- Se registra acción `APROBADO` en el historial.\n'
@@ -246,12 +246,12 @@ class BajaViewSet(ViewSet):
     @extend_schema(
         tags=['Bajas'],
         operation_id='bajas_devolver',
-        summary='Devolver informe a corrección (coordSistema)',
+        summary='Devolver informe a corrección (COORDSISTEMA)',
         description=(
-            'coordSistema devuelve el informe indicando el motivo de rechazo.\n\n'
+            'COORDSISTEMA devuelve el informe indicando el motivo de rechazo.\n\n'
             '- Estado pasa a `DEVUELTO`.\n'
             '- Se registra acción `DEVUELTO` en el historial.\n'
-            '- asistSistema puede corregir y reenviar con `/reenviar/`.\n\n'
+            '- ASISTSISTEMA puede corregir y reenviar con `/reenviar/`.\n\n'
             '`motivo_devolucion` mínimo 5 caracteres.'
         ),
         parameters=[
@@ -343,7 +343,7 @@ class BajaViewSet(ViewSet):
     @extend_schema(
         tags=['Bajas'],
         operation_id='bajas_subir_pdf_firmado',
-        summary='Subir documento físico firmado (coordSistema)',
+        summary='Subir documento físico firmado (COORDSISTEMA)',
         description=(
             'Permite adjuntar el documento impreso y firmado físicamente '
             'después de que la baja esté en estado `ATENDIDO`.\n\n'
@@ -376,9 +376,9 @@ class BajaViewSet(ViewSet):
     @extend_schema(
         tags=['Bajas'],
         operation_id='bajas_bienes_para_baja',
-        summary='Listar bienes disponibles para dar de baja (asistSistema)',
+        summary='Listar bienes disponibles para dar de baja (ASISTSISTEMA)',
         description=(
-            'Retorna todos los bienes activos de la sede del asistSistema con estado '
+            'Retorna todos los bienes activos de la sede del ASISTSISTEMA con estado '
             '**INOPERATIVO**, **OBSOLETO** o **IRRECUPERABLE**.\n\n'
             'Por cada bien incluye `mantenimientos_disponibles`: mantenimientos ATENDIDOS '
             'cuyo diagnóstico final dejó el bien en estado crítico, con diagnósticos '

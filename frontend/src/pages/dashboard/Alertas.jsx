@@ -91,7 +91,7 @@ export default function Alertas() {
 
   const {
     actualizando,
-    aprobarAdminSede,
+    aprobarADMINSEDE,
     devolverAprobacion,
     aprobarSalidaSeguridad,
     aprobarEntradaSeguridad,
@@ -301,7 +301,7 @@ export default function Alertas() {
             item={itemDetalleTransf}
             actualizando={actualizando}
             acciones={{
-              aprobarAdminSede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
+              aprobarADMINSEDE, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
               retornoSalida, retornoEntrada, devolverAprobacion,
               descargarPDF: descargarPDFTransf, subirFirmado,
             }}

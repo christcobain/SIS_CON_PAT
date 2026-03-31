@@ -42,9 +42,9 @@ class TransferenciaRepository:
         role    = params.get('role')
         user_sede_id = params.get('user_sede_id') 
         if role and role != 'SYSADMIN':
-            if role in ['coordSistema', 'adminSede', 'segurSede']:
+            if role in ['COORDSISTEMA', 'ADMINSEDE', 'SEGURSEDE']:
                 qs = qs.filter(Q(sede_origen_id=user_sede_id) | Q(sede_destino_id=user_sede_id))
-            elif role == 'asistSistema':
+            elif role == 'ASISTSISTEMA':
                 qs = qs.filter(Q(usuario_origen_id=user_id) | Q(usuario_destino_id=user_id))
         if params.get('sede_origen_id'):
             qs = qs.filter(sede_origen_id=params.get('sede_origen_id'))
@@ -71,14 +71,14 @@ class TransferenciaRepository:
         qs = Transferencia.objects.prefetch_related('detalles__bien')
         if role=='SYSADMIN':
             return qs.all()
-        if role in ['coordSistema', 'asistSistema']:
+        if role in ['COORDSISTEMA', 'ASISTSISTEMA']:
             return qs.filter(
                 models.Q(usuario_origen_id=usuario_id) | 
                 models.Q(usuario_destino_id=usuario_id)
             )
-        if role == 'adminSede':
+        if role == 'ADMINSEDE':
             return qs.filter(sede_origen_id=sede_id)            
-        if role == 'segurSede':
+        if role == 'SEGURSEDE':
             return qs.filter(
                 models.Q(sede_origen_id=sede_id) | models.Q(sede_destino_id=sede_id),
                 tipo='TRASLADO_SEDE'

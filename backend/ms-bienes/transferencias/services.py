@@ -15,19 +15,19 @@ from bienes.repositories import BienRepository
 from shared.clients import MsUsuariosClient
 from catalogos.models import CatEstadoBien
 
-ROLES_REGISTRA_TRASLADO   = {'analistaSistema', 'coordSistema', 'SYSADMIN'}
-ROLES_REGISTRA_ASIGNACION = {'asistSistema', 'SYSADMIN'}
-ROLES_ADMINSEDE           = {'adminSede', 'coordSistema', 'SYSADMIN'}
-ROLES_SEGURSEDE           = {'segurSede', 'SYSADMIN'}
+ROLES_REGISTRA_TRASLADO   = {'ANALISTASISTEMA', 'COORDSISTEMA', 'SYSADMIN'}
+ROLES_REGISTRA_ASIGNACION = {'ASISTSISTEMA', 'SYSADMIN'}
+ROLES_ADMINSEDE           = {'ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'}
+ROLES_SEGURSEDE           = {'SEGURSEDE', 'SYSADMIN'}
 MODULO_COORD_INFORMATICA  = 1
 
 
 class TransferenciaService:
     @staticmethod
-    def _rol_aprobador_adminsede(role: str) -> str:
-        return role if role == 'coordSistema' else 'adminSede'
+    def _rol_aprobador_ADMINSEDE(role: str) -> str:
+        return role if role == 'COORDSISTEMA' else 'ADMINSEDE'
     @staticmethod
-    def _validar_aprobador_adminsede(
+    def _validar_aprobador_ADMINSEDE(
         role, sede_aprobador_id, modulo_aprobador_id,
         sede_origen_id, modulo_origen_id,
     ):
@@ -37,18 +37,18 @@ class TransferenciaService:
             sede_origen_id == 1 and modulo_origen_id == MODULO_COORD_INFORMATICA
         )
         if es_coord_informatica:
-            if role != 'coordSistema':
+            if role != 'COORDSISTEMA':
                 raise PermissionDenied(
-                    'Solo coordSistema puede aprobar traslados del módulo '
+                    'Solo COORDSISTEMA puede aprobar traslados del módulo '
                     'Coordinación de Informática.'
                 )
             if sede_aprobador_id != sede_origen_id:
                 raise PermissionDenied(
-                    'coordSistema debe pertenecer a la sede central para aprobar.'
+                    'COORDSISTEMA debe pertenecer a la sede central para aprobar.'
                 )
         else:
-            if role != 'adminSede':
-                raise PermissionDenied('Solo adminSede puede aprobar traslados de esta sede.')
+            if role != 'ADMINSEDE':
+                raise PermissionDenied('Solo ADMINSEDE puede aprobar traslados de esta sede.')
             if sede_aprobador_id != sede_origen_id:
                 raise PermissionDenied('Solo puede aprobar traslados de su propia sede.')
     @staticmethod
@@ -304,7 +304,7 @@ class TransferenciaService:
         })
         TransferenciaService._registrar_aprobacion(
             transferencia, 'REGISTRADOR', 'APROBADO', usuario_registra_id,
-            detalle='Transferencia registrada exitosamente, Pendiente aprobación adminSede/coordSistema.',
+            detalle='Transferencia registrada exitosamente, Pendiente aprobación ADMINSEDE/COORDSISTEMA.',
         )
         TransferenciaDetalleRepository.bulk_create(transferencia, bienes)
         TransferenciaService._cambiar_estado_bienes(bienes, 'EN_TRASLADO')
@@ -316,7 +316,7 @@ class TransferenciaService:
     @transaction.atomic
     def crear_asignacion_interna(data: Dict[str, Any],usuario_registra_id: int,sede_registra_id: int,role: str,token: str = None) -> Dict[str, Any]:
         if role not in ROLES_REGISTRA_ASIGNACION:
-            raise PermissionDenied('Solo asistSistema puede registrar asignaciones internas.')
+            raise PermissionDenied('Solo ASISTSISTEMA puede registrar asignaciones internas.')
         bien_ids = data.pop('bien_ids', [])
         bienes   = TransferenciaService._get_bienes_validados(bien_ids)
         origen   = TransferenciaService._extraer_origen(bienes)
@@ -339,7 +339,7 @@ class TransferenciaService:
         })
         TransferenciaService._registrar_aprobacion(
             transferencia, 'REGISTRADOR', 'APROBADO', usuario_registra_id,
-            detalle='Transferencia registrada exitosamente, Pendiente aprobación adminSede/coordSistema.',
+            detalle='Transferencia registrada exitosamente, Pendiente aprobación ADMINSEDE/COORDSISTEMA.',
         )
         TransferenciaDetalleRepository.bulk_create(transferencia, bienes)
         TransferenciaService._cambiar_estado_bienes(bienes, 'EN_ASIGNACION')
@@ -351,17 +351,17 @@ class TransferenciaService:
     # APROBACIONES
     @staticmethod
     @transaction.atomic
-    def aprobar_adminsede(pk, aprobador_id, role, sede_aprobador_id, modulo_aprobador_id,cookie: str = ''):
+    def aprobar_ADMINSEDE(pk, aprobador_id, role, sede_aprobador_id, modulo_aprobador_id,cookie: str = ''):
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'PENDIENTE_APROBACION':
             raise ValidationError(f'No se puede aprobar en estado "{t.estado_transferencia}".')
         if t.aprobado_por_adminsede_id:
             raise ValidationError('La transferencia ya fue aprobada previamente.')
-        TransferenciaService._validar_aprobador_adminsede(
+        TransferenciaService._validar_aprobador_ADMINSEDE(
             role, sede_aprobador_id, modulo_aprobador_id,
             t.sede_origen_id, t.modulo_origen_id,
         )
-        rol_historial = TransferenciaService._rol_aprobador_adminsede(role)
+        rol_historial = TransferenciaService._rol_aprobador_ADMINSEDE(role)
         now = timezone.now()
         if t.tipo == 'ASIGNACION_INTERNA':
             TransferenciaService._aplicar_asignacion(t)
@@ -387,15 +387,15 @@ class TransferenciaService:
         return {'success': True, 'message': 'Aprobación registrada exitosamente.'}
     @staticmethod
     @transaction.atomic
-    def devolver_adminsede(pk, aprobador_id, motivo, role, sede_aprobador_id, modulo_aprobador_id,):
+    def devolver_ADMINSEDE(pk, aprobador_id, motivo, role, sede_aprobador_id, modulo_aprobador_id,):
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'PENDIENTE_APROBACION':
             raise ValidationError('Solo se puede devolver en estado PENDIENTE_APROBACION.')
-        TransferenciaService._validar_aprobador_adminsede(
+        TransferenciaService._validar_aprobador_ADMINSEDE(
             role, sede_aprobador_id, modulo_aprobador_id,
             t.sede_origen_id, t.modulo_origen_id,
         )
-        rol_historial = TransferenciaService._rol_aprobador_adminsede(role)
+        rol_historial = TransferenciaService._rol_aprobador_ADMINSEDE(role)
         TransferenciaRepository.update_fields(t, {
             'estado_transferencia':       'DEVUELTO',
             'motivo_devolucion':          motivo,
@@ -413,7 +413,7 @@ class TransferenciaService:
     @transaction.atomic
     def aprobar_segur_salida(pk, segursede_id, role, sede_segur_id):
         if role not in ROLES_SEGURSEDE:
-            raise PermissionDenied('Solo segurSede puede aprobar la salida física.')
+            raise PermissionDenied('Solo SEGURSEDE puede aprobar la salida física.')
         t = TransferenciaService._get_or_404(pk)
         TransferenciaService._validar_sede_segursede(sede_segur_id, t.sede_origen_id, role)
         if t.tipo != 'TRASLADO_SEDE':
@@ -435,7 +435,7 @@ class TransferenciaService:
     @transaction.atomic
     def rechazar_segur_salida(pk, segursede_id, motivo, role, sede_segur_id):
         if role not in ROLES_SEGURSEDE:
-            raise PermissionDenied('Solo segurSede puede rechazar la salida física.')
+            raise PermissionDenied('Solo SEGURSEDE puede rechazar la salida física.')
         t = TransferenciaService._get_or_404(pk)
         TransferenciaService._validar_sede_segursede(sede_segur_id, t.sede_origen_id, role)
         if t.tipo != 'TRASLADO_SEDE':
@@ -459,7 +459,7 @@ class TransferenciaService:
     @transaction.atomic
     def aprobar_segur_entrada(pk, segursede_id, observacion, role, sede_segur_id):
         if role not in ROLES_SEGURSEDE:
-            raise PermissionDenied('Solo segurSede puede aprobar la entrada física.')
+            raise PermissionDenied('Solo SEGURSEDE puede aprobar la entrada física.')
         t = TransferenciaService._get_or_404(pk)
         TransferenciaService._validar_sede_segursede(sede_segur_id, t.sede_destino_id, role)
         if t.tipo != 'TRASLADO_SEDE':
@@ -486,7 +486,7 @@ class TransferenciaService:
     @transaction.atomic
     def rechazar_segur_entrada(pk, segursede_id, motivo, role, sede_segur_id):
         if role not in ROLES_SEGURSEDE:
-            raise PermissionDenied('Solo segurSede puede rechazar la entrada física.')
+            raise PermissionDenied('Solo SEGURSEDE puede rechazar la entrada física.')
         t = TransferenciaService._get_or_404(pk)
         TransferenciaService._validar_sede_segursede(sede_segur_id, t.sede_destino_id, role)
         if t.tipo != 'TRASLADO_SEDE':
@@ -600,7 +600,7 @@ class TransferenciaService:
     @transaction.atomic
     def aprobar_retorno_salida(pk, segursede_id, motivo, role, sede_segur_id):
         if role not in ROLES_SEGURSEDE:
-            raise PermissionDenied('Solo segurSede puede aprobar el retorno.')
+            raise PermissionDenied('Solo SEGURSEDE puede aprobar el retorno.')
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'EN_RETORNO':
             raise ValidationError(
@@ -622,7 +622,7 @@ class TransferenciaService:
     @transaction.atomic
     def aprobar_retorno_entrada(pk, segursede_id, observacion, role, sede_segur_id):
         if role not in ROLES_SEGURSEDE:
-            raise PermissionDenied('Solo segurSede puede confirmar el retorno.')
+            raise PermissionDenied('Solo SEGURSEDE puede confirmar el retorno.')
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'EN_RETORNO':
             raise ValidationError(
@@ -791,7 +791,7 @@ class TransferenciaService:
         if role == 'SYSADMIN':
             qs = TransferenciaRepository.filter({})
             qs = qs.exclude(estado_transferencia__in=ESTADOS_EXCLUIDOS) 
-        elif role in ('coordSistema', 'adminSede'):
+        elif role in ('COORDSISTEMA', 'ADMINSEDE'):
             filtros = Q()
             filtros |= Q(
                 estado_transferencia='PENDIENTE_APROBACION',
@@ -815,7 +815,7 @@ class TransferenciaService:
             ) 
             qs = TransferenciaRepository.filter({})
             qs = qs.filter(filtros) 
-        elif role == 'asistSistema':
+        elif role == 'ASISTSISTEMA':
             filtros = Q()
             filtros |= Q(
                 tipo='TRASLADO_SEDE',

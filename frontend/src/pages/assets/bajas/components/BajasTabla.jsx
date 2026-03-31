@@ -17,7 +17,7 @@ const BADGE_BAJA = {
 
 function AccionesFila({ item, userId, userRole, onVerDetalle, onGestionar, onCancelar, onDescargarPDF }) {
   const esElaborador    = userId === item.usuario_elabora_id;
-  const canApprove      = ['adminsede', 'coordsistema', 'SYSADMIN'].includes(userRole);
+  const canApprove      = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(userRole);
   const esAtendido      = item.estado_baja === 'ATENDIDO';
   const yaAprobado      = !!item.aprobado_por_coordsistema_id;
   const tienePdfBase    = !!item.pdf_path;

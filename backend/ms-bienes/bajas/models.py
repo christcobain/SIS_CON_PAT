@@ -37,7 +37,7 @@ class Baja(models.Model):
     motivo_devolucion = models.TextField(null=True, blank=True)
 
     aprobado_por_coordsistema_id = models.IntegerField(null=True, blank=True)
-    nombre_coordsistema          = models.CharField(max_length=255, blank=True, default='')
+    nombre_coordsistema         = models.CharField(max_length=255, blank=True, default='')
     cargo_coordsistema           = models.CharField(max_length=200, blank=True, default='')
     fecha_aprobacion             = models.DateTimeField(null=True, blank=True)
 
@@ -104,8 +104,8 @@ class BajaAprobacion(models.Model):
         ('CANCELADO',  'Cancelado'),
     ]
     ROL_CHOICES = [
-        ('asistSistema', 'Asistente de Sistemas'),
-        ('coordSistema', 'Coordinador de Sistemas'),
+        ('ASISTSISTEMA', 'Asistente de Sistemas'),
+        ('COORDSISTEMA', 'Coordinador de Sistemas'),
         ('SYSADMIN',     'Administrador del Sistema'),
     ]
     baja          = models.ForeignKey(Baja, on_delete=models.CASCADE, related_name='aprobaciones')

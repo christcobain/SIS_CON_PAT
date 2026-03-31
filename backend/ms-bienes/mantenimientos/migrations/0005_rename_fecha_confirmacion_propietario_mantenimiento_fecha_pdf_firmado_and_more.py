@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='mantenimientoaprobacion',
             name='rol_aprobador',
-            field=models.CharField(choices=[('asistSistema', 'Asistente de Sistemas'), ('adminSede', 'Administrador de Sede'), ('coordSistema', 'Coordinador de Sistemas'), ('SYSADMIN', 'Administrador del Sistema')], max_length=20),
+            field=models.CharField(choices=[('ASISTSISTEMA', 'Asistente de Sistemas'), ('ADMINSEDE', 'Administrador de Sede'), ('COORDSISTEMA', 'Coordinador de Sistemas'), ('SYSADMIN', 'Administrador del Sistema')], max_length=20),
         ),
         migrations.AlterField(
             model_name='mantenimientodetalle',

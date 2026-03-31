@@ -212,7 +212,7 @@ def generar_pdf_mantenimiento(mantenimiento, cookie=''):
         story.append(Spacer(1, 0.6*cm))
 
     # 3. Firmas
-    ap_admin = mantenimiento.aprobaciones.filter(rol_aprobador='adminSede', accion='APROBADO').last()
+    ap_admin = mantenimiento.aprobaciones.filter(rol_aprobador='ADMINSEDE', accion='APROBADO').last()
     admin_info = _get_usuario_info(ap_admin.usuario_id, cookie) if ap_admin else {'nombre': '—'}
 
     f_tec = [_sello_manual("Técnico Sistemas", True), Spacer(1, 0.15*cm), Paragraph(tecnico['nombre'], st['s_fnomb']), Paragraph("SISTEMAS", st['s_stmp'])]

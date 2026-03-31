@@ -4,11 +4,11 @@ const Icon = ({ name, className = '' }) => (
 
 const ROLE_CFG = {
   SYSADMIN:     { icon: 'shield_person',  bg: 'rgb(127 29 29 / 0.12)', color: 'var(--color-primary)' },
-  coorSistema: { icon: 'hub',            bg: 'rgb(37 99 235 / 0.12)', color: '#1d4ed8'              },
-  adminSede:    { icon: 'corporate_fare', bg: 'rgb(124 58 237 / 0.12)', color: '#7c3aed'             },
-  asistSistema: { icon: 'person_edit',    bg: 'rgb(180 83 9 / 0.12)',  color: '#b45309'              },
-  segurSede:    { icon: 'security',       bg: 'rgb(194 65 12 / 0.12)', color: '#c2410c'              },
-  userCorte: { icon: 'person',         bg: 'rgb(71 85 105 / 0.12)', color: '#64748b'              },
+  COORDSISTEMA: { icon: 'hub',            bg: 'rgb(37 99 235 / 0.12)', color: '#1d4ed8'              },
+  ADMINSEDE:    { icon: 'corporate_fare', bg: 'rgb(124 58 237 / 0.12)', color: '#7c3aed'             },
+  ASISTSISTEMA: { icon: 'person_edit',    bg: 'rgb(180 83 9 / 0.12)',  color: '#b45309'              },
+  SEGURSEDE:    { icon: 'security',       bg: 'rgb(194 65 12 / 0.12)', color: '#c2410c'              },
+  USUARIOCORTE: { icon: 'person',         bg: 'rgb(71 85 105 / 0.12)', color: '#64748b'              },
 };
 const DEFAULT_CFG = {
   icon: 'manage_accounts',
