@@ -205,14 +205,13 @@ class UserService:
         return {"success": True, "data": usuarios}
     @staticmethod
     @transaction.atomic
-    def create_user(data: Dict[str, Any], sede_ids=None,created_by=None) -> Dict[str, Any]:
-        dni = data.get("dni")
-        empleado_response = BDEmpleadosRepository.get_by_dni(dni)
-        if not empleado_response:
+    def create_user(data: Dict[str, Any], sede_ids=None, created_by=None) -> Dict[str, Any]:
+        dni = data.get("dni") 
+        empleado = BDEmpleadosRepository.get_by_dni(dni)
+        if not empleado:
             raise NotFound(f'El DNI {dni} no existe en la base de datos de RRHH.')
-        if not empleado_response.is_active:
-            raise ValidationError('El empleado está inactivo.')
-
+        if not empleado.is_active:
+            raise ValidationError('El empleado está inactivo en RRHH.') 
         usuario = UserRepository.get_by_dni(dni)
         if usuario:
             if usuario.is_active:
@@ -221,23 +220,23 @@ class UserService:
                 raise ValidationError(
                     'Ya existe un usuario Inactivo con el mismo DNI. '
                     'Por favor active el usuario o use otro DNI.'
-                )
-        empresa_obj = UserService._resolver_empresa(empleado_response.get("empresa", ""))
+                ) 
+        empresa_obj = UserService._resolver_empresa(empleado.empresa or "")
         data.update({
             "username":    dni,
             "password":    dni,
-            "dni":         empleado_response.get("dni") or "",
-            "first_name":  empleado_response.get("first_name") or "",
-            "last_name":   empleado_response.get("last_name") or "",
-            "cargo":       empleado_response.get("cargo") or "",
-            "modulo_rrhh": empleado_response.get("modulo") or "",
-            "empresa":     empresa_obj,   
-            "created_by":   created_by
+            "dni":         empleado.dni or "",
+            "first_name":  empleado.first_name or "",
+            "last_name":   empleado.last_name or "",
+            "cargo":       empleado.cargo or "",
+            "modulo_rrhh": empleado.modulo or "",
+            "empresa":     empresa_obj,
+            "created_by":  created_by,
         })
         user = UserRepository.create(data=data, sede_ids=sede_ids)
         if data.get("es_usuario_sistema"):
             CredentialService.create(user)
-        return {"success": True, "message": "Usuario  con Dni: "+str(user.dni)+" creado exitosamente."}
+        return {"success": True, "message": f"Usuario con DNI: {user.dni} creado exitosamente."}
     @staticmethod
     @transaction.atomic
     def update_user(user_id: int, data: Dict[str, Any], sede_ids=None) -> Dict[str, Any]:
