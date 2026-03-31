@@ -1,5 +1,16 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/ms-usuarios/:path*",
+      "destination": "https://ms-usuarios-production-ba55.up.railway.app/:path*"
+    },
+    {
+      "source": "/ms-bienes/:path*",
+      "destination": "https://ms-bienes-production.up.railway.app/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
