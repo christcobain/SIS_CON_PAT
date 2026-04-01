@@ -211,14 +211,14 @@ class TransferenciaViewSet(ViewSet):
     @action(detail=False, methods=['post'], url_path='traslado')
     def crear_traslado(self, request):
         token = self._get_token(request)
-        print('tokenView== ',token)
+        print('tokenView== ', token)
         ser = TrasladoSedeWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.crear_traslado_sede(
-            filters=ser.validated_data,
-            usuario_id=request.user.id,
-            role=self._get_sede(request),
-            sede_id=self._get_role(request),
+            data=ser.validated_data,          # ✅ era filters=
+            usuario_registra_id=request.user.id,  # ✅ era usuario_id=
+            role=self._get_role(request),     # ✅ estaban invertidos
+            sede_registra_id=self._get_sede(request),  # ✅
             token=token
         )
         return Response(result, status=status.HTTP_201_CREATED)

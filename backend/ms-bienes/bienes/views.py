@@ -22,9 +22,17 @@ class BienViewSet(ViewSet):
             'disponibles_sede':   [HasJWTPermission('ms-bienes:bienes:view_bien')],
         }
         return perms.get(self.action, [IsAuthenticated()])
+    # def _get_token(self, request) -> str:
+    #     cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
+    #     return request.COOKIES.get(cookie_name)
     def _get_token(self, request) -> str:
         cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
-        return request.COOKIES.get(cookie_name)
+        token = request.COOKIES.get(cookie_name)
+        if not token:
+            auth_header = request.headers.get('Authorization', '')
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ', 1)[1]
+        return token
     def _get_sede(self, request) -> int:
         sedes = request.auth.get('sedes_ids', []) if request.auth else []
         if not sedes:
@@ -51,6 +59,8 @@ class BienViewSet(ViewSet):
         responses={200: BienListSerializer(many=True)},
     )
     def list(self, request):
+        token = self._get_token(request)
+        print('tokenView== ',token)
         filters = {
             key: request.query_params.get(key)
             for key in [
