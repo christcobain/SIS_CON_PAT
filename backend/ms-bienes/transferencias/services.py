@@ -241,11 +241,12 @@ class TransferenciaService:
         TransferenciaService._enriquecer_transferencia(tr, token)
         _ = list(tr.detalles.all())
         return tr
-
+    
     @staticmethod
     def mis_transferencias(usuario_id: int, role: str, sede_id: int, filters: Dict[str, Any], token):
         qs = TransferenciaRepository.get_mis_transferencias(usuario_id, role, sede_id)
         if hasattr(filters, 'dict'):
+            
             filters = filters.dict()
         if filters.get('tipo'):
             qs = qs.filter(tipo=filters['tipo'])
@@ -268,6 +269,7 @@ class TransferenciaService:
         origen   = TransferenciaService._extraer_origen(bienes)
         if data['sede_destino_id'] == origen['sede_origen_id']:
             raise ValidationError('Bien asignado es de la misma Sede destino. Seleccione otro bien.')
+        print('token== ',token)
         MsUsuariosClient.validar_usuario(data['usuario_destino_id'], token)
         MsUsuariosClient.validar_sede(data['sede_destino_id'], token)
         if data.get('modulo_destino_id'):

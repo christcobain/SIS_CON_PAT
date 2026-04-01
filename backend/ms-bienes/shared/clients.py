@@ -14,10 +14,8 @@ def _cache_get(key):
     if entry and time.monotonic() - entry['ts'] < _TTL:
         return entry['val']
     return None
-
 def _cache_set(key, val):
     _cache[key] = {'val': val, 'ts': time.monotonic()}
-
 class MsUsuariosClient:
     @classmethod
     def _base_url(cls) -> str:
@@ -47,7 +45,6 @@ class MsUsuariosClient:
             503: f'ms-usuarios/{entidad}: Servicio no disponible.',
         }
         raise ValidationError(mensajes.get(status_code, f'ms-usuarios/{entidad}: Error {status_code}.'))
-
     @classmethod
     def _fetch(cls, path: str, entidad: str, pk: int, token: str) -> dict:
         key = (path, token)
@@ -58,27 +55,21 @@ class MsUsuariosClient:
         cls._raise_si_error(data, sc, entidad, pk)
         _cache_set(key, data or {})
         return data or {}
-
     @classmethod
     def validar_empresa(cls, empresa_id: int, token: str = '') -> dict:
         return cls._fetch(f'/locations/empresas/{empresa_id}/', 'empresa', empresa_id, token)
-
     @classmethod
     def validar_sede(cls, sede_id: int, token: str = '') -> dict:
         return cls._fetch(f'/locations/sedes/{sede_id}/', 'sede', sede_id, token)
-
     @classmethod
     def validar_modulo(cls, modulo_id: int, token: str = '') -> dict:
         return cls._fetch(f'/locations/modulos/{modulo_id}/', 'módulo', modulo_id, token)
-
     @classmethod
     def validar_ubicacion(cls, ubicacion_id: int, token: str = '') -> dict:
         return cls._fetch(f'/locations/ubicaciones/{ubicacion_id}/', 'ubicación', ubicacion_id, token)
-
     @classmethod
     def validar_usuario(cls, usuario_id: int, token: str = '') -> dict:
         return cls._fetch(f'/users/users/{usuario_id}/', 'usuario', usuario_id, token)
-
     @classmethod
     def invalidar_cache(cls):
         _cache.clear()
