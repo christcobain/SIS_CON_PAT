@@ -262,7 +262,6 @@ class TransferenciaService:
     @staticmethod
     @transaction.atomic
     def crear_traslado_sede(data: Dict[str, Any], usuario_registra_id: int, sede_registra_id: int, role: str, token: str = None) -> Dict[str, Any]:
-        print('token== ',token)
         if role not in ROLES_REGISTRA_TRASLADO:
             raise PermissionDenied('No tiene permiso para registrar traslados entre sedes.')
         bien_ids = data.pop('bien_ids', [])

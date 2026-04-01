@@ -22,9 +22,6 @@ class BienViewSet(ViewSet):
             'disponibles_sede':   [HasJWTPermission('ms-bienes:bienes:view_bien')],
         }
         return perms.get(self.action, [IsAuthenticated()])
-    # def _get_token(self, request) -> str:
-    #     cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
-    #     return request.COOKIES.get(cookie_name)
     def _get_token(self, request) -> str:
         cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
         token = request.COOKIES.get(cookie_name)

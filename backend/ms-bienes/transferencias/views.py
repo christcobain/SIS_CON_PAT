@@ -111,6 +111,7 @@ class TransferenciaViewSet(ViewSet):
             auth_header = request.headers.get('Authorization', '')
             if auth_header.startswith('Bearer '):
                 token = auth_header.split(' ', 1)[1]
+        return token
 
     def _get_role(self, request) -> str:
         return request.auth.get('role', '') if request.auth else ''
