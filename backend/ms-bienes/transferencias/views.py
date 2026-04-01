@@ -71,7 +71,6 @@ _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
     ),
 )
 class TransferenciaViewSet(ViewSet):
-
     def get_permissions(self):
         view_t  = HasJWTPermission('ms-bienes:transferencias:view_transferencia')
         view_td = HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')
@@ -107,7 +106,7 @@ class TransferenciaViewSet(ViewSet):
 
     def _get_token(self, request) -> str:
         cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
-        return request.COOKIES.get(cookie_name, '')
+        return request.COOKIES.get(cookie_name)
 
     def _get_role(self, request) -> str:
         return request.auth.get('role', '') if request.auth else ''
@@ -216,11 +215,11 @@ class TransferenciaViewSet(ViewSet):
         ser = TrasladoSedeWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.crear_traslado_sede(
-            ser.validated_data,
-            request.user.id,
-            self._get_sede(request),
-            self._get_role(request),
-            self._get_token(request),
+            data=ser.validated_data,
+            usuario_registra_id=request.user.id,
+            role=self._get_sede(request),
+            sede_id=self._get_role(request),
+            token=token
         )
         return Response(result, status=status.HTTP_201_CREATED)
     @extend_schema(
