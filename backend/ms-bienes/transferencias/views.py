@@ -127,7 +127,6 @@ class TransferenciaViewSet(ViewSet):
 
     def list(self, request):
         token = self._get_token(request)
-        print('tokenList Trabn== ', token)
         FILTROS_PERMITIDOS = {
             'estado_transferencia', 'tipo', 'sede_origen_id', 'sede_destino_id',
             'usuario_origen_id', 'usuario_destino_id', 'search',
@@ -218,7 +217,6 @@ class TransferenciaViewSet(ViewSet):
     @action(detail=False, methods=['post'], url_path='traslado')
     def crear_traslado(self, request):
         token = self._get_token(request)
-        print('tokenViewTransferenc== ', token)
         ser = TrasladoSedeWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.crear_traslado_sede(
