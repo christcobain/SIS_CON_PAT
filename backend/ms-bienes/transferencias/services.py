@@ -281,7 +281,7 @@ class TransferenciaService:
             'numero_orden':         numero_orden,
             'tipo':                 'TRASLADO_SEDE',
             'estado_transferencia': 'PENDIENTE_APROBACION',
-            **origen,
+            **origen
         })
         TransferenciaService._registrar_aprobacion(
             transferencia, 'REGISTRADOR', 'APROBADO', usuario_registra_id,
@@ -290,7 +290,6 @@ class TransferenciaService:
         TransferenciaDetalleRepository.bulk_create(transferencia, bienes)
         TransferenciaService._cambiar_estado_bienes(bienes, 'EN_TRASLADO')
         return {'success': True, 'message': f'Traslado Nro. {transferencia.numero_orden} registrado exitosamente.'}
-
     @staticmethod
     @transaction.atomic
     def crear_asignacion_interna(data: Dict[str, Any], usuario_registra_id: int, sede_registra_id: int, role: str, token: str = None) -> Dict[str, Any]:
