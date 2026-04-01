@@ -215,8 +215,8 @@ class TransferenciaViewSet(ViewSet):
         ser = TrasladoSedeWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.crear_traslado_sede(
-            data=ser.validated_data,
-            usuario_registra_id=request.user.id,
+            filters=ser.validated_data,
+            usuario_id=request.user.id,
             role=self._get_sede(request),
             sede_id=self._get_role(request),
             token=token
