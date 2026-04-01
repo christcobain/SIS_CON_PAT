@@ -262,6 +262,7 @@ class TransferenciaService:
     @staticmethod
     @transaction.atomic
     def crear_traslado_sede(data: Dict[str, Any], usuario_registra_id: int, sede_registra_id: int, role: str, token: str = None) -> Dict[str, Any]:
+        print('token== ',token)
         if role not in ROLES_REGISTRA_TRASLADO:
             raise PermissionDenied('No tiene permiso para registrar traslados entre sedes.')
         bien_ids = data.pop('bien_ids', [])
@@ -269,7 +270,7 @@ class TransferenciaService:
         origen   = TransferenciaService._extraer_origen(bienes)
         if data['sede_destino_id'] == origen['sede_origen_id']:
             raise ValidationError('Bien asignado es de la misma Sede destino. Seleccione otro bien.')
-        print('token== ',token)
+        
         MsUsuariosClient.validar_usuario(data['usuario_destino_id'], token)
         MsUsuariosClient.validar_sede(data['sede_destino_id'], token)
         if data.get('modulo_destino_id'):
