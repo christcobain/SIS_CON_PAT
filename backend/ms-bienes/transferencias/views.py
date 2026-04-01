@@ -106,7 +106,11 @@ class TransferenciaViewSet(ViewSet):
 
     def _get_token(self, request) -> str:
         cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
-        return request.COOKIES.get(cookie_name)
+        token = request.COOKIES.get(cookie_name)
+        if not token:
+            auth_header = request.headers.get('Authorization', '')
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ', 1)[1]
 
     def _get_role(self, request) -> str:
         return request.auth.get('role', '') if request.auth else ''

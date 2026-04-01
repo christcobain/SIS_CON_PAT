@@ -107,7 +107,6 @@ class BienViewSet(ViewSet):
         ser = BienWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         token = self._get_token(request)
-        print('tokenView== ',token)
         result = BienService.crear(
             data=ser.validated_data, 
             usuario_registra_id=request.user.id, 
