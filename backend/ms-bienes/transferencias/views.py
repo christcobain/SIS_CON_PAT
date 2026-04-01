@@ -207,7 +207,7 @@ class TransferenciaViewSet(ViewSet):
             '**Estado inicial:** `PENDIENTE_APROBACION`'
         ),
         request=TrasladoSedeWriteSerializer,
-        responses={201: _OK, 400: _ERR, 403: _403},
+        responses={201: _OK, 400: _ERR, 403: _403}
     )
     @action(detail=False, methods=['post'], url_path='traslado')
     def crear_traslado(self, request):
@@ -223,7 +223,6 @@ class TransferenciaViewSet(ViewSet):
             self._get_token(request),
         )
         return Response(result, status=status.HTTP_201_CREATED)
-
     @extend_schema(
         tags=['Transferencias'],
         summary='Registrar asignación interna a usuario final',
@@ -236,8 +235,8 @@ class TransferenciaViewSet(ViewSet):
             '**Estado inicial:** `PENDIENTE_APROBACION`'
         ),
         request=AsignacionInternaWriteSerializer,
-        responses={201: _OK, 400: _ERR, 403: _403},
-    )
+        responses={201: _OK, 400: _ERR, 403: _403}
+        )
     @action(detail=False, methods=['post'], url_path='asignacion')
     def crear_asignacion(self, request):
         ser = AsignacionInternaWriteSerializer(data=request.data)
