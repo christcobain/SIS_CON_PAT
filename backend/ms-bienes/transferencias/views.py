@@ -215,7 +215,7 @@ class TransferenciaViewSet(ViewSet):
     @action(detail=False, methods=['post'], url_path='traslado')
     def crear_traslado(self, request):
         token = self._get_token(request)
-        print('tokenView== ', token)
+        print('tokenViewTransferenc== ', token)
         ser = TrasladoSedeWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.crear_traslado_sede(

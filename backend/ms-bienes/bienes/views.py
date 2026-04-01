@@ -60,7 +60,7 @@ class BienViewSet(ViewSet):
     )
     def list(self, request):
         token = self._get_token(request)
-        print('tokenView== ',token)
+        print('tokenvinv== ',token)
         filters = {
             key: request.query_params.get(key)
             for key in [
