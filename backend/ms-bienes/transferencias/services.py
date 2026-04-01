@@ -281,7 +281,7 @@ class TransferenciaService:
             'numero_orden':         numero_orden,
             'tipo':                 'TRASLADO_SEDE',
             'estado_transferencia': 'PENDIENTE_APROBACION',
-            **origen
+            **origen,
         })
         TransferenciaService._registrar_aprobacion(
             transferencia, 'REGISTRADOR', 'APROBADO', usuario_registra_id,
