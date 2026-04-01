@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
         migrations.RenameField(
             model_name='mantenimiento',
             old_name='fecha_aprobacion',
-            new_name='fecha_aprobacion_ADMINSEDE',
+            new_name='fecha_aprobacion_adminsede',
         ),
         migrations.RenameField(
             model_name='mantenimiento',

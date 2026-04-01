@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import IsAuthenticated,OR
+from rest_framework.permissions import IsAuthenticated, OR
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from drf_spectacular.utils import (
@@ -15,7 +15,6 @@ from shared.permissions import HasJWTPermission
 from .services import TransferenciaService
 from .serializers import (
     TransferenciaListSerializer,
-    TransferenciaSegurSerializer,
     TrasladoSedeWriteSerializer,
     AsignacionInternaWriteSerializer,
     DevolucionSerializer,
@@ -27,12 +26,13 @@ from .serializers import (
 )
 
 _PK  = OpenApiParameter('id', OpenApiTypes.INT, location=OpenApiParameter.PATH, description='ID de la transferencia')
-_OK  = OpenApiResponse(description='Operación exitosa',            response=OpenApiTypes.OBJECT)
-_ERR = OpenApiResponse(description='Error de validación (400)',    response=OpenApiTypes.OBJECT)
-_403 = OpenApiResponse(description='Sin permisos (403)',           response=OpenApiTypes.OBJECT)
-_404 = OpenApiResponse(description='Transferencia no encontrada',  response=OpenApiTypes.OBJECT)
+_OK  = OpenApiResponse(description='Operación exitosa',           response=OpenApiTypes.OBJECT)
+_ERR = OpenApiResponse(description='Error de validación (400)',   response=OpenApiTypes.OBJECT)
+_403 = OpenApiResponse(description='Sin permisos (403)',          response=OpenApiTypes.OBJECT)
+_404 = OpenApiResponse(description='Transferencia no encontrada', response=OpenApiTypes.OBJECT)
 
-_ESTADO_ENUM = ['PENDIENTE_APROBACION', 'EN_ESPERA_CONFORMIDAD', 'EN_RETORNO', 'ATENDIDO', 'DEVUELTO', 'CANCELADO']
+_ESTADO_ENUM = ['PENDIENTE_APROBACION', 'EN_ESPERA_CONFORMIDAD', 'EN_RETORNO',
+                'EN_ESPERA_FIRMA', 'ATENDIDO', 'DEVUELTO', 'CANCELADO']
 _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
 
 
@@ -42,7 +42,7 @@ _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
         summary='Listar transferencias con filtros',
         description=(
             'Retorna las transferencias según el rol del usuario autenticado.\n\n'
-            '- **SYSADMIN / analistaSistema / COORDSISTEMA**: ven todas las sedes.\n'
+            '- **SYSADMIN / COORDSISTEMA**: ven todas las sedes.\n'
             '- **ADMINSEDE**: solo las de su sede origen.\n'
             '- **SEGURSEDE**: traslados de su sede como origen o destino.\n'
             '- **ASISTSISTEMA**: las que registró + las que le asignaron.\n'
@@ -50,11 +50,12 @@ _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
         ),
         parameters=[
             OpenApiParameter('tipo',               OpenApiTypes.STR, required=False, enum=_TIPO_ENUM,   description='Tipo de transferencia'),
-            OpenApiParameter('estado',             OpenApiTypes.STR, required=False, enum=_ESTADO_ENUM, description='Estado de la transferencia'),
+            OpenApiParameter('estado_transferencia',OpenApiTypes.STR, required=False, enum=_ESTADO_ENUM, description='Estado de la transferencia'),
             OpenApiParameter('sede_origen_id',     OpenApiTypes.INT, required=False, description='ID sede origen'),
             OpenApiParameter('sede_destino_id',    OpenApiTypes.INT, required=False, description='ID sede destino'),
             OpenApiParameter('usuario_origen_id',  OpenApiTypes.INT, required=False, description='ID del registrador'),
             OpenApiParameter('usuario_destino_id', OpenApiTypes.INT, required=False, description='ID del destinatario'),
+            OpenApiParameter('search',             OpenApiTypes.STR, required=False, description='Búsqueda por N° orden, código patrimonial o serie'),
         ],
         responses={200: TransferenciaListSerializer(many=True), 401: _ERR, 403: _403},
     ),
@@ -70,6 +71,7 @@ _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
     ),
 )
 class TransferenciaViewSet(ViewSet):
+
     def get_permissions(self):
         view_t  = HasJWTPermission('ms-bienes:transferencias:view_transferencia')
         view_td = HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')
@@ -88,8 +90,8 @@ class TransferenciaViewSet(ViewSet):
             'crear_asignacion':        [OR(add_t, add_td)],
             'aprobar_ADMINSEDE':       [chg_t],
             'devolver_ADMINSEDE':      [chg_t],
-            'pendientes_segur':         [chg_td],
-            'pendientes_aprobacion':         [chg_t],
+            'pendientes_segur':        [chg_td],
+            'pendientes_aprobacion':   [chg_t],
             'reenviar':                [add_t],
             'cancelar':                [OR(del_t, HasJWTPermission('ms-bienes:transferencias:delete_transferenciadetalle'))],
             'confirmar_recepcion':     [chg_td],
@@ -102,64 +104,77 @@ class TransferenciaViewSet(ViewSet):
             'aprobar_retorno_entrada': [chg_td],
         }
         return perms.get(self.action, [IsAuthenticated()])
+
     def _get_token(self, request) -> str:
         cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
         return request.COOKIES.get(cookie_name, '')
+
     def _get_role(self, request) -> str:
         return request.auth.get('role', '') if request.auth else ''
+
     def _get_sede(self, request) -> int:
         sedes = request.auth.get('sedes_ids', []) if request.auth else []
         if not sedes:
             raise ValidationError('El usuario no tiene sede asignada.')
         return sedes[0]
+
     def _get_modulo(self, request):
-        return request.auth.get('modulo_id', None) if request.auth else None 
+        return request.auth.get('modulo_id', None) if request.auth else None
+
     def list(self, request):
-        FILTROS_PERMITIDOS = {'estado', 'tipo', 'sede_origen_id', 'sede_destino_id',
-                      'usuario_origen_id', 'usuario_destino_id', 'search',
-                      'estado_transferencia'}
+        FILTROS_PERMITIDOS = {
+            'estado_transferencia', 'tipo', 'sede_origen_id', 'sede_destino_id',
+            'usuario_origen_id', 'usuario_destino_id', 'search',
+        }
         filters = {k: v for k, v in request.query_params.items() if k in FILTROS_PERMITIDOS}
         filters['user_id']      = request.user.id
         filters['role']         = self._get_role(request)
         filters['user_sede_id'] = self._get_sede(request)
-        qs = TransferenciaService.listar(filters, self._get_token(request))   
+        qs = TransferenciaService.listar(filters, self._get_token(request))
         return Response(TransferenciaListSerializer(qs, many=True).data)
+
     def retrieve(self, request, pk=None):
-        tr = TransferenciaService.obtener(pk,self._get_token(request))
+        tr = TransferenciaService.obtener(pk, self._get_token(request))
         return Response(TransferenciaListSerializer(tr).data)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='Mis transferencias',
         description=(
             'Cada rol ve sus transferencias correspondientes:\n\n'
-            '- **analistaSistema / COORDSISTEMA**: las que registraron.\n'
+            '- **COORDSISTEMA**: las que registraron.\n'
             '- **ADMINSEDE**: todas las de su sede origen (pendientes e historial).\n'
             '- **SEGURSEDE**: traslados de su sede como origen o destino.\n'
             '- **ASISTSISTEMA**: las que registró y las que le destinaron.\n'
             '- **userCorte**: solo las asignadas a él.'
         ),
         parameters=[
-            OpenApiParameter('estado', OpenApiTypes.STR, required=False, enum=_ESTADO_ENUM),
-            OpenApiParameter('tipo',   OpenApiTypes.STR, required=False, enum=_TIPO_ENUM),
+            OpenApiParameter('estado_transferencia', OpenApiTypes.STR, required=False, enum=_ESTADO_ENUM),
+            OpenApiParameter('tipo',                 OpenApiTypes.STR, required=False, enum=_TIPO_ENUM),
         ],
         responses={200: TransferenciaListSerializer(many=True), 401: _ERR},
     )
     @action(detail=False, methods=['get'], url_path='mis-transferencias')
     def mis_transferencias(self, request):
         qs = TransferenciaService.mis_transferencias(
-            request.user.id,self._get_role(request),
-            self._get_sede(request),request.query_params,
-            self._get_token(request))
+            request.user.id,
+            self._get_role(request),
+            self._get_sede(request),
+            request.query_params,
+            self._get_token(request),
+        )
         return Response(TransferenciaListSerializer(qs, many=True).data)
+
     @extend_schema(
         tags=['Transferencias'],
-        summary='Descargar PDF del acta de transferencia',
+        summary='Descargar documento del acta de transferencia',
         description=(
-            'Retorna el PDF del acta de la transferencia.\n\n'
-            'Prioridad:\n'
+            'Retorna el documento del acta de la transferencia.\n\n'
+            'Prioridad de entrega:\n'
             '1. **PDF firmado** (scan físico subido por ASISTSISTEMA), si existe.\n'
-            '2. **PDF oficial** generado automáticamente al completar el proceso.\n\n'
-            'Solo disponible cuando `estado = ATENDIDO`.\n\n'
+            '2. **PDF oficial** generado automáticamente y almacenado en Supabase Storage.\n'
+            '3. **PDF generado en tiempo real** si por algún motivo no existe en Storage.\n\n'
+            'Disponible cuando `estado = EN_ESPERA_FIRMA` o `estado = ATENDIDO`.\n\n'
             '- **ASIGNACION_INTERNA**: PDF generado al aprobar por ADMINSEDE.\n'
             '- **TRASLADO_SEDE**: PDF generado cuando el usuario destino confirmó recepción.'
         ),
@@ -178,12 +193,13 @@ class TransferenciaViewSet(ViewSet):
         response  = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="TRF-{pk}.pdf"'
         return response
+
     @extend_schema(
         tags=['Transferencias'],
         summary='Registrar traslado entre sedes',
         description=(
             'Registra un traslado físico de bienes hacia otra sede.\n\n'
-            '**Roles permitidos:** `analistaSistema`, `COORDSISTEMA`, `SYSADMIN`\n\n'
+            '**Roles permitidos:** `ANALISTASISTEMA`, `COORDSISTEMA`, `SYSADMIN`\n\n'
             '**Validaciones:**\n'
             '- Sede destino debe ser distinta a la sede del registrador.\n'
             '- Todos los bienes deben estar en la misma sede y módulo origen.\n'
@@ -205,6 +221,7 @@ class TransferenciaViewSet(ViewSet):
             self._get_token(request),
         )
         return Response(result, status=status.HTTP_201_CREATED)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='Registrar asignación interna a usuario final',
@@ -231,15 +248,16 @@ class TransferenciaViewSet(ViewSet):
             self._get_token(request),
         )
         return Response(result, status=status.HTTP_201_CREATED)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='Aprobar transferencia (ADMINSEDE / COORDSISTEMA)',
         description=(
             'Aprueba la transferencia según su tipo:\n\n'
             '**ASIGNACION_INTERNA:**\n'
-            '- Estado → `ATENDIDO`\n'
             '- Bienes actualizados con módulo/ubicación/custodio destino\n'
-            '- PDF del acta generado y guardado automáticamente en `media/`\n\n'
+            '- Estado → `EN_ESPERA_FIRMA`\n'
+            '- PDF del acta generado y guardado automáticamente en Supabase Storage\n\n'
             '**TRASLADO_SEDE:**\n'
             '- Registra aprobación lógica (estado permanece `PENDIENTE_APROBACION`)\n'
             '- Aún requiere aprobación física de SEGURSEDE\n\n'
@@ -248,45 +266,58 @@ class TransferenciaViewSet(ViewSet):
         parameters=[_PK],
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
-    @action(detail=True, methods=['patch'], url_path='aprobar-ADMINSEDE')
+    @action(detail=True, methods=['patch'], url_path='aprobar-adminsede')
     def aprobar_ADMINSEDE(self, request, pk=None):
         result = TransferenciaService.aprobar_ADMINSEDE(
             pk,
             request.user.id,
             self._get_role(request),
-            self._get_sede(request),self._get_modulo(request),cookie=self._get_token(request),)
+            self._get_sede(request),
+            self._get_modulo(request),
+            cookie=self._get_token(request),
+        )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
-        summary='Aprobar del personal de Seguridad.',
+        summary='Listar transferencias pendientes de aprobación por seguridad',
         description=(
-            'Aprueba la transferencia según su sede.'
-            
+            'Retorna los traslados entre sedes que requieren acción del personal '
+            'de seguridad de la sede del usuario autenticado.\n\n'
+            'Incluye pendientes de: salida, entrada, retorno-salida y retorno-entrada.'
         ),
-        responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
+        responses={200: TransferenciaListSerializer(many=True), 400: _ERR, 403: _403},
     )
     @action(detail=False, methods=['get'], url_path='pendientes-segur')
     def pendientes_segur(self, request):
         sede_id = self._get_sede(request)
         role    = self._get_role(request)
         qs = TransferenciaService.listar_pendientes_segur(sede_id, role)
-        return Response(TransferenciaListSerializer(qs, many=True).data) 
+        return Response(TransferenciaListSerializer(qs, many=True).data)
+
     @extend_schema(
         tags=['Transferencias'],
-        summary='Lista de pendientes de aprobacion.',
+        summary='Listar transferencias pendientes de aprobación administrativa',
         description=(
-            'Aprueba la transferencia según su sede.'
-            
+            'Retorna las transferencias que requieren acción del usuario autenticado '
+            'según su rol:\n\n'
+            '- **ADMINSEDE / COORDSISTEMA**: transferencias en `PENDIENTE_APROBACION` de su sede.\n'
+            '- **ASISTSISTEMA**: traslados en `EN_ESPERA_CONFORMIDAD` o `EN_ESPERA_FIRMA` y '
+            'asignaciones en `EN_ESPERA_FIRMA` de su sede destino.\n'
+            '- **SYSADMIN**: todas las transferencias no finalizadas.'
         ),
-        responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
+        responses={200: TransferenciaListSerializer(many=True), 400: _ERR, 403: _403},
     )
     @action(detail=False, methods=['get'], url_path='pendientes-aprobacion')
     def pendientes_aprobacion(self, request):
-        role    = self._get_role(request)
-        sede_id = self._get_sede(request)
+        role      = self._get_role(request)
+        sede_id   = self._get_sede(request)
         modulo_id = self._get_modulo(request)
-        qs = TransferenciaService.listar_pendientes_aprobacion(role, sede_id, modulo_id, self._get_token(request))
+        qs = TransferenciaService.listar_pendientes_aprobacion(
+            role, sede_id, modulo_id, self._get_token(request),
+        )
         return Response(TransferenciaListSerializer(qs, many=True).data)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='Devolver transferencia (ADMINSEDE desaprueba)',
@@ -312,6 +343,7 @@ class TransferenciaViewSet(ViewSet):
             self._get_modulo(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='SEGURSEDE origen — Aprobar salida física',
@@ -328,11 +360,13 @@ class TransferenciaViewSet(ViewSet):
     @action(detail=True, methods=['patch'], url_path='aprobar-segur-salida')
     def aprobar_segur_salida(self, request, pk=None):
         result = TransferenciaService.aprobar_segur_salida(
-            pk, request.user.id,
+            pk,
+            request.user.id,
             self._get_role(request),
             self._get_sede(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='SEGURSEDE origen — Rechazar salida física',
@@ -350,12 +384,14 @@ class TransferenciaViewSet(ViewSet):
         ser = DevolucionSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.rechazar_segur_salida(
-            pk, request.user.id,
+            pk,
+            request.user.id,
             ser.validated_data['motivo_devolucion'],
             self._get_role(request),
             self._get_sede(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='SEGURSEDE destino — Aprobar entrada física',
@@ -375,12 +411,14 @@ class TransferenciaViewSet(ViewSet):
         ser = AprobacionSegurSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.aprobar_segur_entrada(
-            pk, request.user.id,
+            pk,
+            request.user.id,
             ser.validated_data.get('observacion', ''),
             self._get_role(request),
             self._get_sede(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='SEGURSEDE destino — Rechazar entrada física',
@@ -399,12 +437,14 @@ class TransferenciaViewSet(ViewSet):
         ser = DevolucionSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.rechazar_segur_entrada(
-            pk, request.user.id,
+            pk,
+            request.user.id,
             ser.validated_data['motivo_devolucion'],
             self._get_role(request),
             self._get_sede(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='Confirmar recepción (usuario destinatario)',
@@ -412,11 +452,11 @@ class TransferenciaViewSet(ViewSet):
             'El **usuario destinatario** confirma que recibió físicamente los bienes.\n\n'
             '**Requiere:** estado `EN_ESPERA_CONFORMIDAD`.\n\n'
             'Al confirmar:\n'
-            '- Estado → `ATENDIDO`\n'
             '- Bienes actualizados con nueva sede/módulo/ubicación/custodio\n'
-            '- PDF del acta generado y guardado automáticamente en `media/`\n\n'
+            '- Estado → `EN_ESPERA_FIRMA`\n'
+            '- PDF del acta generado y guardado en Supabase Storage\n\n'
             '**Solo aplica a:** `TRASLADO_SEDE`\n\n'
-            '**Permiso:** `IsAuthenticated` — el usuario debe ser el destinatario registrado.'
+            '**Permiso:** el usuario debe ser el destinatario registrado.'
         ),
         parameters=[_PK],
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
@@ -426,10 +466,11 @@ class TransferenciaViewSet(ViewSet):
         result = TransferenciaService.confirmar_recepcion(
             pk,
             request.user.id,
-            self._get_role(request),   
+            self._get_role(request),
             cookie=self._get_token(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='SEGURSEDE destino — Confirmar salida de retorno',
@@ -450,12 +491,14 @@ class TransferenciaViewSet(ViewSet):
         ser = RetornoSalidaSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.aprobar_retorno_salida(
-            pk, request.user.id,
+            pk,
+            request.user.id,
             ser.validated_data.get('motivo_retorno', ''),
             self._get_role(request),
             self._get_sede(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='SEGURSEDE origen — Confirmar entrada de retorno',
@@ -477,12 +520,14 @@ class TransferenciaViewSet(ViewSet):
         ser = RetornoEntradaSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.aprobar_retorno_entrada(
-            pk, request.user.id,
+            pk,
+            request.user.id,
             ser.validated_data.get('observacion', ''),
             self._get_role(request),
             self._get_sede(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='Cancelar transferencia',
@@ -507,6 +552,7 @@ class TransferenciaViewSet(ViewSet):
             ser.validated_data.get('detalle_cancelacion', ''),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='Reenviar transferencia devuelta',
@@ -535,6 +581,7 @@ class TransferenciaViewSet(ViewSet):
             self._get_token(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Transferencias'],
         summary='Cerrar proceso con acta firmada (paso final obligatorio)',
@@ -542,24 +589,23 @@ class TransferenciaViewSet(ViewSet):
             'Sube el acta escaneada con firma física del destinatario.\n\n'
             '**Requiere:** estado `EN_ESPERA_FIRMA`.\n\n'
             'Al subir el archivo:\n'
+            '- `pdf_firmado_path` guardado en Supabase Storage (`transferencias/firmados/`)\n'
             '- Estado → `ATENDIDO`\n'
-            '- `pdf_firmado_path` guardado en el servidor\n'
-            '- `fecha_cierre_documental` registrada\n\n'
+            '- `fecha_pdf` actualizada\n\n'
             '**Roles:** registrador original, ASISTSISTEMA, COORDSISTEMA, SYSADMIN\n\n'
             '**Formato:** `multipart/form-data`, campo `archivo` (PDF, JPG, PNG)'
         ),
         parameters=[_PK],
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
-    @action(detail=True, methods=['post'], url_path='cerrar-con-firma',parser_classes=[MultiPartParser, FormParser])
+    @action(detail=True, methods=['post'], url_path='cerrar-con-firma',
+            parser_classes=[MultiPartParser, FormParser])
     def cerrar_con_firma(self, request, pk=None):
         archivo = request.FILES.get('archivo')
         if not archivo:
             return Response(
-                {"success": False, "error": "Se requiere el campo archivo (PDF o imagen escaneada)."},
+                {'success': False, 'error': 'Se requiere el campo archivo (PDF o imagen escaneada).'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         result = TransferenciaService.cerrar_con_firma(pk, archivo, request.user.id)
         return Response(result, status=status.HTTP_200_OK)
-    
-    
