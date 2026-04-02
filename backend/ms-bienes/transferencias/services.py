@@ -677,10 +677,31 @@ class TransferenciaService:
         qs = TransferenciaRepository.filter({'tipo': 'TRASLADO_SEDE'})
         qs = qs.exclude(estado_transferencia__in=['ATENDIDO', 'CANCELADO', 'DEVUELTO'])
         filtros = Q()
-        filtros |= Q(sede_origen_id=sede_id, estado_transferencia='PENDIENTE_APROBACION', aprobado_por_adminsede_id__isnull=False, aprobado_segur_salida_id__isnull=True)
-        filtros |= Q(sede_destino_id=sede_id, estado_transferencia='PENDIENTE_APROBACION', aprobado_segur_salida_id__isnull=False, aprobado_segur_entrada_id__isnull=True)
-        filtros |= Q(sede_destino_id=sede_id, estado_transferencia='EN_RETORNO', aprobado_retorno_salida_id__isnull=True)
-        filtros |= Q(sede_origen_id=sede_id, estado_transferencia='EN_RETORNO', aprobado_retorno_salida_id__isnull=False, aprobado_retorno_entrada_id__isnull=True)
+        # filtros |= Q(sede_origen_id=sede_id, estado_transferencia='PENDIENTE_APROBACION', aprobado_por_adminsede_id__isnull=False, aprobado_segur_salida_id__isnull=True)
+        filtros |= Q(
+                sede_origen_id=sede_id,
+                aprobado_por_adminsede_id__isnull=False,
+                aprobado_segur_salida_id__isnull=True,
+                estado_transferencia='PENDIENTE_APROBACION'
+            )
+        # filtros |= Q(sede_destino_id=sede_id, estado_transferencia='PENDIENTE_APROBACION', aprobado_segur_salida_id__isnull=False, aprobado_segur_entrada_id__isnull=True)
+        filtros |= Q(
+                sede_destino_id=sede_id,
+                aprobado_segur_salida_id__isnull=False,
+                aprobado_segur_entrada_id__isnull=True,
+                estado_transferencia='PENDIENTE_APROBACION'
+            )
+        filtros |= Q(
+            sede_destino_id=sede_id, 
+            estado_transferencia='EN_RETORNO', 
+            aprobado_retorno_salida_id__isnull=True
+            )
+        filtros |= Q(
+            sede_origen_id=sede_id, 
+            estado_transferencia='EN_RETORNO', 
+            aprobado_retorno_salida_id__isnull=False, 
+            aprobado_retorno_entrada_id__isnull=True
+            )
         qs.filter(filtros).distinct()
         qs = qs.order_by('-fecha_registro')
         lista = list(qs)
@@ -706,7 +727,7 @@ class TransferenciaService:
             filtros |= Q(tipo='TRASLADO_SEDE', estado_transferencia='EN_ESPERA_FIRMA', sede_destino_id=sede_id)
             filtros |= Q(tipo='ASIGNACION_INTERNA', estado_transferencia='EN_ESPERA_FIRMA', sede_destino_id=sede_id)
             qs = TransferenciaRepository.filter({})
-            qs = qs.filter(filtros)
+            qs = qs.filter(filtros).distinct()
         else:
             qs = TransferenciaRepository.filter({}).none()
         qs = qs.order_by('-fecha_registro')
