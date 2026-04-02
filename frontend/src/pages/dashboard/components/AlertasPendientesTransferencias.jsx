@@ -415,7 +415,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
           onConfirm={
             modalDv === 'devolver' ? handleDevolver
             : modalDv === 'rechazar_salida' ? handleRechazarSalida
-            : handleRechazarEntrada
+            : modalDv === 'rechazar_entrada'?handleRechazarEntrada
           }
         />
       )}
