@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAuthStore } from '../../../../store/authStore';
+import { usePermission } from '../../../../hooks/usePermission';
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
@@ -29,11 +30,13 @@ function filtrarItems(items, filtros) {
 }
 
 function AccionesFila({ item,  onVerDetalle, onEditar, onCancelar, onDownload }) {
+  const { canAny } = usePermission();
   const estado = item.estado_transferencia;
   const esRegistrador = item.usuario_origen_id === useAuthStore.getState().user?.id;
   const puedeEditar = (estado === 'DEVUELTO') && esRegistrador;
-  const puedeCancelar = !['ATENDIDO', 'CANCELADO'].includes(estado);
+  const puedeCancelar = !['ATENDIDO', 'CANCELADO'].includes(estado)&& canAny('ms-bienes:transferencias:delete_transferencia', 'ms-bienes:transferencias:delete_transferenciadetalle');
   const puedeDownload = estado === 'ATENDIDO' && (item.pdf_path || item.tiene_pdf_firmado);
+  
 
   return (
     <div className="flex justify-end gap-1">

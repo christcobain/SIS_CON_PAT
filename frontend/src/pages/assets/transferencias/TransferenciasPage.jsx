@@ -157,8 +157,6 @@ export default function TransferenciasPage() {
                     onEditar={handleEditar}
                     onCancelar={handleCancelarClick}
                     onDownload={handleDownload}
-                    puedeCrear={can(currentTabConfig?.permisoCrear)}
-                    puedeEditar={can(currentTabConfig?.permisoEditar)}
                 />
             </div>
 

@@ -5,6 +5,7 @@ import ModalBody   from '../../../../components/modal/ModalBody';
 import ModalFooter from '../../../../components/modal/ModalFooter';
 import { useAuthStore } from '../../../../store/authStore';
 import { useToast }     from '../../../../hooks/useToast';
+import { usePermission } from '../../../../hooks/usePermission';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
@@ -178,7 +179,7 @@ function TabAprobaciones({ t }) {
             {historial.map((h, i) => (
               <div key={h.id ?? i} className="p-3 rounded-xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-[10px] font-black uppercase" style={{ color: h.accion === 'APROBADO' ? '#16a34a' : h.accion === 'DEVUELTO' ? '#b45309' : 'var(--color-text-muted)' }}>
+                  <span className="text-[10px] font-black uppercase" style={{ color: h.accion !== 'DEVUELTO' ? '#16a34a' : h.accion === 'DEVUELTO' ? '#b45309' : 'var(--color-text-muted)' }}>
                     {h.accion}
                   </span>
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
@@ -202,6 +203,7 @@ export default function ModalDetalleTransferencia({
   const [tab, setTab] = useState('ruta');
   const role = useAuthStore(s => s.role);
   const user = useAuthStore(s => s.user);
+  const { can } = usePermission();
   const toast = useToast();
   const fileRef = useRef();
   if (!item) return null;
@@ -360,7 +362,7 @@ export default function ModalDetalleTransferencia({
       <ModalFooter align="space">
         <button onClick={onClose} className="btn-secondary">Cerrar</button>
         <div className="flex items-center gap-2 flex-wrap">
-          {estado === 'PENDIENTE_APROBACION' && puedeAprobarAdmin && (
+            {estado === 'PENDIENTE_APROBACION' && puedeAprobarAdmin && can('ms-bienes:transferencias:view_transferenciaaprobacion') && (
             <>
               <button
                 onClick={() => ejecutar(acciones.devolver, t.id, 'Devuelto para corrección')}
@@ -378,7 +380,7 @@ export default function ModalDetalleTransferencia({
               </button>
             </>
           )}
-          {esTraslado && estado === 'PENDIENTE_APROBACION' && puedeAprobarSegur && (
+            {esTraslado && estado === 'PENDIENTE_APROBACION' && puedeAprobarSegur && can('ms-bienes:transferencias:view_transferenciaaprobacion') && (
             <>
               <button onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} disabled={actualizando}
                 className="btn-primary flex items-center gap-2">

@@ -72,36 +72,37 @@ _TIPO_ENUM   = ['TRASLADO_SEDE', 'ASIGNACION_INTERNA']
 )
 class TransferenciaViewSet(ViewSet):
     def get_permissions(self):
-        view_t  = HasJWTPermission('ms-bienes:transferencias:view_transferencia')
-        view_td = HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')
-        add_t   = HasJWTPermission('ms-bienes:transferencias:add_transferencia')
-        add_td  = HasJWTPermission('ms-bienes:transferencias:add_transferenciadetalle')
-        chg_t   = HasJWTPermission('ms-bienes:transferencias:change_transferencia')
-        view_ta   = HasJWTPermission('ms-bienes:transferencias:view_transferenciaaprobacion')
-        chg_td  = HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')
-        del_t   = HasJWTPermission('ms-bienes:transferencias:delete_transferencia')
-
+        view_t  = HasJWTPermission('ms-bienes:transferencias:view_transferencia')##Tranferencias
+        view_td = HasJWTPermission('ms-bienes:transferencias:view_transferenciadetalle')##Asignaciones
+        view_ta = HasJWTPermission('ms-bienes:transferencias:view_transferenciaaprobacion')##Panel Notificaciones
+        add_t   = HasJWTPermission('ms-bienes:transferencias:add_transferencia')##Tranferencias
+        add_td  = HasJWTPermission('ms-bienes:transferencias:add_transferenciadetalle')##Asignaciones
+        chg_t   = HasJWTPermission('ms-bienes:transferencias:change_transferencia')##Tranferencias
+        chg_td   = HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')##Asignaciones
+        chg_ta   = HasJWTPermission('ms-bienes:transferencias:change_transferenciaaprobacion')
+        del_t   = HasJWTPermission('ms-bienes:transferencias:delete_transferencia'),##Tranferencias
+        del_td   = HasJWTPermission('ms-bienes:transferencias:delete_transferenciadetalle')##Asignaciones
         perms = {
             'list':                    [OR(view_t, view_td)],
             'retrieve':                [OR(view_t, view_td)],
             'mis_transferencias':      [OR(view_t, view_td)],
             'documento':               [OR(view_t, view_td)],
             'crear_traslado':          [add_t],
-            'crear_asignacion':        [OR(add_t, add_td)],
-            'aprobar_adminsede':       [view_ta],
-            'devolver_adminsede':      [view_ta],
-            'pendientes_segur':        [view_ta],
-            'pendientes_aprobacion':   [view_ta],
-            'reenviar':                [add_t],
-            'cancelar':                [OR(del_t, HasJWTPermission('ms-bienes:transferencias:delete_transferenciadetalle'))],
-            'confirmar_recepcion':     [chg_td],
-            'cerrar_con_firma':        [OR(chg_t, chg_td)],
-            'aprobar_segur_salida':    [view_ta],
-            'rechazar_segur_salida':   [view_ta],
-            'aprobar_segur_entrada':   [view_ta],
-            'rechazar_segur_entrada':  [view_ta],
-            'aprobar_retorno_salida':  [view_ta],
-            'aprobar_retorno_entrada': [view_ta],
+            'crear_asignacion':        [add_td],#asistente
+            'aprobar_adminsede':       [chg_t],
+            'devolver_adminsede':      [chg_t],
+            'pendientes_segur':        [chg_ta],
+            'pendientes_aprobacion':   [chg_t],
+            'reenviar':                [OR(add_t, add_td)],
+            'cancelar':                [OR(del_t, del_td)],
+            'confirmar_recepcion':     [add_td],#asistente
+            'cerrar_con_firma':        [add_td],#asistente
+            'aprobar_segur_salida':    [chg_ta],
+            'rechazar_segur_salida':   [chg_ta],
+            'aprobar_segur_entrada':   [chg_ta],
+            'rechazar_segur_entrada':  [chg_ta],
+            'aprobar_retorno_salida':  [chg_ta],
+            'aprobar_retorno_entrada': [chg_ta],
         }
         return perms.get(self.action, [IsAuthenticated()])
 
