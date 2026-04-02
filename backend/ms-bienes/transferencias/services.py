@@ -673,40 +673,48 @@ class TransferenciaService:
         return {'success': True, 'message': 'Transferencia reenviada para aprobación.'}
 
     @staticmethod
-    def listar_pendientes_segur(sede_id: int, role: str,token: str):
+    def listar_pendientes_segur(sede_id: int, role: str, token: str, user_id: int):
+        # 1. Base: Solo traslados que no han terminado
         qs = TransferenciaRepository.filter({'tipo': 'TRASLADO_SEDE'})
-        qs = qs.exclude(estado_transferencia__in=['ATENDIDO', 'CANCELADO', 'DEVUELTO'])
+        qs = qs.exclude(estado_transferencia__in=['ATENDIDO', 'CANCELADO', 'DEVUELTO'])        
+        if role == 'SYSADMIN':
+            return list(qs.order_by('-fecha_registro'))
         filtros = Q()
-        # filtros |= Q(sede_origen_id=sede_id, estado_transferencia='PENDIENTE_APROBACION', aprobado_por_adminsede_id__isnull=False, aprobado_segur_salida_id__isnull=True)
         filtros |= Q(
-                sede_origen_id=sede_id,
-                aprobado_por_adminsede_id__isnull=False,
-                aprobado_segur_salida_id__isnull=True,
-            )
-        # filtros |= Q(sede_destino_id=sede_id, estado_transferencia='PENDIENTE_APROBACION', aprobado_segur_salida_id__isnull=False, aprobado_segur_entrada_id__isnull=True)
+            estado_transferencia='PENDIENTE_APROBACION',
+            sede_origen_id=sede_id,
+            aprobado_por_adminsede_id__isnull=False,
+            aprobado_segur_salida_id__isnull=True
+        )
         filtros |= Q(
-                sede_destino_id=sede_id,
-                aprobado_segur_salida_id__isnull=False,
-                aprobado_segur_entrada_id__isnull=True,
-            )
+            estado_transferencia='PENDIENTE_APROBACION',
+            sede_destino_id=sede_id,
+            aprobado_segur_salida_id__isnull=False,
+            aprobado_segur_entrada_id__isnull=True
+        )
         filtros |= Q(
             estado_transferencia='EN_RETORNO',
             sede_destino_id=sede_id,
-            aprobado_retorno_salida_id__isnull=True  # Si ya firmó aquí (ID 22), desaparece de su vista
+            aprobado_retorno_salida_id__isnull=True
         )
         filtros |= Q(
             estado_transferencia='EN_RETORNO',
             sede_origen_id=sede_id,
             aprobado_retorno_salida_id__isnull=False,
-            aprobado_retorno_entrada_id__isnull=True   
+            aprobado_retorno_entrada_id__isnull=True
         )
         qs = qs.filter(filtros).distinct()
-        qs = qs.order_by('-fecha_registro')
-        lista = list(qs)
-        for tr in lista:
+        lista_final = []
+        qs = qs.order_by('-fecha_registro')        
+        for tr in qs:
+            if tr.estado_transferencia == 'EN_RETORNO' and tr.aprobado_retorno_salida_id == user_id:
+                continue
+            if tr.estado_transferencia == 'EN_RETORNO' and tr.aprobado_retorno_entrada_id == user_id:
+                continue
             TransferenciaService._enriquecer_transferencia(tr, token)
             _ = list(tr.detalles.all())
-        return lista       
+            lista_final.append(tr)            
+        return lista_final   
     @staticmethod
     def listar_pendientes_aprobacion(role: str, sede_id: int, modulo_id: int, token: str):
         ESTADOS_EXCLUIDOS = ['ATENDIDO', 'CANCELADO', 'EN_ESPERA_FIRMA']
