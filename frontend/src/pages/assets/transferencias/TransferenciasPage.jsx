@@ -60,8 +60,8 @@ export default function TransferenciasPage() {
 
     const {
         transferencias, loading, error, actualizando, refetch, 
-        descargarPDF, crearTraslado, crearAsignacion, aprobarADMINSEDE,
-        devolverAprobacion, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
+        descargarPDF, crearTraslado, crearAsignacion, aprobarAdminsede,
+        devolver, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
         retornoSalida, retornoEntrada, reenviarTransferencia, cancelar,subirFirmado
     } = useTransferencias(activeTab, { misTransferencias: filtros.misTransferencias, usuarioId: user?.id });
 
@@ -184,9 +184,9 @@ export default function TransferenciasPage() {
                         onClose={() => setModalDetalle(false)}
                         item={itemDetalle}
                         actualizando={actualizando}
-                        acciones={{ aprobarADMINSEDE, aprobarSalidaSeguridad, 
+                        acciones={{ aprobarAdminsede, aprobarSalidaSeguridad, 
                             aprobarEntradaSeguridad, retornoSalida, retornoEntrada, 
-                            devolverAprobacion,descargarPDF,subirFirmado }}
+                            devolver,descargarPDF,subirFirmado }}
                         onAccionExitosa={() => { setModalDetalle(false); refetch(); }}
                     />
                 )}

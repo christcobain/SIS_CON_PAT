@@ -320,7 +320,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
             <ActionBtn icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'}
               color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
               disabled={busy}
-              onClick={() => accion(() => transferenciasService.aprobarADMINSEDE(t.id), 'Transferencia aprobada.')} />
+              onClick={() => accion(() => transferenciasService.aprobarAdminsede(t.id), 'Transferencia aprobada.')} />
             <ActionBtn icon="reply" label="Devolver"
               color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
               disabled={busy} onClick={() => setModalDv('devolver')} />

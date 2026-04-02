@@ -362,14 +362,14 @@ export default function ModalDetalleTransferencia({
           {estado === 'PENDIENTE_APROBACION' && puedeAprobarAdmin && (
             <>
               <button
-                onClick={() => ejecutar(acciones.devolverAprobacion, t.id, 'Devuelto para corrección')}
+                onClick={() => ejecutar(acciones.devolver, t.id, 'Devuelto para corrección')}
                 disabled={actualizando}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer"
                 style={{ background: 'rgb(180 83 9 / 0.1)', color: '#b45309', border: '1px solid rgb(180 83 9 / 0.25)' }}>
                 <Icon name="reply" className="text-[16px]" />Devolver
               </button>
               <button
-                onClick={() => ejecutar(acciones.aprobarADMINSEDE, t.id)}
+                onClick={() => ejecutar(acciones.aprobarAdminsede, t.id)}
                 disabled={actualizando}
                 className="btn-primary flex items-center gap-2">
                 {actualizando ? <span className="btn-loading-spin" /> : <Icon name="verified" className="text-[16px]" />}

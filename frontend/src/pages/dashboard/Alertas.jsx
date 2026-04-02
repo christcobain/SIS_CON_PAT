@@ -91,8 +91,8 @@ export default function Alertas() {
 
   const {
     actualizando,
-    aprobarADMINSEDE,
-    devolverAprobacion,
+    aprobarAdminsede,
+    devolver,
     aprobarSalidaSeguridad,
     aprobarEntradaSeguridad,
     retornoSalida,
@@ -301,8 +301,8 @@ export default function Alertas() {
             item={itemDetalleTransf}
             actualizando={actualizando}
             acciones={{
-              aprobarADMINSEDE, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
-              retornoSalida, retornoEntrada, devolverAprobacion,
+              aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
+              retornoSalida, retornoEntrada, devolver,
               descargarPDF: descargarPDFTransf, subirFirmado,
             }}
             onAccionExitosa={() => { setModalDetalleTransf(false); refetchTransf(); notificarYRefrescar(); }}

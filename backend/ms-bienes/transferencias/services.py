@@ -324,7 +324,7 @@ class TransferenciaService:
 
     @staticmethod
     @transaction.atomic
-    def aprobar_ADMINSEDE(pk, aprobador_id, role, sede_aprobador_id, modulo_aprobador_id, cookie: str = ''):
+    def aprobar_adminsede(pk, aprobador_id, role, sede_aprobador_id, modulo_aprobador_id, cookie: str = ''):
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'PENDIENTE_APROBACION':
             raise ValidationError(f'No se puede aprobar en estado "{t.estado_transferencia}".')
@@ -352,7 +352,7 @@ class TransferenciaService:
 
     @staticmethod
     @transaction.atomic
-    def devolver_ADMINSEDE(pk, aprobador_id, motivo, role, sede_aprobador_id, modulo_aprobador_id):
+    def devolver_adminsede(pk, aprobador_id, motivo, role, sede_aprobador_id, modulo_aprobador_id):
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'PENDIENTE_APROBACION':
             raise ValidationError('Solo se puede devolver en estado PENDIENTE_APROBACION.')

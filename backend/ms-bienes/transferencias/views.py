@@ -87,8 +87,8 @@ class TransferenciaViewSet(ViewSet):
             'documento':               [OR(view_t, view_td)],
             'crear_traslado':          [add_t],
             'crear_asignacion':        [OR(add_t, add_td)],
-            'aprobar_ADMINSEDE':       [chg_t],
-            'devolver_ADMINSEDE':      [chg_t],
+            'aprobar_adminsede':       [chg_t],
+            'devolver_adminsede':      [chg_t],
             'pendientes_segur':        [chg_td],
             'pendientes_aprobacion':   [chg_t],
             'reenviar':                [add_t],
@@ -220,10 +220,10 @@ class TransferenciaViewSet(ViewSet):
         ser = TrasladoSedeWriteSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.crear_traslado_sede(
-            data=ser.validated_data,          # ✅ era filters=
-            usuario_registra_id=request.user.id,  # ✅ era usuario_id=
-            role=self._get_role(request),     # ✅ estaban invertidos
-            sede_registra_id=self._get_sede(request),  # ✅
+            data=ser.validated_data,          
+            usuario_registra_id=request.user.id,  
+            role=self._get_role(request),    
+            sede_registra_id=self._get_sede(request), 
             token=token
         )
         return Response(result, status=status.HTTP_201_CREATED)
@@ -272,8 +272,8 @@ class TransferenciaViewSet(ViewSet):
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
     @action(detail=True, methods=['patch'], url_path='aprobar-adminsede')
-    def aprobar_ADMINSEDE(self, request, pk=None):
-        result = TransferenciaService.aprobar_ADMINSEDE(
+    def aprobar_adminsede(self, request, pk=None):
+        result = TransferenciaService.aprobar_adminsede(
             pk,
             request.user.id,
             self._get_role(request),
@@ -315,11 +315,12 @@ class TransferenciaViewSet(ViewSet):
     )
     @action(detail=False, methods=['get'], url_path='pendientes-aprobacion')
     def pendientes_aprobacion(self, request):
+        token = self._get_token(request)
         role      = self._get_role(request)
         sede_id   = self._get_sede(request)
         modulo_id = self._get_modulo(request)
         qs = TransferenciaService.listar_pendientes_aprobacion(
-            role, sede_id, modulo_id, self._get_token(request),
+            role, sede_id, modulo_id, token,
         )
         return Response(TransferenciaListSerializer(qs, many=True).data)
 
@@ -336,10 +337,10 @@ class TransferenciaViewSet(ViewSet):
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
     @action(detail=True, methods=['patch'], url_path='devolver')
-    def devolver_ADMINSEDE(self, request, pk=None):
+    def devolver_adminsede(self, request, pk=None):
         ser = DevolucionSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        result = TransferenciaService.devolver_ADMINSEDE(
+        result = TransferenciaService.devolver_adminsede(
             pk,
             request.user.id,
             ser.validated_data['motivo_devolucion'],
