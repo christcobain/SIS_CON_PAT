@@ -673,7 +673,7 @@ class TransferenciaService:
         return {'success': True, 'message': 'Transferencia reenviada para aprobación.'}
 
     @staticmethod
-    def listar_pendientes_segur(sede_id: int, role: str, token: str, user_id: int):
+    def listar_pendientes_segur(user_id: int,sede_id: int, role: str, token: str):
         # 1. Base: Solo traslados que no han terminado
         qs = TransferenciaRepository.filter({'tipo': 'TRASLADO_SEDE'})
         qs = qs.exclude(estado_transferencia__in=['ATENDIDO', 'CANCELADO', 'DEVUELTO'])        
