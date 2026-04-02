@@ -329,6 +329,7 @@ export default function ModalTransferencia({
 
   const ubicacionesDest = (ubicaciones ?? []).filter(m => m.is_active !== false);
   const modulosActivos  = (modulos ?? []).filter(m => m.is_active !== false);
+  console.log('modulosActivos= ',modulosActivos)
 
   const toggleBien = id => set('bien_ids',
     form.bien_ids.includes(id) ? form.bien_ids.filter(x => x !== id) : [...form.bien_ids, id]
@@ -544,7 +545,10 @@ export default function ModalTransferencia({
 
                 <div>
                   <FLabel>Módulo destino</FLabel>
-                  <FSelect value={form.modulo_destino_id} onChange={v => { set('modulo_destino_id', v); set('ubicacion_destino_id', ''); }}>
+                  <FSelect 
+                    value={form.modulo_destino_id} 
+                    onChange={v => { set('modulo_destino_id', v); 
+                    set('ubicacion_destino_id', ''); }}>
                     <option value="">Sin módulo específico</option>
                     {modulosActivos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                   </FSelect>
