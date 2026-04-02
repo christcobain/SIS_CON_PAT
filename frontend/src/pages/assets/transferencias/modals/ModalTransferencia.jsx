@@ -329,7 +329,7 @@ export default function ModalTransferencia({
 
   const ubicacionesDest = (ubicaciones ?? []).filter(m => m.is_active !== false);
   const modulosActivos  = (modulos ?? []).filter(m => m.is_active !== false);
-  console.log('modulosActivos= ',modulosActivos)
+  console.log('ubicacionesDest= ',ubicacionesDest)
 
   const toggleBien = id => set('bien_ids',
     form.bien_ids.includes(id) ? form.bien_ids.filter(x => x !== id) : [...form.bien_ids, id]
