@@ -303,8 +303,6 @@ export default function AlertasPendientesTransferencias({ onVerDetalle,acciones}
   const sedes  = useAuthStore(s => s.sedes);
   const user = useAuthStore(s => s.user);
   const sedeId = sedes?.[0]?.id;
-  console.log('verdetalle== ',onVerDetalle)
-
   const [pendientes, setPendientes] = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [recargar,   setRecargar]   = useState(0);

@@ -690,16 +690,16 @@ class TransferenciaService:
                 aprobado_segur_entrada_id__isnull=True,
             )
         filtros |= Q(
-            sede_destino_id=sede_id, 
-            aprobado_retorno_salida_id__isnull=True,
-            estado_transferencia='EN_RETORNO'
-            )
+            estado_transferencia='EN_RETORNO',
+            sede_destino_id=sede_id,
+            aprobado_retorno_salida_id__isnull=True  # Si ya firmó aquí (ID 22), desaparece de su vista
+        )
         filtros |= Q(
-            sede_origen_id=sede_id,  
-            aprobado_retorno_salida_id__isnull=False, 
-            aprobado_retorno_entrada_id__isnull=True,
-            estado_transferencia='EN_RETORNO'
-            )
+            estado_transferencia='EN_RETORNO',
+            sede_origen_id=sede_id,
+            aprobado_retorno_salida_id__isnull=False,
+            aprobado_retorno_entrada_id__isnull=True   
+        )
         qs = qs.filter(filtros).distinct()
         qs = qs.order_by('-fecha_registro')
         lista = list(qs)
