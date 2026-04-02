@@ -42,22 +42,17 @@ export default function TransferenciasPage() {
     const toast = useToast();
     const { user } = useAuth();
     const { can } = usePermission();
-
     const tabsDisponibles = useMemo(() => 
         TABS_CONFIG.filter(tab => can(tab.permisoVer)), 
     [can]);
-
     const [activeTab, setActiveTab] = useState(() => tabsDisponibles[0]?.id || '');
-    const [filtros, setFiltros] = useState(FILTROS_INICIALES);
-    
+    const [filtros, setFiltros] = useState(FILTROS_INICIALES);    
     const [modalForm, setModalForm] = useState(false);
     const [modalDetalle, setModalDetalle] = useState(false);
-    const [confirmCancel, setConfirmCancel] = useState(false);
-    
+    const [confirmCancel, setConfirmCancel] = useState(false);    
     const [itemEditar, setItemEditar] = useState(null);
     const [itemDetalle, setItemDetalle] = useState(null);
     const [itemCancel, setItemCancel] = useState(null);
-
     const {
         transferencias, loading, error, actualizando, refetch, obtenerTransf,
         descargarPDF, crearTraslado, crearAsignacion, aprobarAdminsede,

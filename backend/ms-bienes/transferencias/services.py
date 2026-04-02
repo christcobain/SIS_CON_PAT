@@ -511,22 +511,48 @@ class TransferenciaService:
         tipo_msg = 'Traslado' if t.tipo == 'TRASLADO_SEDE' else 'Asignación'
         return {'success': True, 'message': f'{tipo_msg} completado. Acta firmada registrada en el sistema.'}
 
+    # @staticmethod
+    # def obtener_documento(pk: int, cookie: str = '') -> bytes:
+    #     t = TransferenciaService._get_or_404(pk)
+    #     ESTADOS_CON_DOCUMENTO = {'EN_ESPERA_FIRMA', 'ATENDIDO'}
+    #     if t.estado_transferencia not in ESTADOS_CON_DOCUMENTO:
+    #         raise ValidationError('El documento solo está disponible cuando el estado es EN_ESPERA_FIRMA o ATENDIDO.')
+    #     if t.pdf_firmado_path:
+    #         try:
+    #             return descargar_pdf(t.pdf_firmado_path)
+    #         except Exception as e:
+    #             logger.warning('No se pudo descargar PDF firmado %s: %s', t.pdf_firmado_path, e)
+    #     if t.pdf_path:
+    #         try:
+    #             return descargar_pdf(t.pdf_path)
+    #         except Exception as e:
+    #             logger.warning('No se pudo descargar PDF %s: %s', t.pdf_path, e)
+    #     return generar_pdf_transferencia(t, cookie=cookie)
     @staticmethod
     def obtener_documento(pk: int, cookie: str = '') -> bytes:
         t = TransferenciaService._get_or_404(pk)
         ESTADOS_CON_DOCUMENTO = {'EN_ESPERA_FIRMA', 'ATENDIDO'}
         if t.estado_transferencia not in ESTADOS_CON_DOCUMENTO:
-            raise ValidationError('El documento solo está disponible cuando el estado es EN_ESPERA_FIRMA o ATENDIDO.')
+            raise ValidationError(
+                'El documento solo está disponible cuando el estado es EN_ESPERA_FIRMA o ATENDIDO.'
+            )
         if t.pdf_firmado_path:
             try:
-                return descargar_pdf(t.pdf_firmado_path)
+                datos = descargar_pdf(t.pdf_firmado_path)
+                if datos:
+                    return datos
+                logger.warning('PDF firmado vacío: %s', t.pdf_firmado_path)
             except Exception as e:
-                logger.warning('No se pudo descargar PDF firmado %s: %s', t.pdf_firmado_path, e)
+                logger.error('Error descargando PDF firmado %s: %s', t.pdf_firmado_path, e)
         if t.pdf_path:
             try:
-                return descargar_pdf(t.pdf_path)
+                datos = descargar_pdf(t.pdf_path)
+                if datos:
+                    return datos
+                logger.warning('PDF sin firmar vacío: %s', t.pdf_path)
             except Exception as e:
-                logger.warning('No se pudo descargar PDF %s: %s', t.pdf_path, e)
+                logger.error('Error descargando PDF %s: %s', t.pdf_path, e)
+        logger.info('Regenerando PDF al vuelo para transferencia %s', t.numero_orden)
         return generar_pdf_transferencia(t, cookie=cookie)
 
     @staticmethod
