@@ -254,7 +254,7 @@ export default function ModalTransferencia({
     } else {
       setForm({ ...FORM_BASE, sede_destino_id: isTraslado ? '' : String(sede_auth_id ?? '') });
     }
-  }, [open, item?.id, isTraslado]);
+  }, [open, item?.id, isTraslado,fetchCatalogos,isEditar,obtenerTransf,sede_auth_id,item]);
 
   const itemData = itemCompleto ?? item;
 
@@ -548,7 +548,7 @@ export default function ModalTransferencia({
                   <FSelect 
                     value={form.modulo_destino_id} 
                     onChange={v => { set('modulo_destino_id', v); 
-                    set('ubicacion_destino_id', ''); }}>
+                    set('modulo_destino_id', ''); }}>
                     <option value="">Sin módulo específico</option>
                     {modulosActivos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                   </FSelect>
@@ -556,7 +556,10 @@ export default function ModalTransferencia({
 
                 <div>
                   <FLabel>Ubicación destino</FLabel>
-                  <FSelect value={form.ubicacion_destino_id} onChange={v => set('ubicacion_destino_id', v)}>
+                  <FSelect 
+                    value={form.ubicacion_destino_id} 
+                    onChange={v => 
+                    set('ubicacion_destino_id', v)}>
                     <option value="">Sin ubicación específica</option>
                     {ubicacionesDest.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
                   </FSelect>
