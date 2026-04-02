@@ -212,8 +212,9 @@ export default function ModalDetalleTransferencia({
   const esAsignacion = t.tipo === 'ASIGNACION_INTERNA';
   const badge      = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
   const bienes     = t.bienes ?? [];  
-  const puedeAprobarAdmin = can('ms-bienes:transferencias:change_transferencia') && ['PENDIENTE_APROBACION'].includes(estado) && !!t.aprobado_por_adminsede_id;
+  const puedeAprobarAdmin = can('ms-bienes:transferencias:change_transferencia') && estado === 'PENDIENTE_APROBACION' && !!t.aprobado_por_adminsede_id;
   const puedeAprobarSegur = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado);
+  const puedeAprobarretornoSegur = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&&!!t.aprobado_segur_salida_id;
   const esUsuarioFinal  = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia');
   const mostrarDescargaPDF =(esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA' ||estado=='ATENDIDO' && (t.pdf_path || t.tiene_pdf_firmado) ;
   const mostrarSubirActa = (esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA'  && !t.tiene_pdf_firmado; 
@@ -361,7 +362,7 @@ export default function ModalDetalleTransferencia({
         <button onClick={onClose} className="btn-secondary">Cerrar</button>
 
         <div className="flex items-center gap-2 flex-wrap">
-            {estado === 'PENDIENTE_APROBACION' && puedeAprobarAdmin && can('ms-bienes:transferencias:view_transferenciaaprobacion') && (
+            { puedeAprobarAdmin  && (
             <>
               <button
                 onClick={() => ejecutar(acciones.devolver, t.id, 'Devuelto para corrección')}
@@ -379,7 +380,8 @@ export default function ModalDetalleTransferencia({
               </button>
             </>
           )}
-            {esTraslado && estado === 'PENDIENTE_APROBACION' && puedeAprobarSegur && can('ms-bienes:transferencias:view_transferenciaaprobacion') && (
+
+            {puedeAprobarSegur && (
             <>
               <button onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} disabled={actualizando}
                 className="btn-primary flex items-center gap-2">
@@ -391,6 +393,19 @@ export default function ModalDetalleTransferencia({
               </button>
             </>
           )}
+          {puedeAprobarretornoSegur && (               
+            <button onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
+              className="btn-primary flex items-center gap-2">
+              <Icon name="return" className="text-[16px]" />Aprobar retorno Salida
+            </button>
+              )}
+              {puedeAprobarretornoSegur && t.aprobado_retorno_salida_id &&(
+            <button onClick={() => ejecutar(acciones.retornoEntrada, t.id)} disabled={actualizando}
+              className="btn-primary flex items-center gap-2">
+              <Icon name="return" className="text-[16px]" />Aprobar retorno Entrada
+            </button>            
+          )}
+
         </div>
       </ModalFooter>
     </Modal>
