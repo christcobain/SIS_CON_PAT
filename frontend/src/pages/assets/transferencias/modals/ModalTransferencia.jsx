@@ -195,7 +195,7 @@ const FORM_BASE = {
 
 export default function ModalTransferencia({
   open, onClose, activeTab, item, actualizando,
-  crearTraslado, crearAsignacion, reenviarTransferencia, onGuardado,
+  crearTraslado, crearAsignacion, reenviarTransferencia, obtenerTransf,onGuardado,
 }) {
   const toast      = useToast();
   const isTraslado = activeTab === 'TRASLADO_SEDE';
@@ -214,6 +214,7 @@ export default function ModalTransferencia({
   const [buscador,  setBuscador]  = useState('');
   const [errors,    setErrors]    = useState({});
   const [confirm,   setConfirm]   = useState(false);
+  const [cargandoDatos, setCargandoDatos] = useState(false);
   const [guardando, setGuardando] = useState(false);
   console.log('item= ',item)
 
@@ -236,6 +237,7 @@ export default function ModalTransferencia({
       setForm({ ...FORM_BASE, sede_destino_id: isTraslado ? '' : String(sede_auth_id ?? '') });
     }
   }, [open, item?.id, isTraslado]);
+  
 
   // ── Al cambiar sede destino, cargar usuarios de esa sede ────────────────────
   useEffect(() => {

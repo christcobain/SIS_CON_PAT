@@ -68,6 +68,7 @@ export function useTransferencias(activeTab, params) {
     actualizando,
     refetch: fetchTransferencias,
     descargarPDFTransf,
+    obtenerTransf:             (id)          => transferenciasService.obtener(id),
     crearTraslado:          (data)         => ejecutarYRefrescar(transferenciasService.crearTraslado, data),
     crearAsignacion:        (data)         => ejecutarYRefrescar(transferenciasService.crearAsignacion, data),
     aprobarAdminsede:       (id)           => ejecutarYRefrescar(transferenciasService.aprobarAdminsede, id),
