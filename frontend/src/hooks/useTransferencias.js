@@ -46,7 +46,7 @@ export function useTransferencias(activeTab, params) {
     }
   };
 
-  const descargarPDF = async (id) => {
+  const descargarPDFTransf = async (id) => {
     try {
       const blob = await transferenciasService.descargarPDF(id);
       const url  = window.URL.createObjectURL(blob);
@@ -67,13 +67,15 @@ export function useTransferencias(activeTab, params) {
     error,
     actualizando,
     refetch: fetchTransferencias,
-    descargarPDF,
+    descargarPDFTransf,
     crearTraslado:          (data)         => ejecutarYRefrescar(transferenciasService.crearTraslado, data),
     crearAsignacion:        (data)         => ejecutarYRefrescar(transferenciasService.crearAsignacion, data),
     aprobarAdminsede:       (id)           => ejecutarYRefrescar(transferenciasService.aprobarAdminsede, id),
-    devolverAprobacion:     (id, motivo)   => ejecutarYRefrescar(transferenciasService.devolver, id, motivo),
+    devolver:     (id, motivo)   => ejecutarYRefrescar(transferenciasService.devolver, id, motivo),
     aprobarSalidaSeguridad: (id, data)     => ejecutarYRefrescar(transferenciasService.aprobarSalidaSeguridad, id, data),
     aprobarEntradaSeguridad:(id, data)     => ejecutarYRefrescar(transferenciasService.aprobarEntradaSeguridad, id, data),
+    rechazarSalidaSeguridad:(id, data)     => ejecutarYRefrescar(transferenciasService.rechazarSalidaSeguridad, id, data),
+    rechazarEntradaSeguridad:(id, data)    => ejecutarYRefrescar(transferenciasService.rechazarEntradaSeguridad, id, data),
     retornoSalida:          (id, data)     => ejecutarYRefrescar(transferenciasService.retornoSalida, id, data),
     retornoEntrada:         (id, data)     => ejecutarYRefrescar(transferenciasService.retornoEntrada, id, data),
     reenviarTransferencia:  (id, data)     => ejecutarYRefrescar(transferenciasService.reenviar, id, data),

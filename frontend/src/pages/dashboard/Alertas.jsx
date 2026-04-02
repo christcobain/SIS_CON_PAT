@@ -95,9 +95,11 @@ export default function Alertas() {
     devolver,
     aprobarSalidaSeguridad,
     aprobarEntradaSeguridad,
+    rechazarSalidaSeguridad,
+    rechazarEntradaSeguridad,
     retornoSalida,
     retornoEntrada,
-    descargarPDF: descargarPDFTransf,
+    descargarPDFTransf,
     subirFirmado,
     refetch: refetchTransf,
   } = useTransferencias('TRASLADO_SEDE', { misTransferencias: false, usuarioId: user?.id });
@@ -139,11 +141,13 @@ export default function Alertas() {
   // ── Transferencias handlers ───────────────────────────────────────────────
   const handleVerDetalleTransf = (item) => { 
     setItemDetalleTransf(item); 
-    setModalDetalleTransf(true); };
-  const handleDownloadTransf   = async (id) => {
-    try { await descargarPDFTransf(id); }
-    catch (e) { toast.error(e?.response?.data?.error || 'No se pudo generar el documento'); }
+    setModalDetalleTransf(true); 
   };
+
+  // const handleDownloadTransf   = async (id) => {
+  //   try { await descargarPDFTransf(id); }
+  //   catch (e) { toast.error(e?.response?.data?.error || 'No se pudo generar el documento'); }
+  // };
 
   // ── Mantenimientos handlers ───────────────────────────────────────────────
   const handleVerDetalleMant = (item) => { setItemActivoMant(item); setModalDetalleMant(true); };
@@ -249,8 +253,13 @@ export default function Alertas() {
               <AlertasPendientesTransferencias
                 onVerDetalle={handleVerDetalleTransf}
                 item={itemDetalleTransf}
-                onDownload={handleDownloadTransf}
-                subirFirmado={subirFirmado}
+                acciones={{
+                  aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
+                  rechazarSalidaSeguridad, rechazarEntradaSeguridad,
+                  retornoSalida, retornoEntrada, devolver,
+                  descargarPDFTransf, subirFirmado,
+                }}
+                onAccionExitosa={() => { setModalDetalleTransf(false); refetchTransf(); notificarYRefrescar(); }}
               />
             </div>
           )}
@@ -307,8 +316,9 @@ export default function Alertas() {
             actualizando={actualizando}
             acciones={{
               aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
+              rechazarSalidaSeguridad, rechazarEntradaSeguridad,
               retornoSalida, retornoEntrada, devolver,
-              descargarPDF: descargarPDFTransf, subirFirmado,
+              descargarPDFTransf, subirFirmado,
             }}
             onAccionExitosa={() => { setModalDetalleTransf(false); refetchTransf(); notificarYRefrescar(); }}
           />

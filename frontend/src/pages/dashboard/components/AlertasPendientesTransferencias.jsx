@@ -39,7 +39,6 @@ function MiniModalMotivo({ open, onClose, onConfirm, loading, titulo, placeholde
     onConfirm(motivo.trim());
     setMotivo('');
   };
-
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center"
@@ -120,312 +119,181 @@ function InfoChip({ icon, label, color }) {
 }
 
 // ── Tarjeta individual de transferencia ───────────────────────────────────────
-function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,subirFirmado,user }) {
-  const toast   = useToast();
+function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado, user, acciones }) {
+  const toast = useToast();
   const fileRef = useRef();
-  const [busy,    setBusy]    = useState(false);
+  const [busy, setBusy] = useState(false);
   const [modalDv, setModalDv] = useState(null);
-  const estado     = t.estado_transferencia;
-  const esTraslado = t.tipo === 'TRASLADO_SEDE';
-  console.log(t)
-  const bienes     = t.bienes ?? [];
-  const esAdminAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
-  const esSegur          = ['SEGURSEDE', 'SYSADMIN'].includes(role);
-  const esASISTSISTEMA   = ['ASISTSISTEMA', 'SYSADMIN'].includes(role);
-  const miSede = String(sedeId);
 
-  const adminAprobado   = !!t.aprobado_por_adminsede_id;
-  const segurSalidaOk   = !!t.aprobado_segur_salida_id;
-  const segurEntradaOk  = !!t.aprobado_segur_entrada_id;
+  const {
+    aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
+    rechazarSalidaSeguridad, rechazarEntradaSeguridad,
+    retornoSalida, retornoEntrada, devolver,
+    descargarPDFTransf, subirFirmado
+  } = acciones;
+
+  const estado = t.estado_transferencia;
+  const esTraslado = t.tipo === 'TRASLADO_SEDE';
+  const esAdminAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
+  const esSegur = ['SEGURSEDE', 'SYSADMIN'].includes(role);
+  const esASISTSISTEMA = ['ASISTSISTEMA', 'SYSADMIN'].includes(role);
+  const miSede = String(sedeId);
+  const adminAprobado = !!t.aprobado_por_adminsede_id;
+  const segurSalidaOk = !!t.aprobado_segur_salida_id;
+  const segurEntradaOk = !!t.aprobado_segur_entrada_id;
   const retornoSalidaOk = !!t.aprobado_retorno_salida_id;
-  const sedeOrigen  = String(t.sede_origen_id  ?? '');
+  const sedeOrigen = String(t.sede_origen_id ?? '');
   const sedeDestino = String(t.sede_destino_id ?? '');
 
-   const puedeAprobarAdmin =
-    esAdminAprobador &&
-    estado === 'PENDIENTE_APROBACION' &&
-    !adminAprobado;
+  const puedeAprobarAdmin = esAdminAprobador && estado === 'PENDIENTE_APROBACION' && !adminAprobado;
+  const puedeAprobarSalida = esSegur && esTraslado && estado === 'PENDIENTE_APROBACION' && adminAprobado && !segurSalidaOk && sedeOrigen === miSede;
+  const puedeAprobarEntrada = esSegur && esTraslado && estado === 'PENDIENTE_APROBACION' && segurSalidaOk && !segurEntradaOk && sedeDestino === miSede;
+  const puedeConfirmarRecepcion = esASISTSISTEMA && esTraslado && estado === 'EN_ESPERA_CONFORMIDAD' && sedeDestino === miSede;
+  const puedeDescargarPDF = esASISTSISTEMA && estado === 'EN_ESPERA_FIRMA' && ((esTraslado && sedeDestino === miSede) || (!esTraslado && (sedeOrigen === miSede || sedeDestino === miSede)));
+  const puedeSubirActa = puedeDescargarPDF;
+  const puedeRetornoSalida = esSegur && esTraslado && estado === 'EN_RETORNO' && !retornoSalidaOk && sedeDestino === miSede;
+  const puedeRetornoEntrada = esSegur && esTraslado && estado === 'EN_RETORNO' && retornoSalidaOk && !t.aprobado_retorno_entrada_id && sedeOrigen === miSede;
 
-  const puedeAprobarSalida =
-    esSegur && esTraslado &&
-    estado === 'PENDIENTE_APROBACION' &&
-    adminAprobado && !segurSalidaOk &&
-    sedeOrigen === miSede;
-
-  const puedeAprobarEntrada =
-    esSegur && esTraslado &&
-    estado === 'PENDIENTE_APROBACION' &&
-    segurSalidaOk && !segurEntradaOk &&
-    sedeDestino === miSede;
-
-  const puedeConfirmarRecepcion =
-    esASISTSISTEMA && esTraslado &&
-    estado === 'EN_ESPERA_CONFORMIDAD' &&
-    sedeDestino === miSede;
-
-  const soloInformativoConformidad =
-    esAdminAprobador && !esASISTSISTEMA && esTraslado &&
-    estado === 'EN_ESPERA_CONFORMIDAD' &&
-    sedeDestino === miSede;
-
-  const puedeDescargarPDF =
-    (esASISTSISTEMA ) &&
-    estado === 'EN_ESPERA_FIRMA' &&
-    (
-      (esTraslado  && sedeDestino === miSede) ||
-      (!esTraslado && (sedeOrigen === miSede || sedeDestino === miSede))
-    );
-  const puedeSubirActa=puedeDescargarPDF ;
-
-  const puedeRetornoSalida =
-    esSegur && esTraslado &&
-    estado === 'EN_RETORNO' &&
-    !retornoSalidaOk &&
-    sedeDestino === miSede;
-
-  const puedeRetornoEntrada =
-    esSegur && esTraslado &&
-    estado === 'EN_RETORNO' &&
-    retornoSalidaOk &&
-    !t.aprobado_retorno_entrada_id && t.aprobado_retorno_salida_id&&
-    sedeOrigen === miSede;
-  const hayAccionPrimaria = puedeAprobarAdmin || puedeAprobarSalida || puedeAprobarEntrada ||
-                            puedeConfirmarRecepcion || puedeSubirActa ||
-                            puedeRetornoSalida || puedeRetornoEntrada;
-
-  // ── Ejecutor genérico ────────────────────────────────────────────────────
-  const accion = async (fn, msg) => {
+  const ejecutar = async (fn, ...args) => {
+    if (!fn) return;
     setBusy(true);
     try {
-      await fn();
-      toast.success(msg);
+      const res = await fn(...args);
+      toast.success(res?.message || res?.response?.data?.message || 'Operación realizada con éxito');
       onAprobado();
     } catch (e) {
-      toast.error(e?.response?.data?.error || e?.response?.data?.detail ||e?.detail || 'Error al procesar.');
+      toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Error al procesar la solicitud');
     } finally {
       setBusy(false);
     }
   };
-  const handleDevolver        = async (m) => { 
-    setModalDv(null); 
-    const result=await accion(() => transferenciasService.devolver(t.id, { motivo_devolucion: m }), result.message||result.response?.data?.message || 'Transferencia devuelta al registrador.'); };
-  const handleRechazarSalida  = async (m) => { 
-    setModalDv(null); 
-    const result=await accion(() => transferenciasService.rechazarSalidaSeguridad(t.id, { motivo_devolucion: m }), result.message||result.response?.data?.message || 'Salida física rechazada. En retorno.'); 
-  };
-  const handleRechazarEntrada = async (m) => { 
-    setModalDv(null); 
-    const result=await accion(() => transferenciasService.rechazarEntradaSeguridad(t.id, { motivo_devolucion: m }), result.message||result.response?.data?.message || 'Entrada rechazada. En retorno.'); 
-  };
 
-  const handleSubirFirmado = async e => {
+  const handleSubirFirmado = async (e) => {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
-    setBusy(true);
-    try {      
-      const result = await subirFirmado(t.id, archivo, user?.id);
-      toast.success(result?.message || 'Acta firmada subida correctamente.');
-      onAprobado();
-    } catch (err) {
-      toast.error(err?.response?.data?.error || 'Error al subir el acta.');
-    } finally {
-      setBusy(false);
-    }
+    await ejecutar(subirFirmado, t.id, archivo, user?.id);
+    if (fileRef.current) fileRef.current.value = "";
   };
-
-  const getPaso = () => {
-    if (puedeAprobarAdmin)          return { paso: '①', desc: esTraslado ? 'Requiere aprobación de Admin Sede' : 'Requiere aprobación de Admin Sede', color: 'var(--color-primary)' };
-    if (puedeAprobarSalida)         return { paso: '②', desc: 'Requiere V°B° de Seguridad — Salida física (tu sede)', color: '#7c3aed' };
-    if (puedeAprobarEntrada)        return { paso: '③', desc: 'Requiere V°B° de Seguridad — Entrada física (tu sede)', color: '#1d4ed8' };
-    if (puedeConfirmarRecepcion)    return { paso: '④', desc: 'Requiere confirmación de recepción del destinatario', color: '#1d4ed8' };
-    if (soloInformativoConformidad) return { paso: '④', desc: 'Esperando que el asistente de destino confirme la recepción', color: '#94a3b8' };
-    if (puedeSubirActa)             return { paso: '⑦', desc: 'Acta lista — descárgala, fírmala físicamente y sube el escaneado', color: '#7c3aed' };
-    if (puedeRetornoSalida)         return { paso: '⑤', desc: 'Bien en retorno — confirmar salida desde tu sede', color: '#b45309' };
-    if (puedeRetornoEntrada)        return { paso: '⑥', desc: 'Bien en retorno — confirmar llegada a sede origen', color: '#16a34a' };
-    return null;
-  };
-
-  const paso = getPaso();
-
-  const MODAL_CFG = {
-    devolver:         { titulo: 'Devolver al registrador',     placeholder: 'Describe el motivo de la devolución...' },
-    rechazar_salida:  { titulo: 'Rechazar salida física',      placeholder: 'Describe el motivo del rechazo de salida...' },
-    rechazar_entrada: { titulo: 'Rechazar entrada — retorno',  placeholder: 'Describe el motivo del rechazo de entrada...' },
-  };
-  const modalCfg = modalDv ? MODAL_CFG[modalDv] : null; 
 
   return (
-    <>     
-      <div
-        className="card p-4 hover:shadow-md transition-shadow"
-        style={{
-          borderLeft: puedeSubirActa
-            ? '3px solid rgb(124 58 237 / 0.5)'
-            : soloInformativoConformidad
-            ? '3px solid rgb(37 99 235 / 0.3)'
-            : undefined,
-        }}
-      >
-        <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="size-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
-              style={{ background: esTraslado ? 'rgb(37 99 235 / 0.08)' : 'rgb(127 29 29 / 0.08)' }}>
-              <Icon
-                name={esTraslado ? 'local_shipping' : 'person_add'}
-                className="text-[20px]"
-                style={{ color: esTraslado ? '#1d4ed8' : 'var(--color-primary)' }}
-              />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-xs font-black" style={{ color: 'var(--color-text-primary)' }}>{t.numero_orden}</p>
-                <EstadoChip estado={estado} />
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"
-                  style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
-                  {esTraslado ? 'Traslado' : 'Asignación'}
-                </span>
-              </div>              
-              <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
-                Origen: <strong>{t.sede_origen_nombre ?? `Sede #${t.sede_origen_id}`}</strong>
-                {esTraslado && (
-                  <> <span className="mx-1 opacity-40">→</span> Destino: <strong>{t.sede_destino_nombre ?? `Sede #${t.sede_destino_id}`}</strong></>
-                )}
-              </p>
-              <p className="text-[10px]" style={{ color: 'var(--color-text-faint)' }}>
-                Fecha / Hora registro: {fmtT(t.fecha_registro)} - Cantidad:  {bienes.length} bien(es)
-              </p>
-              {bienes.length > 0 && (
-                <p className="text-[10px] mt-0.5 font-mono truncate max-w-sm" style={{ color: 'var(--color-text-muted)' }}>
-                  {bienes.slice(0, 2).map(b => `${b.tipo_bien_nombre ?? 'Bien'} ${b.codigo_patrimonial ?? b.numero_serie ?? ''}`).join(' · ')}
-                  {bienes.length > 2 && ` +${bienes.length - 2} más`}
-                </p>
-              )}
-            </div>
+    <div className="card p-4 rounded-2xl relative border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm transition-all hover:shadow-md">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onDetalle(t)}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider" 
+                  style={{ background: t.tipo === 'TRASLADO_SEDE' ? 'rgb(59 130 246 / 0.1)' : 'rgb(16 185 129 / 0.1)', color: t.tipo === 'TRASLADO_SEDE' ? '#2563eb' : '#059669' }}>
+              {t.tipo?.replace('_', ' ')}
+            </span>
+            <span className="text-xs font-mono font-medium text-[var(--color-text-muted)]">#{t.correlativo || t.id}</span>
           </div>
-
-          <button
-            onClick={() => onDetalle(t)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer shrink-0"
-            style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-body)' }}
-          >
-            <Icon name="visibility" className="text-[14px]" />
-            Detalle
-          </button>
+          <p className="text-sm font-bold truncate mb-1 text-[var(--color-text)]">{t.motivo || 'Sin motivo'}</p>
+          <div className="flex items-center gap-4 text-[11px] text-[var(--color-text-faint)]">
+            <div className="flex items-center gap-1"><Icon name="calendar_today" className="text-[14px]" /> {new Date(t.created_at).toLocaleDateString()}</div>
+            <div className="flex items-center gap-1"><Icon name="inventory_2" className="text-[14px]" /> {t.bienes_count || 0} bienes</div>
+          </div>
         </div>
 
-        {paso && (
-          <div
-            className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3"
-            style={{ background: `${paso.color}08`, border: `1px dashed ${paso.color}30` }}
-          >
-            <span className="text-[12px] font-black shrink-0" style={{ color: paso.color }}>{paso.paso}</span>
-            <p className="text-[10px] font-semibold" style={{ color: 'var(--color-text-muted)' }}>{paso.desc}</p>
-          </div>
-        )}
+        <div className="flex flex-col gap-2 shrink-0 items-end">
+          {puedeAprobarAdmin && (
+            <>
+              <button disabled={busy} onClick={() => ejecutar(aprobarAdminsede, t.id)} className="btn-primary py-2 px-4 text-xs flex items-center gap-2">
+                {busy ? <span className="btn-loading-spin" /> : <Icon name="verified" className="text-sm" />} Aprobar {t.tipo === 'ASIGNACION_DIRECTA' ? 'Asignación' : 'Traslado'}
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); setModalDv('DEVOLVER'); }} className="text-[11px] font-bold uppercase tracking-tight text-[#b45309] hover:underline">
+                Devolver
+              </button>
+            </>
+          )}
 
-        <div className="flex items-center gap-2 flex-wrap border-t pt-3" style={{ borderColor: 'var(--color-border-light)' }}>
+          {puedeAprobarSalida && (
+            <>
+              <button disabled={busy} onClick={() => ejecutar(aprobarSalidaSeguridad, t.id)} className="btn-primary py-2 px-4 text-xs flex items-center gap-2">
+                {busy ? <span className="btn-loading-spin" /> : <Icon name="output" className="text-sm" />} Aprobar Salida
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); setModalDv('RECHAZAR_SALIDA'); }} className="text-[11px] font-bold uppercase tracking-tight text-[#dc2626] hover:underline">
+                Rechazar Salida
+              </button>
+            </>
+          )}
 
-          {puedeAprobarAdmin && (<>
-            <ActionBtn icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'}
-              color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
-              disabled={busy}
-              onClick={() => accion(() => transferenciasService.aprobarAdminsede(t.id), 'Transferencia aprobada.')} />
-            <ActionBtn icon="reply" label="Devolver"
-              color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
-              disabled={busy} onClick={() => setModalDv('devolver')} />
-          </>)}
-
-          {puedeAprobarSalida && (<>
-            <ActionBtn icon="output" label="V°B° Salida Sede"
-              color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)"
-              disabled={busy}
-              onClick={() => accion(() => transferenciasService.aprobarSalidaSeguridad(t.id, {}), 'Salida física aprobada.')} />
-            <ActionBtn icon="block" label="Rechazar Salida"
-              color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
-              disabled={busy} onClick={() => setModalDv('rechazar_salida')} />
-          </>)}
-
-          {puedeAprobarEntrada && (<>
-            <ActionBtn icon="input" label="V°B° Entrada Sede"
-              color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
-              disabled={busy}
-              onClick={() => accion(() => transferenciasService.aprobarEntradaSeguridad(t.id, {}), 'Entrada física aprobada.')} />
-            <ActionBtn icon="keyboard_return" label="Rechazar Entrada"
-              color="#c2410c" bgColor="rgb(194 65 12 / 0.06)" borderColor="rgb(194 65 12 / 0.25)"
-              disabled={busy} onClick={() => setModalDv('rechazar_entrada')} />
-          </>)}
+          {puedeAprobarEntrada && (
+            <>
+              <button disabled={busy} onClick={() => ejecutar(aprobarEntradaSeguridad, t.id)} className="btn-primary py-2 px-4 text-xs flex items-center gap-2">
+                {busy ? <span className="btn-loading-spin" /> : <Icon name="input" className="text-sm" />} Aprobar Entrada
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); setModalDv('RECHAZAR_ENTRADA'); }} className="text-[11px] font-bold uppercase tracking-tight text-[#dc2626] hover:underline">
+                Rechazar Entrada
+              </button>
+            </>
+          )}
 
           {puedeConfirmarRecepcion && (
-            <ActionBtn icon="front_hand" label="Confirmar Usuari Final"
-              color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
-              disabled={busy}
-              onClick={() => accion(() => transferenciasService.confirmarRecepcion(t.id, {}), 'Recepción confirmada. Descarga el acta y súbela firmada.')} />
+            <button disabled={busy} onClick={() => onDetalle(t)} className="btn-primary py-2 px-4 text-xs flex items-center gap-2 bg-[#7c3aed] border-[#7c3aed]">
+              <Icon name="check_circle" className="text-sm" /> Confirmar Recepción
+            </button>
           )}
 
-          {soloInformativoConformidad && (
-            <InfoChip icon="hourglass_top" label="Esperando confirmación del asistente de destino" color="#64748b" />
-          )}
-          
-          {puedeDescargarPDF && (            
-            <ActionBtn icon="download" label="Descargar Acta PDF"
-              color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)"
-              disabled={busy}
-              onClick={() => onDownload(t.id)} />
-          )}
-            <input 
-            ref={fileRef} 
-            type="file" 
-            accept=".pdf,.jpg,.jpeg,.png" 
-            className="hidden" 
-            onChange={handleSubirFirmado} />
           {puedeSubirActa && (
-            <ActionBtn icon="upload_file" label="Subir Acta Firmada"
-              color="#7c3aed" bgColor="rgb(124 58 237 / 0.12)" borderColor="rgb(124 58 237 / 0.45)"
-              disabled={busy} 
-              onClick={() => fileRef.current?.click()} />
+            <div className="flex gap-2">
+              <button disabled={busy} onClick={() => descargarPDFTransf(t.id)} className="p-2 rounded-xl border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors">
+                <Icon name="picture_as_pdf" />
+              </button>
+              <button disabled={busy} onClick={() => fileRef.current?.click()} className="btn-primary py-2 px-4 text-xs flex items-center gap-2">
+                <Icon name="upload_file" className="text-sm" /> Subir Acta
+              </button>
+              <input ref={fileRef} type="file" hidden accept=".pdf" onChange={handleSubirFirmado} />
+            </div>
           )}
 
           {puedeRetornoSalida && (
-            <ActionBtn icon="undo" label="Confirmar Retorno Salida"
-              color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)"
-              disabled={busy}
-              onClick={() => accion(() => transferenciasService.retornoSalida(t.id, {}), 'Salida de retorno confirmada.')} />
+            <button disabled={busy} onClick={() => ejecutar(retornoSalida, t.id)} className="btn-primary py-2 px-4 text-xs flex items-center gap-2 bg-[#c2410c] border-[#c2410c]">
+              {busy ? <span className="btn-loading-spin" /> : <Icon name="assignment_return" className="text-sm" />} Registrar Retorno (Salida)
+            </button>
           )}
 
           {puedeRetornoEntrada && (
-            <ActionBtn icon="home" label="Confirmar Retorno Entrada"
-              color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
-              disabled={busy}
-              onClick={() => accion(() => transferenciasService.retornoEntrada(t.id, {}), 'Retorno completado.')} />
-          )}
-
-          {!hayAccionPrimaria && !soloInformativoConformidad && (
-            <p className="text-[10px] italic" style={{ color: 'var(--color-text-faint)' }}>
-              Sin acciones disponibles para tu rol en esta etapa.
-            </p>
+            <button disabled={busy} onClick={() => ejecutar(retornoEntrada, t.id)} className="btn-primary py-2 px-4 text-xs flex items-center gap-2 bg-[#c2410c] border-[#c2410c]">
+              {busy ? <span className="btn-loading-spin" /> : <Icon name="assignment_return" className="text-sm" />} Registrar Retorno (Entrada)
+            </button>
           )}
         </div>
       </div>
 
-      {/* Modal de motivo */}
-      {modalDv && modalCfg && (
+      {modalDv === 'DEVOLVER' && (
         <MiniModalMotivo
-          open={!!modalDv} onClose={() => setModalDv(null)} loading={busy}
-          titulo={modalCfg.titulo} placeholder={modalCfg.placeholder}
-          onConfirm={
-            modalDv === 'devolver' ? handleDevolver
-            : modalDv === 'rechazar_salida' ? handleRechazarSalida
-            : modalDv === 'rechazar_entrada'? handleRechazarEntrada
-            : null
-          }
+          onClose={() => setModalDv(null)}
+          onConfirm={(m) => { setModalDv(null); ejecutar(devolver, t.id, { motivo_devolucion: m }); }}
+          title="Devolver transferencia"
+          label="Motivo de la devolución"
+          color="#b45309"
         />
       )}
-    </>
+
+      {modalDv === 'RECHAZAR_SALIDA' && (
+        <MiniModalMotivo
+          onClose={() => setModalDv(null)}
+          onConfirm={(m) => { setModalDv(null); ejecutar(rechazarSalidaSeguridad, t.id, { motivo_devolucion: m }); }}
+          title="Rechazar salida física"
+          label="Motivo del rechazo"
+          color="#dc2626"
+        />
+      )}
+
+      {modalDv === 'RECHAZAR_ENTRADA' && (
+        <MiniModalMotivo
+          onClose={() => setModalDv(null)}
+          onConfirm={(m) => { setModalDv(null); ejecutar(rechazarEntradaSeguridad, t.id, { motivo_devolucion: m }); }}
+          title="Rechazar entrada"
+          label="Motivo del rechazo"
+          color="#dc2626"
+        />
+      )}
+    </div>
   );
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function AlertasPendientesTransferencias({ onVerDetalle,onDownload,subirFirmado }) {
+export default function AlertasPendientesTransferencias({ onVerDetalle,acciones}) {
   const role   = useAuthStore(s => s.role);
   const sedes  = useAuthStore(s => s.sedes);
   const user = useAuthStore(s => s.user);
@@ -507,8 +375,7 @@ export default function AlertasPendientesTransferencias({ onVerDetalle,onDownloa
           sedeId={sedeId}
           onDetalle={onVerDetalle}
           onAprobado={refresh}
-          onDownload={onDownload}
-          subirFirmado={subirFirmado}
+          acciones={acciones}
           user={user}
         />
       ))}
