@@ -258,7 +258,7 @@ export default function ModalTransferencia({
     } else {
       setForm({ ...FORM_BASE, sede_destino_id: isTraslado ? '' : String(sede_auth_id ?? '') });
     }
-  }, [open, item?.id, isTraslado,fetchCatalogos,isEditar,obtenerTransf,sede_auth_id,item,motivosTransferencia]);
+  }, [open, item?.id, isTraslado,fetchCatalogos,isEditar,obtenerTransf,sede_auth_id]);
 
   const itemData = itemCompleto ?? item;
 
