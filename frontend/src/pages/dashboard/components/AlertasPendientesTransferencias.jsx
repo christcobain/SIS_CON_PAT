@@ -336,7 +336,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
           </>)}
 
           {puedeAprobarSalida && (<>
-            <ActionBtn icon="output" label="V°B° Salida"
+            <ActionBtn icon="output" label="V°B° Salida Sede"
               color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)"
               disabled={busy}
               onClick={() => accion(() => transferenciasService.aprobarSalidaSeguridad(t.id, {}), 'Salida física aprobada.')} />
@@ -346,7 +346,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
           </>)}
 
           {puedeAprobarEntrada && (<>
-            <ActionBtn icon="input" label="V°B° Entrada"
+            <ActionBtn icon="input" label="V°B° Entrada Sede"
               color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
               disabled={busy}
               onClick={() => accion(() => transferenciasService.aprobarEntradaSeguridad(t.id, {}), 'Entrada física aprobada.')} />
@@ -356,7 +356,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
           </>)}
 
           {puedeConfirmarRecepcion && (
-            <ActionBtn icon="front_hand" label="Confirmar Recepción"
+            <ActionBtn icon="front_hand" label="Confirmar Usuari Final"
               color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
               disabled={busy}
               onClick={() => accion(() => transferenciasService.confirmarRecepcion(t.id, {}), 'Recepción confirmada. Descarga el acta y súbela firmada.')} />
