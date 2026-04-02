@@ -551,12 +551,14 @@ class TransferenciaViewSet(ViewSet):
     @action(detail=True, methods=['patch'], url_path='cancelar')
     def cancelar(self, request, pk=None):
         ser = CancelacionSerializer(data=request.data)
+        role = self._get_role(request)
         ser.is_valid(raise_exception=True)
         result = TransferenciaService.cancelar(
             pk,
             request.user.id,
             ser.validated_data['motivo_cancelacion_id'],
             ser.validated_data.get('detalle_cancelacion', ''),
+            role
         )
         return Response(result, status=status.HTTP_200_OK)
 
@@ -609,10 +611,11 @@ class TransferenciaViewSet(ViewSet):
             parser_classes=[MultiPartParser, FormParser])
     def cerrar_con_firma(self, request, pk=None):
         archivo = request.FILES.get('archivo')
+        role= self._get_role(request)
         if not archivo:
             return Response(
                 {'success': False, 'error': 'Se requiere el campo archivo (PDF o imagen escaneada).'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        result = TransferenciaService.cerrar_con_firma(pk, archivo, request.user.id)
+        result = TransferenciaService.cerrar_con_firma(pk, archivo, request.user.id,role)
         return Response(result, status=status.HTTP_200_OK)

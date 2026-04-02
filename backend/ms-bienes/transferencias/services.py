@@ -347,7 +347,8 @@ class TransferenciaService:
                 'aprobado_por_adminsede_id':  aprobador_id,
                 'fecha_aprobacion_adminsede': now,
             })
-            TransferenciaService._registrar_aprobacion(t, rol_historial, 'APROBADO', aprobador_id, detalle='Traslado aprobado. Pendiente aprobación de seguridad.')
+            TransferenciaService._registrar_aprobacion(
+                t, rol_historial, 'APROBADO', aprobador_id, detalle='Traslado aprobado. Pendiente aprobación de seguridad.')
         return {'success': True, 'message': 'Aprobación registrada exitosamente.'}
 
     @staticmethod
@@ -364,7 +365,8 @@ class TransferenciaService:
             'aprobado_por_adminsede_id':  None,
             'fecha_aprobacion_adminsede': None,
         })
-        TransferenciaService._registrar_aprobacion(t, rol_historial, 'DEVUELTO', aprobador_id, detalle=motivo)
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'DEVUELTO', aprobador_id, detalle=motivo)
         TransferenciaService._restaurar_estado_bienes(t, 'ACTIVO')
         return {'success': True, 'message': 'Transferencia devuelta para corrección.'}
 
@@ -409,7 +411,8 @@ class TransferenciaService:
             'aprobado_por_adminsede_id':  None,
             'fecha_aprobacion_adminsede': None,
         })
-        TransferenciaService._registrar_aprobacion(t, 'SEGUR_SALIDA', 'RECHAZADO', segursede_id, detalle=motivo)
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'DEVUELTO', segursede_id, detalle=motivo)
         TransferenciaService._restaurar_estado_bienes(t, 'ACTIVO')
         return {'success': True, 'message': 'Salida física rechazada.'}
 
@@ -454,7 +457,8 @@ class TransferenciaService:
             'estado_transferencia': 'EN_RETORNO',
             'motivo_devolucion':    motivo,
         })
-        TransferenciaService._registrar_aprobacion(t, 'SEGUR_ENTRADA', 'RECHAZADO', segursede_id, detalle=motivo)
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'RECHAZADO', segursede_id, detalle=motivo)
         return {'success': True, 'message': 'Entrada rechazada. Bien en retorno a sede origen.'}
 
     @staticmethod
@@ -474,13 +478,14 @@ class TransferenciaService:
             'fecha_confirmacion_destino':        now,
             'estado_transferencia':              'EN_ESPERA_FIRMA',
         })
-        TransferenciaService._registrar_aprobacion(t, 'USUARIO_DESTINO', 'APROBADO', usuario_destino_id, detalle='Recepción confirmada. Pendiente subir acta firmada.')
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'APROBADO', usuario_destino_id, detalle='Recepción confirmada. Pendiente subir acta firmada.')
         TransferenciaService._guardar_pdf(t, cookie=cookie)
         return {'success': True, 'message': 'Recepción confirmada. Descargue el acta, obtenga la firma del destinatario y suba el documento escaneado.'}
 
     @staticmethod
     @transaction.atomic
-    def cerrar_con_firma(pk: int, archivo, usuario_id: int) -> Dict[str, Any]:
+    def cerrar_con_firma(pk: int, archivo, usuario_id: int,role) -> Dict[str, Any]:
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia != 'EN_ESPERA_FIRMA':
             raise ValidationError(f'Solo se puede cerrar con firma en estado EN_ESPERA_FIRMA. Estado actual: {t.estado_transferencia}.')
@@ -501,7 +506,8 @@ class TransferenciaService:
             'estado_transferencia': 'ATENDIDO',
             'fecha_pdf':            timezone.now(),
         })
-        TransferenciaService._registrar_aprobacion(t, 'REGISTRADOR', 'APROBADO', usuario_id, detalle='Acta firmada recibida. Proceso ATENDIDO.')
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'ATENDIDO', usuario_id, detalle='Acta firmada recibida. Proceso ATENDIDO.')
         tipo_msg = 'Traslado' if t.tipo == 'TRASLADO_SEDE' else 'Asignación'
         return {'success': True, 'message': f'{tipo_msg} completado. Acta firmada registrada en el sistema.'}
 
@@ -541,7 +547,8 @@ class TransferenciaService:
             'fecha_aprobacion_retorno_salida': timezone.now(),
             'motivo_devolucion':               motivo or t.motivo_devolucion,
         })
-        TransferenciaService._registrar_aprobacion(t, 'SEGUR_RETORNO_SALIDA', 'APROBADO', segursede_id, detalle=motivo or 'Salida de retorno aprobada.')
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'DEVUELTO', segursede_id, detalle=motivo or 'Salida de retorno aprobada.')
         return {'success': True, 'message': 'Salida de retorno aprobada.'}
 
     @staticmethod
@@ -575,12 +582,13 @@ class TransferenciaService:
             'aprobado_retorno_entrada_id':      None,
             'fecha_aprobacion_retorno_entrada': None,
         })
-        TransferenciaService._registrar_aprobacion(t, 'SEGUR_RETORNO_ENTRADA', 'APROBADO', segursede_id, detalle=observacion or 'Bien retornado a sede origen.')
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'DEVUELTO', segursede_id, detalle=observacion or 'Bien retornado a sede origen.')
         return {'success': True, 'message': 'Retorno completado. El bien volvió a su sede origen.'}
 
     @staticmethod
     @transaction.atomic
-    def cancelar(pk, usuario_id, motivo_cancelacion_id, detalle):
+    def cancelar(pk, usuario_id, motivo_cancelacion_id, detalle,role):
         t = TransferenciaService._get_or_404(pk)
         if t.estado_transferencia in ('ATENDIDO', 'CANCELADO'):
             raise ValidationError(f'No se puede cancelar en estado "{t.estado_transferencia}".')
@@ -600,7 +608,8 @@ class TransferenciaService:
             'aprobado_retorno_entrada_id':      None,
             'fecha_aprobacion_retorno_entrada': None,
         })
-        TransferenciaService._registrar_aprobacion(t, 'REGISTRADOR', 'RECHAZADO', usuario_id, detalle=f'Cancelado. {detalle}')
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'CANCELADO', usuario_id, detalle=f'Cancelado. {detalle}')
         TransferenciaService._restaurar_estado_bienes(t, 'ACTIVO')
         return {'success': True, 'message': 'Transferencia cancelada.'}
 
@@ -659,7 +668,8 @@ class TransferenciaService:
             if campo in data:
                 update_data[campo] = data[campo]
         TransferenciaRepository.update_fields(t, update_data)
-        TransferenciaService._registrar_aprobacion(t, 'REGISTRADOR', 'APROBADO', usuario_id, detalle='Transferencia reenviada con correcciones.')
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'REGISTRADO', usuario_id, detalle='Transferencia reenviada con correcciones.')
         return {'success': True, 'message': 'Transferencia reenviada para aprobación.'}
 
     @staticmethod
@@ -677,9 +687,7 @@ class TransferenciaService:
         for tr in lista:
             TransferenciaService._enriquecer_transferencia(tr, token)
             _ = list(tr.detalles.all())
-        return lista
-        
-
+        return lista       
     @staticmethod
     def listar_pendientes_aprobacion(role: str, sede_id: int, modulo_id: int, token: str):
         ESTADOS_EXCLUIDOS = ['ATENDIDO', 'CANCELADO', 'EN_ESPERA_FIRMA']

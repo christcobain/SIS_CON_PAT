@@ -284,8 +284,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
                   style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
                   {esTraslado ? 'Traslado' : 'Asignación'}
                 </span>
-              </div>
-              {console.log(t)}
+              </div>              
               <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
                 Origen: <strong>{t.sede_origen_nombre ?? `Sede #${t.sede_origen_id}`}</strong>
                 {esTraslado && (
@@ -293,7 +292,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
                 )}
               </p>
               <p className="text-[10px]" style={{ color: 'var(--color-text-faint)' }}>
-                {fmtT(t.fecha_registro)} · {bienes.length} bien(es)
+                Fecha / Hora registro: {fmtT(t.fecha_registro)} - Cantidad:  {bienes.length} bien(es)
               </p>
               {bienes.length > 0 && (
                 <p className="text-[10px] mt-0.5 font-mono truncate max-w-sm" style={{ color: 'var(--color-text-muted)' }}>

@@ -212,8 +212,10 @@ export default function ModalDetalleTransferencia({
   const badge      = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
   const bienes     = t.bienes ?? [];  
   const puedeAprobarAdmin = can('ms-bienes:transferencias:change_transferencia') && estado === 'PENDIENTE_APROBACION' && !t.aprobado_por_adminsede_id;
-  const puedeAprobarSegur = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado);
-  const puedeAprobarretornoSegur = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&&!!t.aprobado_segur_salida_id;
+  const puedeAprobarSalida = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado);
+  const puedeAprobarEntrada = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado)&& t.aprobado_segur_salida_id;
+  const puedeRetornoSalida = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&& !t.aprobado_retorno_salida_id;
+  const puedeRetornoEntrada = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&& t.aprobado_retorno_salida_id;
   const esUsuarioFinal  = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia');
   const mostrarDescargaPDF =(esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA' ||estado=='ATENDIDO' && (t.pdf_path || t.tiene_pdf_firmado) ;
   const mostrarSubirActa = (esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA'  && !t.tiene_pdf_firmado; 
@@ -383,25 +385,26 @@ export default function ModalDetalleTransferencia({
             </>
           )}
 
-            {puedeAprobarSegur && (
-            <>
+            {puedeAprobarSalida && (
+     
               <button onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} disabled={actualizando}
                 className="btn-primary flex items-center gap-2">
                 <Icon name="output" className="text-[16px]" />Aprobar salida
               </button>
+              )}
+              {puedeAprobarEntrada && (
               <button onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} disabled={actualizando}
                 className="btn-primary flex items-center gap-2">
                 <Icon name="input" className="text-[16px]" />Aprobar entrada
-              </button>
-            </>
+              </button>       
           )}
-          {puedeAprobarretornoSegur && (               
+          {puedeRetornoSalida && (               
             <button onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
               className="btn-primary flex items-center gap-2">
               <Icon name="return" className="text-[16px]" />Aprobar retorno Salida
             </button>
               )}
-              {puedeAprobarretornoSegur && t.aprobado_retorno_salida_id &&(
+              {puedeRetornoEntrada && t.aprobado_retorno_salida_id &&(
             <button onClick={() => ejecutar(acciones.retornoEntrada, t.id)} disabled={actualizando}
               className="btn-primary flex items-center gap-2">
               <Icon name="return" className="text-[16px]" />Aprobar retorno Entrada
