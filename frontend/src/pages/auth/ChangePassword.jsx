@@ -90,30 +90,30 @@ export default function ChangePassword({ open, onClose, onSuccess, mode = 'volun
 
   const confirmaFeedback = confirmar ? (nueva === confirmar ? 'ok' : 'error') : null;
 
-  const validar = () => {
-    if (!usernameInput.trim())    { toast.error('Ingrese su usuario (DNI).');      return false; }
-    if (!actual)                  { toast.error('Ingrese su contraseña actual.');  return false; }
-    if (!nueva)                   { toast.error('Ingrese la nueva contraseña.');   return false; }
-    if (nueva !== confirmar)      { toast.error('Las contraseñas no coinciden.');  return false; }
-    return true;
-  };
+  // const validar = () => {
+  //   if (!usernameInput.trim())    { toast.error('Ingrese su usuario (DNI).');      return false; }
+  //   if (!actual)                  { toast.error('Ingrese su contraseña actual.');  return false; }
+  //   if (!nueva)                   { toast.error('Ingrese la nueva contraseña.');   return false; }
+  //   if (nueva !== confirmar)      { toast.error('Las contraseñas no coinciden.');  return false; }
+  //   return true;
+  // };
 
   const handleSubmit = async () => {
-    if (!validar()) return;
+    // if (!validar()) return;
     setErrores([]);
     try {
       await cambiarPassword(actual, nueva, usernameInput.trim());
       setExito(true);
-      toast.success('Contraseña actualizada correctamente.');
       setTimeout(() => onSuccess?.(), 1800);
     } catch (e) {
+      toast.error(e?.response?.data?.error || 'Error al cambiar la contraseña.');
       const raw  = e?.response?.data?.error ?? e?.response?.data?.detail;
       const lista = Array.isArray(raw) ? raw : raw ? [raw] : ['Error al cambiar la contraseña.'];
       setErrores(lista);
     }
   };
 
-  // Metadatos visuales según modo
+ 
   const meta = expired
     ? { icon: 'lock_clock', text: 'Contraseña Expirada',          color: '#ef4444', bg: '#fef2f2' }
     : warning
