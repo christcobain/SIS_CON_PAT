@@ -212,7 +212,7 @@ export default function ModalDetalleTransferencia({
   const esAsignacion = t.tipo === 'ASIGNACION_INTERNA';
   const badge      = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
   const bienes     = t.bienes ?? [];  
-  const puedeAprobarAdmin = can('ms-bienes:transferencias:change_transferencia') && ['PENDIENTE_APROBACION'].includes(estado);
+  const puedeAprobarAdmin = can('ms-bienes:transferencias:change_transferencia') && ['PENDIENTE_APROBACION'].includes(estado) && !!t.aprobado_por_adminsede_id;
   const puedeAprobarSegur = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado);
   const esUsuarioFinal  = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia');
   const mostrarDescargaPDF =(esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA' ||estado=='ATENDIDO' && (t.pdf_path || t.tiene_pdf_firmado) ;
