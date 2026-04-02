@@ -1,17 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
-import Modal         from '../../../../components/modal/Modal';
-import ModalHeader   from '../../../../components/modal/ModalHeader';
-import ModalBody     from '../../../../components/modal/ModalBody';
-import ModalFooter   from '../../../../components/modal/ModalFooter';
-import ConfirmDialog from '../../../../components/feedback/ConfirmDialog';
-import { useBienes }     from '../../../../hooks/useBienes';
-import { useLocaciones } from '../../../../hooks/useLocaciones';
-import { useUsuarios }   from '../../../../hooks/useUsuarios';
-import { useCatalogos }  from '../../../../hooks/useCatalogos';
-import { useBienesEnriquecidos } from '../../../../hooks/useBienesEnriquecidos';
-import { useAuthStore }  from '../../../../store/authStore';
-import { useToast }      from '../../../../hooks/useToast';
-import usuariosService   from '../../../../services/usuarios.service';
+import Modal         from '../../../components/modal/Modal';
+import ModalHeader   from '../../../components/modal/ModalHeader';
+import ModalBody     from '../../../components/modal/ModalBody';
+import ModalFooter   from '../../../components/modal/ModalFooter';
+import ConfirmDialog from '../../../components/feedback/ConfirmDialog';
+import { useBienes }     from '../../../hooks/useBienes';
+import { useLocaciones } from '../../../hooks/useLocaciones';
+import { useUsuarios }   from '../../../hooks/useUsuarios';
+import { useCatalogos }  from '../../../hooks/useCatalogos';
+import { useBienesEnriquecidos } from '../../../hooks/useBienesEnriquecidos';
+import { useAuthStore }  from '../../../store/authStore';
+import { useToast }      from '../../../hooks/useToast';
+import usuariosService   from '../../../services/usuarios.service';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
@@ -117,7 +117,7 @@ export default function ModalTransferencia({
             })));
           }
         } catch (err) {
-          toast.error("No se pudo cargar la información completa");
+          toast.error(err.response?.data?.error || "No se pudo cargar la información completa");
         } finally {
           setCargandoDetalle(false);
         }
