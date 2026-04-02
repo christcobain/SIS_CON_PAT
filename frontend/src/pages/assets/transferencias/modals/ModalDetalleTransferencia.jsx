@@ -389,25 +389,25 @@ export default function ModalDetalleTransferencia({
      
               <button onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} disabled={actualizando}
                 className="btn-primary flex items-center gap-2">
-                <Icon name="output" className="text-[16px]" />Aprobar salida
+                <Icon name="output" className="text-[16px]" />V°B° Salida
               </button>
               )}
               {puedeAprobarEntrada && (
               <button onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} disabled={actualizando}
                 className="btn-primary flex items-center gap-2">
-                <Icon name="input" className="text-[16px]" />Aprobar entrada
+                <Icon name="input" className="text-[16px]" />V°B° Entrada
               </button>       
           )}
           {puedeRetornoSalida && (               
             <button onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
               className="btn-primary flex items-center gap-2">
-              <Icon name="return" className="text-[16px]" />Aprobar retorno Salida
+              <Icon name="return" className="text-[16px]" />V°B° retorno Salida
             </button>
               )}
               {puedeRetornoEntrada && t.aprobado_retorno_salida_id &&(
             <button onClick={() => ejecutar(acciones.retornoEntrada, t.id)} disabled={actualizando}
               className="btn-primary flex items-center gap-2">
-              <Icon name="return" className="text-[16px]" />Aprobar retorno Entrada
+              <Icon name="return" className="text-[16px]" />V°B° retorno Entrada
             </button>            
           )}
 
