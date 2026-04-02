@@ -17,318 +17,545 @@ const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
 );
 
-const FUNC_COLOR = {
-  TRASLADO_SEDE:      { bg: 'rgb(37 99 235 / 0.1)',  tx: '#1d4ed8', icon: 'local_shipping' },
-  ASIGNACION_INTERNA: { bg: 'rgb(127 29 29 / 0.1)', tx: 'var(--color-primary)', icon: 'person_add' }
-};
-
-const ESTADO_BIEN_COLOR = {
-  ACTIVO:      { bg: 'rgb(22 163 74 / 0.1)',  tx: '#16a34a' },
-  MANTENIMIENTO: { bg: 'rgb(180 83 9 / 0.1)', tx: '#b45309' },
-  BAJA:        { bg: 'rgb(220 38 38 / 0.1)', tx: '#dc2626' }
-};
-
-const S = {
-  input: {
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    color: 'var(--color-text-primary)',
-    outline: 'none'
-  }
-};
-
+const S = { input: { background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', outline: 'none' } };
 const onF  = e => { e.currentTarget.style.border = '1px solid var(--color-primary)'; };
 const offF = e => { e.currentTarget.style.border = '1px solid var(--color-border)'; };
 
-const FLabel = ({ children }) => (
-  <label className="text-[11px] font-black uppercase tracking-wider mb-1.5 block" style={{ color: 'var(--color-text-muted)' }}>
-    {children}
-  </label>
-);
+function FLabel({ children, required }) {
+  return (
+    <p className="text-[9px] font-black uppercase tracking-widest mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
+      {children}{required && <span className="text-red-500 ml-0.5">*</span>}
+    </p>
+  );
+}
+function FSelect({ value, onChange, children, disabled }) {
+  return (
+    <select value={value ?? ''} onChange={e => onChange(e.target.value)} disabled={disabled}
+      className="w-full text-sm rounded-xl px-3 py-2.5 cursor-pointer"
+      style={{ ...S.input, opacity: disabled ? 0.6 : 1 }} onFocus={onF} onBlur={offF}>
+      {children}
+    </select>
+  );
+}
 
-const FSelect = ({ children, ...p }) => (
-  <select {...p} className="w-full p-2.5 rounded-xl text-sm transition-all cursor-pointer" style={S.input} onFocus={onF} onBlur={offF}>
-    {children}
-  </select>
-);
+const ESTADO_BIEN_COLOR = (n = '') => {
+  const u = n.toUpperCase();
+  if (u === 'ACTIVO')              return { color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)', ok: true };
+  if (u.includes('TRASLADO'))      return { color: '#b45309', bg: 'rgb(180 83 9 / 0.1)',  ok: false };
+  if (u.includes('ASIGNACI'))      return { color: '#b45309', bg: 'rgb(180 83 9 / 0.1)',  ok: false };
+  if (u.includes('MANTENIMIENTO')) return { color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)', ok: false };
+  if (u.includes('BAJA'))          return { color: '#dc2626', bg: 'rgb(220 38 38 / 0.1)', ok: false };
+  return { color: '#64748b', bg: 'var(--color-border-light)', ok: false };
+};
 
-export default function ModalTransferencia({ 
-  open, onClose, item, actualizando, 
+const FUNC_COLOR = (n = '') => {
+  const u = n.toUpperCase();
+  if (u === 'OPERATIVO')   return { color: '#1d4ed8', bg: 'rgb(37 99 235 / 0.1)'  };
+  if (u === 'AVERIADO')    return { color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   };
+  if (u === 'INOPERATIVO') return { color: '#dc2626', bg: 'rgb(220 38 38 / 0.1)'  };
+  return { color: '#64748b', bg: 'var(--color-border-light)' };
+};
+
+function TarjetaBien({ b, seleccionado, onToggle }) {
+  const estadoB = ESTADO_BIEN_COLOR(b.estado_bien_nombre ?? '');
+  const funcB   = FUNC_COLOR(b.estado_funcionamiento_nombre ?? '');
+  const puedeSeleccionar = estadoB.ok;
+
+  return (
+    <label
+      className={`flex items-start gap-4 p-2.5 rounded-xl transition-all ${
+        puedeSeleccionar ? 'cursor-pointer hover:bg-surface-alt' : 'cursor-not-allowed opacity-60'
+      }`}
+      style={{
+        background: seleccionado ? 'rgb(var(--color-primary-rgb) / 0.05)' : 'var(--color-surface)',
+        border: `1px solid ${seleccionado ? 'var(--color-primary)' : 'var(--color-border)'}`,
+      }}
+    >
+      {/* Selector Izquierdo */}
+      <div className="relative size-5 shrink-0 mt-1">
+        <input 
+          type="checkbox" 
+          checked={seleccionado} 
+          onChange={() => puedeSeleccionar && onToggle(b.id)}
+          disabled={!puedeSeleccionar}
+          className="appearance-none size-5 rounded-lg border-2 transition-all"
+          style={{
+            borderColor: seleccionado ? 'var(--color-primary)' : 'var(--color-border-dark)',
+            background: seleccionado ? 'var(--color-primary)' : 'transparent',
+          }} 
+        />
+        {seleccionado && <Icon name="check" className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-white" />}
+      </div>
+
+      {/* Cuerpo de Información */}
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        
+        {/* FILA 1: TIPOBIEN MARCA MODELO => ESTADOS */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[11px] font-black uppercase truncate" style={{ color: 'var(--color-text-primary)' }}>
+              {b.tipo_bien_nombre}
+            </span>
+            <span className="text-[10px] font-bold opacity-60 truncate">
+              {b.marca_nombre} — {b.modelo}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[9px] font-black px-2 py-0.5 rounded border" style={{ color: funcB.color, borderColor: funcB.color + '33' }}>
+              {b.estado_funcionamiento_nombre}
+            </span>
+            <span className="text-[9px] font-black px-2 py-0.5 rounded border" style={{ color: estadoB.color, borderColor: estadoB.color + '33' }}>
+              {b.estado_bien_nombre}
+            </span>
+          </div>
+        </div>
+
+        {/* FILA 2: CODPAT SEDE MODULO UBICACION */}
+        <div className="flex items-center gap-x-3 text-[10px] border-t border-border/40 pt-1">
+          <div className="flex items-center gap-1 shrink-0">
+            <Icon name="qr_code" className="text-[12px] text-primary" />
+            <span className="font-mono font-bold">{b.codigo_patrimonial || 'S/C'}</span>
+          </div>
+          <div className="flex items-center gap-1 truncate opacity-80">
+            <Icon name="location_on" className="text-[12px]" />
+            <span className="font-bold">{b.sede_nombre}</span>
+            <span className="opacity-50">/</span>
+            <span>{b.modulo_nombre || 'S.M.'}</span>
+            <span className="opacity-50">/</span>
+            <span className="font-medium">{b.ubicacion_nombre || 'U.'}</span>
+          </div>
+        </div>
+
+        {/* FILA 3: USUARIO_ASIGNADO_NOMBRE, USUARIO_ASIGNADO_CARGO */}
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <Icon name="person" className="text-[12px] text-primary" />
+          <span className="font-black uppercase" style={{ color: b.usuario_asignado_nombre ? 'var(--color-text-primary)' : 'var(--color-text-faint)' }}>
+            {b.usuario_asignado_nombre || 'Sin asignar'}
+          </span>
+          {b.usuario_asignado_cargo && (
+            <>
+              <span className="opacity-30">|</span>
+              <span className="text-[9px] font-bold opacity-60 italic truncate">
+                {b.usuario_asignado_cargo}
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* FILA 4: PUEDESELECCIONAR (ALERTA) */}
+        {!puedeSeleccionar && (
+          <div className="flex items-center gap-1 mt-0.5 text-[8px] font-black text-red-500 uppercase tracking-tighter">
+            <Icon name="block" className="text-[10px]" />
+            Bloqueado por estado del bien: {b.estado_bien_nombre}
+          </div>
+        )}
+
+      </div>
+    </label>
+  );
+}
+
+function ResumenBienesSeleccionados({ bienesSeleccionados, onQuitar }) {
+  if (!bienesSeleccionados.length) return null;
+  return (
+    <div className="mt-3 p-3 rounded-xl" style={{ background: 'rgb(127 29 29 / 0.05)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
+      <p className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: 'var(--color-primary)' }}>
+        <Icon name="check_circle" className="text-[13px]" />
+        {bienesSeleccionados.length} bien(es) seleccionado(s)
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {bienesSeleccionados.map(b => (
+          <div key={b.id}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold"
+            style={{ background: 'var(--color-surface)', border: '1px solid rgb(127 29 29 / 0.25)', color: 'var(--color-text-primary)' }}>
+            <Icon name="devices" className="text-[12px]" style={{ color: 'var(--color-primary)' }} />
+            <span className="truncate max-w-[120px]">
+              {b.tipo_bien_nombre ?? 'Bien'} — {b.codigo_patrimonial ?? b.modelo ?? `#${b.id}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => onQuitar(b.id)}
+              className="size-4 flex items-center justify-center rounded-full hover:bg-red-500 hover:text-white transition-all shrink-0"
+              style={{ color: 'var(--color-text-muted)' }}>
+              <Icon name="close" className="text-[10px]" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const FORM_BASE = {
+  bien_ids: [], usuario_destino_id: '', sede_destino_id: '',
+  modulo_destino_id: '', ubicacion_destino_id: '',
+  piso_destino: '', motivo_transferencia: '', descripcion: '',
+};
+
+export default function ModalTransferencia({
+  open, onClose, activeTab, item, actualizando,
   crearTraslado, crearAsignacion, reenviarTransferencia, 
-  obtenerTransf,
-  onGuardado 
+  obtenerTransf,onGuardado,
 }) {
-  const toast = useToast();
-  const user  = useAuthStore(s => s.user);
+  const toast      = useToast();
+  const isTraslado = activeTab === 'TRASLADO_SEDE';
+  
   const isEditar   = !!item;
-  const isTraslado = isEditar ? item.tipo === 'TRASLADO_SEDE' : true;
+  const sedes_auth   = useAuthStore(s => s.sedes);
+  const sede_auth_id = sedes_auth?.[0]?.id;
+  const { bienes: todosBienes, loading: loadingBienes } = useBienes({});
+  const { sedes, modulos, ubicaciones }                 = useLocaciones();
+  const { usuarios: usuariosMs }                        = useUsuarios({ is_active: true });
+  const { fetchCatalogos, motivosTransferencia = [] }   = useCatalogos();
+  const [usuariosPorSede, setUsuariosPorSede] = useState([]);
+  const [loadingUsuariosSede, setLoadingUsuariosSede] = useState(false);
+  const bienesConNombres = useBienesEnriquecidos(todosBienes, { sedes, modulos,ubicaciones, usuarios: usuariosMs });
 
-  const [form, setForm] = useState({
-    tipo: isTraslado ? 'TRASLADO_SEDE' : 'ASIGNACION_INTERNA',
-    sede_destino_id: '',
-    usuario_destino_id: '',
-    descripcion: '',
-    bien_ids: []
-  });
-
-  const [busqueda, setBusqueda] = useState('');
-  const [bienesSelected, setBienesSelected] = useState([]);
-  const [confirm, setConfirm] = useState(false);
+  const [form,      setForm]      = useState({ ...FORM_BASE });
+  const [buscador,  setBuscador]  = useState('');
+  const [errors,    setErrors]    = useState({});
+  const [confirm,   setConfirm]   = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [cargandoDetalle, setCargandoDetalle] = useState(false);
-
-  const { sedes } = useLocaciones();
-  const { usuarios: destinatarios } = useUsuarios({ 
-    sede_id: isTraslado ? form.sede_destino_id : user?.sede_id, 
-    activo: true 
-  });
-
-  const { bienes, loading: loadingBienes } = useBienes({
-    sede_id: user?.sede_id,
-    estado_bien: 'ACTIVO',
-    search: busqueda,
-    limit: 10
-  });
+  console.log('item= ',item)
 
   useEffect(() => {
-    if (open && isEditar && item?.id && obtenerTransf) {
-      const cargar = async () => {
-        setCargandoDetalle(true);
-        try {
-          const data = await obtenerTransf(item.id);
-          setForm({
-            tipo: data.tipo,
-            sede_destino_id: data.sede_destino_id || '',
-            usuario_destino_id: data.usuario_destino_id || '',
-            descripcion: data.descripcion || '',
-            bien_ids: data.bienes?.map(b => b.bien_id) || []
-          });
-          
-          if (data.bienes) {
-            setBienesSelected(data.bienes.map(b => ({
-              id: b.bien_id,
-              tipo_bien_nombre: b.tipo_bien_nombre,
-              marca_nombre: b.marca_nombre,
-              modelo: b.modelo,
-              numero_serie: b.numero_serie,
-              codigo_patrimonial: b.codigo_patrimonial,
-              estado_bien: 'ACTIVO'
-            })));
-          }
-        } catch (err) {
-          toast.error("Error al cargar datos");
-        } finally {
-          setCargandoDetalle(false);
-        }
-      };
-      cargar();
-    } else if (open && !isEditar) {
+    if (!open) return;
+    fetchCatalogos(['motivosTransferencia']);
+    setErrors({}); setBuscador('');
+    if (isEditar && item) {
       setForm({
-        tipo: isTraslado ? 'TRASLADO_SEDE' : 'ASIGNACION_INTERNA',
-        sede_destino_id: '',
-        usuario_destino_id: '',
-        descripcion: '',
-        bien_ids: []
+        bien_ids:             (item.bienes ?? []).map(b => b.bien_id).filter(Boolean),
+        usuario_destino_id:   String(item.usuario_destino_id ?? ''),
+        sede_destino_id:      String(item.sede_destino_id ?? ''),
+        modulo_destino_id:    String(item.modulo_destino_id ?? ''),
+        ubicacion_destino_id: String(item.ubicacion_destino_id ?? ''),
+        piso_destino:         item.piso_destino ?? '',
+        motivo_transferencia_id: String(item.motivo_transferencia_id ?? ''),
+        descripcion:          item.descripcion ?? '',
       });
-      setBienesSelected([]);
-    }
-  }, [open, item, isEditar]);
-
-  const toggleBien = (b) => {
-    const exists = bienesSelected.find(x => x.id === b.id);
-    let newBienes;
-    if (exists) {
-      newBienes = bienesSelected.filter(x => x.id !== b.id);
     } else {
-      newBienes = [...bienesSelected, b];
+      setForm({ ...FORM_BASE, sede_destino_id: isTraslado ? '' : String(sede_auth_id ?? '') });
     }
-    setBienesSelected(newBienes);
-    setForm(prev => ({ ...prev, bien_ids: newBienes.map(x => x.id) }));
+  }, [open, item?.id, isTraslado]);
+  
+
+  // ── Al cambiar sede destino, cargar usuarios de esa sede ────────────────────
+  useEffect(() => {
+    const sedeId = form.sede_destino_id;
+    if (!sedeId) {
+      if (!isTraslado) {
+        const misUsuarios = usuariosMs.filter(u =>
+          (u.sedes ?? []).some(s => String(s.id) === String(sede_auth_id))
+        );
+        setUsuariosPorSede(misUsuarios);
+      } else {
+        setUsuariosPorSede([]);
+      }
+      return;
+    }
+    const usuariosFiltrados = usuariosMs.filter(u =>
+      (u.sedes ?? []).some(s => String(s.id) === String(sedeId))
+    );
+    if (usuariosFiltrados.length > 0) {
+      setUsuariosPorSede(usuariosFiltrados);
+    } else {
+      setLoadingUsuariosSede(true);
+      usuariosService.listar({ is_active: true })
+        .then(data => {
+          const lista = Array.isArray(data) ? data : data?.results ?? [];
+          const filtrados = lista.filter(u =>
+            (u.sedes ?? []).some(s => String(s.id) === String(sedeId))
+          );
+          setUsuariosPorSede(filtrados);
+        })
+        .catch(() => setUsuariosPorSede([]))
+        .finally(() => setLoadingUsuariosSede(false));
+    }
+  }, [form.sede_destino_id, isTraslado, usuariosMs, sede_auth_id]);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const bienesFiltradosBuscador = useMemo(() => {
+    const base = isTraslado
+      ? bienesConNombres
+      : bienesConNombres.filter(b => String(b.sede_id) === String(sede_auth_id));
+    if (!buscador.trim()) return base;
+    const q = buscador.trim().toLowerCase();
+    return base.filter(b =>
+      b.codigo_patrimonial?.toLowerCase().includes(q) ||
+      b.numero_serie?.toLowerCase().includes(q)       ||
+      b.tipo_bien_nombre?.toLowerCase().includes(q)   ||
+      b.marca_nombre?.toLowerCase().includes(q)       ||
+      b.modelo?.toLowerCase().includes(q)
+    );
+  }, [bienesConNombres, buscador, isTraslado, sede_auth_id]);
+
+  const bienesSeleccionados = useMemo(() =>
+    bienesConNombres.filter(b => form.bien_ids.includes(b.id)),
+    [bienesConNombres, form.bien_ids]
+  );
+
+  const ubicacionesDest = (ubicaciones ?? []).filter(m => m.is_active !== false);
+  const modulosActivos  = (modulos ?? []).filter(m => m.is_active !== false);
+
+  const toggleBien = id => set('bien_ids',
+    form.bien_ids.includes(id) ? form.bien_ids.filter(x => x !== id) : [...form.bien_ids, id]
+  );
+
+  const validar = () => {
+    const e = {};
+    if (!form.bien_ids.length)    e.bien_ids           = 'Selecciona al menos un bien.';
+    if (!form.usuario_destino_id) e.usuario_destino_id = 'Campo obligatorio.';
+    if (!form.sede_destino_id)    e.sede_destino_id    = 'Campo obligatorio.';
+    return e;
+  };
+
+  const handleSubmit = async () => {
+    setConfirm(false);
+    setGuardando(true);
+    const payload = {
+      bien_ids:             form.bien_ids.map(Number),
+      usuario_destino_id:   Number(form.usuario_destino_id),
+      sede_destino_id:      Number(form.sede_destino_id),
+      ...(form.modulo_destino_id    && { modulo_destino_id:    Number(form.modulo_destino_id)    }),
+      ...(form.ubicacion_destino_id && { ubicacion_destino_id: Number(form.ubicacion_destino_id) }),
+      ...(form.piso_destino         && { piso_destino:         Number(form.piso_destino)         }),
+      ...(form.motivo_transferencia_id && { motivo_transferencia_id: Number(form.motivo_transferencia_id) }),
+      ...(form.descripcion?.trim()  && { descripcion: form.descripcion.trim() }),
+    };
+    try {
+      let result;
+      if (isEditar)        result = await reenviarTransferencia(item.id, payload);
+      else if (isTraslado) result = await crearTraslado(payload);
+      else                 result = await crearAsignacion(payload);
+      toast.success(result?.message ?? 'Operación exitosa.');
+      onGuardado();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail|| err?.response?.data || err?.response?.detail ||'Error al registrar.');
+    } finally { setGuardando(false); }
   };
 
   const handleSolicitar = () => {
-    if (!form.usuario_destino_id) return toast.error('Seleccione un usuario de destino');
-    if (isTraslado && !form.sede_destino_id) return toast.error('Seleccione sede de destino');
-    if (form.bien_ids.length === 0) return toast.error('Seleccione al menos un bien');
+    const e = validar();
+    if (Object.keys(e).length) { setErrors(e); return; }
     setConfirm(true);
   };
 
-  const onConfirmar = async () => {
-    setConfirm(false);
-    setGuardando(true);
-    try {
-      if (isEditar) {
-        await reenviarTransferencia(item.id, { ...form, usuario_id: user?.id });
-      } else {
-        if (isTraslado) {
-          await crearTraslado({ ...form, sede_origen_id: user?.sede_id, usuario_origen_id: user?.id });
-        } else {
-          await crearAsignacion({ ...form, sede_origen_id: user?.sede_id, usuario_origen_id: user?.id, sede_destino_id: user?.sede_id });
-        }
-      }
-      onGuardado();
-    } catch (err) {
-      toast.error(err?.response?.data?.error || 'Error al procesar');
-    } finally {
-      setGuardando(false);
-    }
-  };
-
-  const cfg = FUNC_COLOR[form.tipo];
-
   return (
-    <Modal open={open} onClose={onClose} width="800px">
-      <ModalHeader 
-        title={isEditar ? `Editar Orden: ${item?.numero_orden}` : (isTraslado ? 'Nuevo Traslado de Sede' : 'Nueva Asignación Directa')} 
-        onClose={onClose} 
-      />
+    <>
+      <Modal open={open} onClose={onClose} size="xl">
+        <ModalHeader
+          icon={isTraslado ? 'local_shipping' : 'person_add'}
+          title={isEditar ? `Reenviar ${item.numero_orden}` : (isTraslado ? 'Nuevo traslado entre sedes' : 'Nueva asignación interna')}
+          subtitle={isTraslado
+            ? 'Mueve bienes hacia otra sede. Requiere aprobación de ADMINSEDE y V°B° SEGURSEDE.'
+            : 'Asigna bienes a un usuario final dentro de tu sede.'}
+          onClose={onClose}
+        />
 
-      <ModalBody>
-        <div className="space-y-6">
-          <div className="p-4 rounded-2xl flex items-center gap-4" style={{ background: cfg.bg }}>
-            <div className="size-12 rounded-xl flex items-center justify-center shrink-0 bg-white shadow-sm">
-              <Icon name={cfg.icon} className="text-[28px]" style={{ color: cfg.tx }} />
-            </div>
-            <div>
-              <p className="text-sm font-black" style={{ color: cfg.tx }}>
-                {isTraslado ? 'TRANSFERENCIA ENTRE SEDES' : 'ASIGNACIÓN INTERNA DE BIENES'}
-              </p>
-              <p className="text-[11px] font-medium opacity-70" style={{ color: cfg.tx }}>
-                {isTraslado 
-                  ? 'Mueva bienes de una sede a otra con aprobación de seguridad.' 
-                  : 'Asigne bienes a un usuario dentro de su misma sede actual.'}
-              </p>
-            </div>
-          </div>
+        <ModalBody>
+          <div className="grid grid-cols-2 gap-5">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {isTraslado && (
-              <div className="flex flex-col">
-                <FLabel>Sede Destino</FLabel>
-                <FSelect 
-                  value={form.sede_destino_id}
-                  onChange={e => setForm({ ...form, sede_destino_id: e.target.value, usuario_destino_id: '' })}
-                >
-                  <option value="">Seleccione sede...</option>
-                  {sedes.filter(s => s.id !== user?.sede_id).map(s => (
-                    <option key={s.id} value={s.id}>{s.nombre}</option>
-                  ))}
+            {/* ── Columna izquierda: selección de bienes ──────────────────── */}
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <FLabel required>Bienes a transferir</FLabel>
+                  {form.bien_ids.length > 0 && (
+                    <span className="text-[10px] font-black" style={{ color: 'var(--color-primary)' }}>
+                      {form.bien_ids.length} seleccionado(s)
+                    </span>
+                  )}
+                </div>
+
+                {/* Buscador */}
+                <div className="relative mb-2">
+                  <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[17px] pointer-events-none"
+                    style={{ color: buscador ? 'var(--color-primary)' : 'var(--color-text-faint)' }} />
+                  <input type="text" value={buscador} onChange={e => setBuscador(e.target.value)}
+                    placeholder="Buscar por código, serie, tipo, marca..."
+                    className="w-full text-xs rounded-xl py-2.5 pr-4 transition-all"
+                    style={{ ...S.input, paddingLeft: 36 }} onFocus={onF} onBlur={offF} />
+                </div>
+
+                {/* ── Resumen compacto de bienes seleccionados ── */}
+                <ResumenBienesSeleccionados
+                  bienesSeleccionados={bienesSeleccionados}
+                  onQuitar={toggleBien}
+                />
+
+                {/* Lista de bienes */}
+                {loadingBienes ? (
+                  <div className="space-y-2 mt-2">{[1, 2, 3].map(i => <div key={i} className="skeleton h-16 rounded-xl" />)}</div>
+                ) : bienesFiltradosBuscador.length === 0 ? (
+                  <div className="text-center py-8 rounded-xl mt-2" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+                    <Icon name="inventory_2" className="text-[32px]" style={{ color: 'var(--color-text-faint)' }} />
+                    <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>
+                      Sin bienes{buscador ? ' con esa búsqueda' : ' disponibles'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 overflow-y-auto pr-1 mt-2" style={{ maxHeight: '40vh' }}>
+                    {bienesFiltradosBuscador.map(b => (
+                      <TarjetaBien 
+                      key={b.id} 
+                      b={b}
+                      seleccionado={form.bien_ids.includes(b.id)}
+                      onToggle={toggleBien} />
+                    ))}
+                  </div>
+                )}
+
+                {errors.bien_ids && (
+                  <p className="text-[10px] text-red-500 mt-1 font-semibold flex items-center gap-1">
+                    <Icon name="error" className="text-[11px]" />{errors.bien_ids}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* ── Columna derecha: datos del destino ──────────────────────── */}
+            <div className="space-y-4">
+
+              {/* Sede destino (solo traslados) */}
+              {isTraslado && (
+                <div>
+                  <FLabel required>Sede destino</FLabel>
+                  <FSelect
+                    value={form.sede_destino_id}
+                    onChange={v => {
+                      set('sede_destino_id', v);
+                      set('modulo_destino_id', '');
+                      set('ubicacion_destino_id', '');
+                      set('usuario_destino_id', ''); 
+                    }}>
+                    <option value="">Seleccionar sede...</option>
+                    {(sedes ?? []).filter(s => s.is_active !== false).map(s => (
+                      <option key={s.id} value={s.id}>{s.nombre}</option>
+                    ))}
+                  </FSelect>
+                  {errors.sede_destino_id && <p className="text-[10px] text-red-500 mt-1">{errors.sede_destino_id}</p>}
+                </div>
+              )}
+
+              {/* Usuario destinatario — filtrado por sede destino seleccionada */}
+              <div>
+                <FLabel required>
+                  Usuario destinatario
+                  {isTraslado && form.sede_destino_id && (
+                    <span className="ml-2 text-[9px] font-bold normal-case" style={{ color: 'var(--color-text-muted)' }}>
+                      (usuarios de la sede seleccionada)
+                    </span>
+                  )}
+                </FLabel>
+                {loadingUsuariosSede ? (
+                  <div className="skeleton h-10 rounded-xl" />
+                ) : (
+                  <FSelect
+                    value={form.usuario_destino_id}
+                    onChange={v => set('usuario_destino_id', v)}
+                    disabled={isTraslado && !form.sede_destino_id}
+                  >
+                    <option value="">
+                      {isTraslado && !form.sede_destino_id
+                        ? '← Selecciona primero la sede'
+                        : usuariosPorSede.length === 0
+                          ? 'Sin usuarios en esta sede'
+                          : 'Seleccionar usuario...'}
+                    </option>
+                    {usuariosPorSede.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.first_name} {u.last_name} — {u.cargo || u.role?.name || 'Sin cargo'}
+                      </option>
+                    ))}
+                  </FSelect>
+                )}
+                {errors.usuario_destino_id && <p className="text-[10px] text-red-500 mt-1">{errors.usuario_destino_id}</p>}
+              </div>
+
+              {/* Módulo destino */}
+              <div>
+                <FLabel>Módulo destino</FLabel>
+                <FSelect value={form.modulo_destino_id} onChange={v => { set('modulo_destino_id', v); set('ubicacion_destino_id', ''); }}>
+                  <option value="">Sin módulo específico</option>
+                  {modulosActivos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                 </FSelect>
               </div>
-            )}
 
-            <div className="flex flex-col">
-              <FLabel>Usuario Destinatario</FLabel>
-              <FSelect 
-                value={form.usuario_destino_id}
-                onChange={e => setForm({ ...form, usuario_destino_id: e.target.value })}
-                disabled={isTraslado && !form.sede_destino_id}
-              >
-                <option value="">Seleccione usuario...</option>
-                {destinatarios.map(u => (
-                  <option key={u.id} value={u.id}>{u.nombre_completo} ({u.username})</option>
-                ))}
-              </FSelect>
-            </div>
-          </div>
-
-          <div className="flex flex-col">
-            <FLabel>Justificación / Descripción</FLabel>
-            <textarea
-              className="w-full p-3 rounded-xl text-sm transition-all min-h-[80px] resize-none"
-              style={S.input} onFocus={onF} onBlur={offF}
-              placeholder="Indique el motivo detallado de la transferencia..."
-              value={form.descripcion}
-              onChange={e => setForm({ ...form, descripcion: e.target.value })}
-            />
-          </div>
-
-          <div className="border rounded-2xl overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
-            <div className="p-3 bg-[var(--color-surface-alt)] border-b" style={{ borderColor: 'var(--color-border)' }}>
-              <div className="relative">
-                <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[var(--color-text-faint)]" />
-                <input
-                  type="text"
-                  className="w-full pl-10 pr-4 py-2 rounded-xl text-sm bg-[var(--color-surface)] border border-[var(--color-border)] outline-none focus:border-[var(--color-primary)]"
-                  placeholder="Buscar bienes por código patrimonial o serie..."
-                  value={busqueda}
-                  onChange={e => setBusqueda(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
-              {loadingBienes || cargandoDetalle ? (
-                <div className="py-10 text-center"><span className="btn-loading-spin !border-t-primary" /></div>
-              ) : (
-                bienes.map(b => {
-                  const isSel = bienesSelected.some(x => x.id === b.id);
-                  return (
-                    <div 
-                      key={b.id}
-                      onClick={() => toggleBien(b)}
-                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all hover:bg-[var(--color-surface-alt)]"
-                      style={{ 
-                        border: isSel ? '1px solid var(--color-primary)' : '1px solid transparent',
-                        background: isSel ? 'rgb(127 29 29 / 0.03)' : 'transparent'
-                      }}
-                    >
-                      <div className={`size-5 rounded-md border flex items-center justify-center transition-all ${isSel ? 'bg-[var(--color-primary)] border-[var(--color-primary)]' : 'border-[var(--color-border)]'}`}>
-                        {isSel && <Icon name="check" className="text-white text-[14px] font-black" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-[var(--color-text-primary)]">{b.tipo_bien_nombre} - {b.marca_nombre} {b.modelo}</p>
-                        <p className="text-[10px] text-[var(--color-text-faint)] font-mono">
-                          CP: {b.codigo_patrimonial || '—'} · SERIE: {b.numero_serie || '—'}
-                        </p>
-                      </div>
-                      <div className="px-2 py-0.5 rounded text-[9px] font-black" style={ESTADO_BIEN_COLOR[b.estado_bien || 'ACTIVO']}>
-                        {b.estado_bien || 'ACTIVO'}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
-            <div className="flex items-start gap-3">
-              <Icon name="info" className="text-[20px] text-[var(--color-primary)] shrink-0" />
+              {/* Ubicación destino */}
               <div>
-                <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>Resumen de selección</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-body)' }}>
-                  Has seleccionado <strong>{bienesSelected.length} bien(es)</strong> para esta operación. 
-                </p>
-                <div className="text-[10px] mt-2 italic" style={{ color: 'var(--color-text-body)' }}>
-                  {isTraslado 
-                    ? <p>Solo bienes ACTIVO pueden trasladarse. Flujo: ADMINSEDE → SEGURSEDE salida → SEGURSEDE entrada.</p>
-                    : <p>Solo bienes ACTIVO de tu sede pueden asignarse. Requiere aprobación de ADMINSEDE.</p>}
+                <FLabel>Ubicación destino</FLabel>
+                <FSelect value={form.ubicacion_destino_id} onChange={v => set('ubicacion_destino_id', v)}>
+                  <option value="">Sin ubicación específica</option>
+                  {ubicacionesDest.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+                </FSelect>
+              </div>
+
+              {/* Piso y Motivo */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <FLabel>Piso</FLabel>
+                  <input type="number" value={form.piso_destino}
+                    onChange={e => set('piso_destino', e.target.value)}
+                    placeholder="Ej: 2"
+                    className="w-full text-sm rounded-xl px-3 py-2.5"
+                    style={S.input} onFocus={onF} onBlur={offF} />
+                </div>
+                <div>
+                  <FLabel>Motivo</FLabel>
+                  <FSelect value={form.motivo_transferencia_id} onChange={v => set('motivo_transferencia_id', v)}>
+                    <option value="">Sin motivo</option>
+                    {motivosTransferencia.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                  </FSelect>
+                </div>
+              </div>
+
+              {/* Descripción */}
+              <div>
+                <FLabel>Descripción / Justificación</FLabel>
+                <textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)} rows={3}
+                  placeholder="Describe el motivo del movimiento..."
+                  className="w-full text-sm rounded-xl px-3 py-2.5 resize-none"
+                  style={S.input} onFocus={onF} onBlur={offF} />
+              </div>
+
+              {/* Info del flujo */} 
+              <div className="p-3 rounded-xl" style={{
+                background: isTraslado ? 'rgb(37 99 235 / 0.06)' : 'rgb(22 163 74 / 0.06)',
+                border: `1px solid ${isTraslado ? 'rgb(37 99 235 / 0.2)' : 'rgb(22 163 74 / 0.2)'}`,
+              }}>
+                <div className="flex items-start gap-2">
+                  <Icon name="info" className="text-[16px] shrink-0 mt-0.5"
+                    style={{ color: isTraslado ? '#1d4ed8' : '#16a34a' }} />
+                  <p className="text-[11px]" style={{ color: 'var(--color-text-body)' }}>
+                    {isTraslado
+                      ? 'Solo bienes ACTIVO pueden trasladarse. Flujo: ADMINSEDE → SEGURSEDE salida → SEGURSEDE entrada.'
+                      : 'Solo bienes ACTIVO de tu sede pueden asignarse. Requiere aprobación de ADMINSEDE.'}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </ModalBody>
+        </ModalBody>
 
-      <ModalFooter align="right">
-        <button onClick={onClose} className="btn-secondary">Cancelar</button>
-        <button onClick={handleSolicitar} disabled={guardando || actualizando || cargandoDetalle}
-          className="btn-primary flex items-center gap-2">
-          {(guardando || actualizando || cargandoDetalle) ? <span className="btn-loading-spin" /> : <Icon name={isEditar ? 'send' : 'add_circle'} className="text-[16px]" />}
-          {isEditar ? 'Reenviar orden' : (isTraslado ? 'Registrar traslado' : 'Registrar asignación')}
-        </button>
-      </ModalFooter>
+        <ModalFooter align="right">
+          <button onClick={onClose} className="btn-secondary">Cancelar</button>
+          <button onClick={handleSolicitar} disabled={guardando || actualizando}
+            className="btn-primary flex items-center gap-2">
+            {(guardando || actualizando) ? <span className="btn-loading-spin" /> : <Icon name={isEditar ? 'send' : 'add_circle'} className="text-[16px]" />}
+            {isEditar ? 'Reenviar orden' : (isTraslado ? 'Registrar traslado' : 'Registrar asignación')}
+          </button>
+        </ModalFooter>
+      </Modal>
 
       <ConfirmDialog
         open={confirm}
         title={isEditar ? 'Confirmar reenvío' : (isTraslado ? 'Confirmar traslado' : 'Confirmar asignación')}
         message={`¿${isEditar ? 'Reenviar' : 'Registrar'} con ${form.bien_ids.length} bien(es) seleccionado(s)?`}
         confirmLabel={isEditar ? 'Sí, reenviar' : 'Sí, registrar'}
-        onConfirm={onConfirmar}
-        onClose={() => setConfirm(false)}
-        loading={guardando}
-      />
-    </Modal>
+        variant="primary" loading={guardando}
+        onConfirm={handleSubmit} onClose={() => setConfirm(false)} />
+    </>
   );
 }
