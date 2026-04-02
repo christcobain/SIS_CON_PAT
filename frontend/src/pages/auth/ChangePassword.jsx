@@ -90,16 +90,16 @@ export default function ChangePassword({ open, onClose, onSuccess, mode = 'volun
 
   const confirmaFeedback = confirmar ? (nueva === confirmar ? 'ok' : 'error') : null;
 
-  // const validar = () => {
-  //   if (!usernameInput.trim())    { toast.error('Ingrese su usuario (DNI).');      return false; }
-  //   if (!actual)                  { toast.error('Ingrese su contraseña actual.');  return false; }
-  //   if (!nueva)                   { toast.error('Ingrese la nueva contraseña.');   return false; }
-  //   if (nueva !== confirmar)      { toast.error('Las contraseñas no coinciden.');  return false; }
-  //   return true;
-  // };
+  const validar = () => {
+    if (!usernameInput.trim())    { toast.error('Ingrese su usuario (DNI).');      return false; }
+    if (!actual)                  { toast.error('Ingrese su contraseña actual.');  return false; }
+    if (!nueva)                   { toast.error('Ingrese la nueva contraseña.');   return false; }
+    if (nueva !== confirmar)      { toast.error('Las contraseñas no coinciden.');  return false; }
+    return true;
+  };
 
   const handleSubmit = async () => {
-    // if (!validar()) return;
+    if (!validar()) return;
     setErrores([]);
     try {
       await cambiarPassword(actual, nueva, usernameInput.trim());

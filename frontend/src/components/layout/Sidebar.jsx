@@ -11,7 +11,7 @@ const MENU = [
       { label: 'Usuarios', icon: 'group', to: '/admin/usuarios', perm: 'ms-usuarios:users:view_user' },
       { label: 'Seguridad', icon: 'history', to: '/admin/seguridad', perm: 'ms-usuarios:authentication:view_passwordpolicy' },
       { label: 'Locaciones', icon: 'account_balance', to: '/admin/locaciones', perm: 'ms-usuarios:locations:add_sede' },
-      { label: 'Roles y Permisos', icon: 'admin_panel_settings', to: '/admin/roles', perm: 'ms-usuarios:roles:view_role' },
+      { label: 'Roles y Permisos', icon: 'admin_panel_settings', to: '/admin/roles', perm: 'ms-usuarios:roles:add_role' },
     ],
   },
   {
@@ -26,7 +26,7 @@ const MENU = [
         label: 'Transferencias', 
         icon: 'swap_horiz', 
         to: '/transferencias', 
-        perm: ['ms-bienes:transferencias:view_transferencia','ms-bienes:transferencias:view_transferenciadetalle'] 
+        perm: ['ms-bienes:transferencias:view_transferencia'] 
       },
       { label: 'Bajas de Activos', icon: 'delete_sweep', to: '/bajas', perm: 'ms-bienes:bajas:view_baja' },
     ],
