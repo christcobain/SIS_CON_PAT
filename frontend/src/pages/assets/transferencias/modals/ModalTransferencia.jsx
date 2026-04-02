@@ -215,6 +215,7 @@ export default function ModalTransferencia({
   const [errors,    setErrors]    = useState({});
   const [confirm,   setConfirm]   = useState(false);
   const [guardando, setGuardando] = useState(false);
+  console.log('item= ',item)
 
   useEffect(() => {
     if (!open) return;
