@@ -95,10 +95,13 @@ class TransferenciaDetalle(models.Model):
 
 
 class TransferenciaAprobacion(models.Model):
-    ACCION_CHOICES = [     
+    ACCION_CHOICES = [   
+        ('REGISTRADO',   'Registrado y derivado para actualizar data'),
         ('APROBADO',  'Aprobado'),
         ('RECHAZADO', 'Rechazado'),
         ('DEVUELTO',  'Devuelto'),
+        ('ATENDIDO','Atendido con PDF subido'),
+        ('CANCELADO', 'Cancelado'),
     ]
     ROL_CHOICES = [
         ('COORDSISTEMA',          'Coordinador de Sistemas'),
@@ -112,7 +115,7 @@ class TransferenciaAprobacion(models.Model):
     ]
     transferencia = models.ForeignKey(Transferencia, on_delete=models.CASCADE, related_name='aprobaciones')
     rol_aprobador = models.CharField(max_length=25, choices=ROL_CHOICES)
-    accion        = models.CharField(max_length=10, choices=ACCION_CHOICES)
+    accion        = models.TextField(null=True, blank=True)
     usuario_id    = models.IntegerField()
     detalle       = models.TextField(null=True, blank=True)
     fecha         = models.DateTimeField(auto_now_add=True)

@@ -317,7 +317,6 @@ class TransferenciaViewSet(ViewSet):
     @action(detail=False, methods=['get'], url_path='pendientes-aprobacion')
     def pendientes_aprobacion(self, request):
         token = self._get_token(request)
-        print('pendientes_aprobacion== ',token)
         role      = self._get_role(request)
         sede_id   = self._get_sede(request)
         modulo_id = self._get_modulo(request)

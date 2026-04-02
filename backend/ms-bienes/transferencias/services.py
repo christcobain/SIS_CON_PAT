@@ -283,7 +283,7 @@ class TransferenciaService:
             **origen,
         })
         TransferenciaService._registrar_aprobacion(
-            transferencia, 'REGISTRADOR', 'APROBADO', usuario_registra_id,
+            transferencia, 'REGISTRADOR', 'REGISTRADO', usuario_registra_id,
             detalle='Transferencia registrada exitosamente, Pendiente aprobación ADMINSEDE/COORDSISTEMA.',
         )
         TransferenciaDetalleRepository.bulk_create(transferencia, bienes)

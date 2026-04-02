@@ -147,15 +147,16 @@ function TabBienes({ bienes = [] }) {
 
 function TabAprobaciones({ t }) {
   const esTraslado = t.tipo === 'TRASLADO_SEDE';
+  console.log(t)
   const pasos = esTraslado ? [
-    { label: 'Registrado',             nombre: t.usuario_origen_nombre,                 fecha: t.fecha_registro,                   hecho: true },
-    { label: 'Aprobado por Admin Sede', nombre: t.aprobado_por_adminsede_nombre,         fecha: t.fecha_aprobacion_adminsede,       hecho: !!t.aprobado_por_adminsede_id },
+    { label: 'Registrado por:',             nombre: t.usuario_origen_nombre,                 fecha: t.fecha_registro,                   hecho: true },
+    { label: 'Aprobado por:', nombre: t.aprobado_por_adminsede_nombre,         fecha: t.fecha_aprobacion_adminsede,       hecho: !!t.aprobado_por_adminsede_id },
     { label: 'V°B° Salida (Segur.)',    nombre: t.aprobado_segur_salida_nombre,          fecha: t.fecha_aprobacion_segur_salida,    hecho: !!t.aprobado_segur_salida_id },
     { label: 'V°B° Entrada (Segur.)',   nombre: t.aprobado_segur_entrada_nombre,         fecha: t.fecha_aprobacion_segur_entrada,   hecho: !!t.aprobado_segur_entrada_id },
-    { label: 'Confirmado por destino',  nombre: t.confirmado_por_usuario_destino_nombre, fecha: t.fecha_confirmacion_destino,       hecho: !!t.confirmado_por_usuario_destino_id },
+    { label: 'Confirmado por',  nombre: t.confirmado_por_usuario_destino_nombre, fecha: t.fecha_confirmacion_destino,       hecho: !!t.confirmado_por_usuario_destino_id },
   ] : [
-    { label: 'Registrado',              nombre: t.usuario_origen_nombre,               fecha: t.fecha_registro,                   hecho: true },
-    { label: 'Aprobado por Admin Sede', nombre: t.aprobado_por_adminsede_nombre,       fecha: t.fecha_aprobacion_adminsede,       hecho: !!t.aprobado_por_adminsede_id },
+    { label: 'Registrado por:',              nombre: t.usuario_origen_nombre,               fecha: t.fecha_registro,                   hecho: true },
+    { label: 'Aprobado por', nombre: t.aprobado_por_adminsede_nombre,       fecha: t.fecha_aprobacion_adminsede,       hecho: !!t.aprobado_por_adminsede_id },
   ];
 
   const historial = t.aprobaciones ?? [];
