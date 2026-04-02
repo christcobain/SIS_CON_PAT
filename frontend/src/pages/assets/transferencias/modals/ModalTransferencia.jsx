@@ -226,6 +226,9 @@ export default function ModalTransferencia({
           const detalle = data?.data ?? data;
           setItemCompleto(detalle);
           const bienIds = (detalle.bienes ?? []).map(b => b.bien_id).filter(Boolean);
+          const motivoEncontrado = motivosTransferencia.find(
+            m => m.nombre === detalle.motivo_transferencia_nombre
+          );
           setForm({
             bien_ids:                bienIds,
             usuario_destino_id:      String(detalle.usuario_destino_id ?? ''),
@@ -233,7 +236,8 @@ export default function ModalTransferencia({
             modulo_destino_id:       String(detalle.modulo_destino_id ?? ''),
             ubicacion_destino_id:    String(detalle.ubicacion_destino_id ?? ''),
             piso_destino:            detalle.piso_destino ?? '',
-            motivo_transferencia_id: String(detalle.motivo_transferencia_id ?? ''),
+            // motivo_transferencia_id: String(detalle.motivo_transferencia_id ?? ''),
+            motivo_transferencia_id: motivoEncontrado ? String(motivoEncontrado.id) : String(item.motivo_transferencia_id ?? ''),
             descripcion:             detalle.descripcion ?? '',
           });
         })
@@ -254,7 +258,7 @@ export default function ModalTransferencia({
     } else {
       setForm({ ...FORM_BASE, sede_destino_id: isTraslado ? '' : String(sede_auth_id ?? '') });
     }
-  }, [open, item?.id, isTraslado,fetchCatalogos,isEditar,obtenerTransf,sede_auth_id,item]);
+  }, [open, item?.id, isTraslado,fetchCatalogos,isEditar,obtenerTransf,sede_auth_id,item,motivosTransferencia]);
 
   const itemData = itemCompleto ?? item;
 
