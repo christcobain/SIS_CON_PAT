@@ -264,7 +264,8 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado, user, accion
 
           {soloInformativoConformidad && <InfoChip icon="hourglass_top" label="Esperando confirmación del asistente de destino" color="#64748b" />}
           
-          {puedeDescargarPDF && <ActionBtn icon="download" label="Descargar Acta PDF" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)" disabled={busy} onClick={() => acciones.descargarPDFTransf(t.id)} />}
+          {puedeDescargarPDF && 
+          <ActionBtn icon="download" label="Descargar Acta PDF" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)" disabled={busy} onClick={() => ejecutar(descargarPDFTransf, t.id, {})} />}
           
           <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirFirmado} />
           
@@ -302,6 +303,7 @@ export default function AlertasPendientesTransferencias({ onVerDetalle,acciones}
   const sedes  = useAuthStore(s => s.sedes);
   const user = useAuthStore(s => s.user);
   const sedeId = sedes?.[0]?.id;
+  console.log('verdetalle== ',onVerDetalle)
 
   const [pendientes, setPendientes] = useState([]);
   const [loading,    setLoading]    = useState(false);

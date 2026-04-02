@@ -401,13 +401,13 @@ export default function ModalDetalleTransferencia({
           {puedeRetornoSalida && (               
             <button onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
               className="btn-primary flex items-center gap-2">
-              <Icon name="return" className="text-[16px]" />V°B° retorno Salida
+              <Icon name="assignment_return" className="text-[16px]" />V°B° retorno Salida
             </button>
               )}
               {puedeRetornoEntrada && t.aprobado_retorno_salida_id &&(
             <button onClick={() => ejecutar(acciones.retornoEntrada, t.id)} disabled={actualizando}
               className="btn-primary flex items-center gap-2">
-              <Icon name="return" className="text-[16px]" />VB. Retorno Entrada
+              <Icon name="assignment_return" className="text-[16px]" />VB. Retorno Entrada
             </button>            
           )}
 
