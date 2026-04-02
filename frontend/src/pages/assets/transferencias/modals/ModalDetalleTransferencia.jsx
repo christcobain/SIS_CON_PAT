@@ -201,9 +201,8 @@ export default function ModalDetalleTransferencia({
   open, onClose, item, actualizando, acciones, onAccionExitosa,
 }) {
   const [tab, setTab] = useState('ruta');
-  const role = useAuthStore(s => s.role);
   const user = useAuthStore(s => s.user);
-  const { can } = usePermission();
+  const { can,canAny } = usePermission();
   const toast = useToast();
   const fileRef = useRef();
   if (!item) return null;
@@ -213,9 +212,11 @@ export default function ModalDetalleTransferencia({
   const esAsignacion = t.tipo === 'ASIGNACION_INTERNA';
   const badge      = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
   const bienes     = t.bienes ?? [];  
-  const puedeAprobarAdmin = ['SYSADMIN', 'COORDSISTEMA', 'ADMINSEDE'].includes(role);
-  const puedeAprobarSegur = role === 'SEGURSEDE';
-  const esASISTSISTEMA   = ['ASISTSISTEMA', 'SYSADMIN'].includes(role);
+  const puedeAprobarAdmin = can('ms-bienes:transferencias:change_transferencia') && ['PENDIENTE_APROBACION'].includes(estado);
+  const puedeAprobarSegur = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado);
+  const esUsuarioFinal  = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia');
+  const mostrarDescargaPDF =(esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA' ||estado=='ATENDIDO' && (t.pdf_path || t.tiene_pdf_firmado) ;
+  const mostrarSubirActa = (esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA'  && !t.tiene_pdf_firmado; 
 
   const ejecutar = async (fn, ...args) => {
     try {
@@ -246,11 +247,7 @@ export default function ModalDetalleTransferencia({
     } catch {
       toast.error('Error al descargar el PDF.');
     }
-  };
-
-  const mostrarDescargaPDF =(esASISTSISTEMA ) && estado === 'EN_ESPERA_FIRMA';
-  const mostrarSubirActa = (esASISTSISTEMA ) && estado === 'EN_ESPERA_FIRMA'  && !t.tiene_pdf_firmado;
- 
+  }; 
 
   return (
     <Modal open={open} onClose={onClose} size="xl">
@@ -360,7 +357,9 @@ export default function ModalDetalleTransferencia({
       </ModalBody>
 
       <ModalFooter align="space">
+        
         <button onClick={onClose} className="btn-secondary">Cerrar</button>
+
         <div className="flex items-center gap-2 flex-wrap">
             {estado === 'PENDIENTE_APROBACION' && puedeAprobarAdmin && can('ms-bienes:transferencias:view_transferenciaaprobacion') && (
             <>

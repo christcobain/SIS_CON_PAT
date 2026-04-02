@@ -268,8 +268,7 @@ class TransferenciaService:
         bienes   = TransferenciaService._get_bienes_validados(bien_ids)
         origen   = TransferenciaService._extraer_origen(bienes)
         if data['sede_destino_id'] == origen['sede_origen_id']:
-            raise ValidationError('Bien asignado es de la misma Sede destino. Seleccione otro bien.')
-        
+            raise ValidationError('Bien asignado es de la misma Sede destino. Seleccione otro bien.')        
         MsUsuariosClient.validar_usuario(data['usuario_destino_id'], token)
         MsUsuariosClient.validar_sede(data['sede_destino_id'], token)
         if data.get('modulo_destino_id'):
@@ -283,7 +282,7 @@ class TransferenciaService:
             **origen,
         })
         TransferenciaService._registrar_aprobacion(
-            transferencia, 'REGISTRADOR', 'REGISTRADO', usuario_registra_id,
+            transferencia, role, 'REGISTRADO', usuario_registra_id,
             detalle='Transferencia registrada exitosamente, Pendiente aprobación ADMINSEDE/COORDSISTEMA.',
         )
         TransferenciaDetalleRepository.bulk_create(transferencia, bienes)
@@ -340,7 +339,8 @@ class TransferenciaService:
                 'fecha_aprobacion_adminsede': now,
                 'estado_transferencia':       'EN_ESPERA_FIRMA',
             })
-            TransferenciaService._registrar_aprobacion(t, rol_historial, 'APROBADO', aprobador_id, detalle='Asignación aprobada. Pendiente subir acta firmada.')
+            TransferenciaService._registrar_aprobacion(
+                t, rol_historial, 'APROBADO', aprobador_id, detalle='Asignación aprobada. Pendiente subir acta firmada.')
             TransferenciaService._guardar_pdf(t, cookie=cookie)
         else:
             TransferenciaRepository.update_fields(t, {
@@ -385,8 +385,10 @@ class TransferenciaService:
             'aprobado_segur_salida_id':      segursede_id,
             'fecha_aprobacion_segur_salida': timezone.now(),
         })
-        TransferenciaService._registrar_aprobacion(t, 'SEGUR_SALIDA', 'APROBADO', segursede_id, detalle='Salida física aprobada.')
-        return {'success': True, 'message': 'Salida física aprobada por Personal de Seguridad.'}
+        msge='Salida física aprobada por Personal de Seguridad.',
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'APROBADO', segursede_id, detalle=msge)
+        return {'success': True, 'message': msge}
 
     @staticmethod
     @transaction.atomic
@@ -430,8 +432,10 @@ class TransferenciaService:
             'observacion_segursede':          observacion,
             'estado_transferencia':           'EN_ESPERA_CONFORMIDAD',
         })
-        TransferenciaService._registrar_aprobacion(t, 'SEGUR_ENTRADA', 'APROBADO', segursede_id, detalle=observacion or 'Entrada física aprobada. Pendiente conformidad del usuario destino.')
-        return {'success': True, 'message': 'Entrada física aprobada. Esperando conformidad del usuario destinatario.'}
+        msge='Entrada física aprobada. Pendiente conformidad del usuario destinatario.'
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'APROBADO', segursede_id, detalle=observacion or msge)
+        return {'success': True, 'message': msge}
 
     @staticmethod
     @transaction.atomic
