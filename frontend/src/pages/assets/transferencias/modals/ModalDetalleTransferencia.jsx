@@ -148,7 +148,6 @@ function TabBienes({ bienes = [] }) {
 
 function TabAprobaciones({ t }) {
   const esTraslado = t.tipo === 'TRASLADO_SEDE';
-  console.log(t)
   const pasos = esTraslado ? [
     { label: 'Registrado por:',             nombre: t.usuario_origen_nombre,                 fecha: t.fecha_registro,                   hecho: true },
     { label: 'Aprobado por:', nombre: t.aprobado_por_adminsede_nombre,         fecha: t.fecha_aprobacion_adminsede,       hecho: !!t.aprobado_por_adminsede_id },

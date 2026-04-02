@@ -127,6 +127,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
   const [modalDv, setModalDv] = useState(null);
   const estado     = t.estado_transferencia;
   const esTraslado = t.tipo === 'TRASLADO_SEDE';
+  console.log(t)
   const bienes     = t.bienes ?? [];
   const esAdminAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
   const esSegur          = ['SEGURSEDE', 'SYSADMIN'].includes(role);

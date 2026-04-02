@@ -137,7 +137,9 @@ export default function Alertas() {
   };
 
   // ── Transferencias handlers ───────────────────────────────────────────────
-  const handleVerDetalleTransf = (item) => { setItemDetalleTransf(item); setModalDetalleTransf(true); };
+  const handleVerDetalleTransf = (item) => { 
+    setItemDetalleTransf(item); 
+    setModalDetalleTransf(true); };
   const handleDownloadTransf   = async (id) => {
     try { await descargarPDFTransf(id); }
     catch (e) { toast.error(e?.response?.data?.error || 'No se pudo generar el documento'); }
