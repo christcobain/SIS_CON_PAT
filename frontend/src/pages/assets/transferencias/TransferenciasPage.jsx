@@ -90,7 +90,9 @@ export default function TransferenciasPage() {
         try {
             await descargarPDF(id);
         } catch (e) {
-            toast.error(e.response?.data?.error||'No se pudo generar el documento');
+            console.log(e?.error)
+            console.log(e?.response?.data)
+            toast.error(e?.error||e.response?.data?.error||'No se pudo generar el documento');
         }
     };
 
