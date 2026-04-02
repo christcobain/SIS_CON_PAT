@@ -55,7 +55,7 @@ export default function TransferenciasPage() {
     const [itemCancel, setItemCancel] = useState(null);
     const {
         transferencias, loading, error, actualizando, refetch, obtenerTransf,
-        descargarPDF, crearTraslado, crearAsignacion, aprobarAdminsede,
+        descargarPDFTransf, crearTraslado, crearAsignacion, aprobarAdminsede,
         devolver, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
         retornoSalida, retornoEntrada, reenviarTransferencia, cancelar,subirFirmado
     } = useTransferencias(activeTab, { misTransferencias: filtros.misTransferencias, usuarioId: user?.id });
@@ -83,7 +83,7 @@ export default function TransferenciasPage() {
 
     const handleDownload = async (id) => {
         try {
-            await descargarPDF(id);
+            await descargarPDFTransf (id);
         } catch (e) {
             console.log(e?.error)
             console.log(e?.response?.data)
