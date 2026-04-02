@@ -57,7 +57,7 @@ class CatalogoViewSet(ViewSet):
         perms = {
             'list':       [HasJWTPermission('ms-bienes:catalogos:view_catcategoriabien')],
             'retrieve':   [HasJWTPermission('ms-bienes:catalogos:view_catcategoriabien')],
-            'create':     [HasJWTPermission('ms-bienes:catalogos:vadd_catcategoriabien')],
+            'create':     [HasJWTPermission('ms-bienes:catalogos:add_catcategoriabien')],
             'update':     [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
             'activate':   [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
             'deactivate': [HasJWTPermission('ms-bienes:catalogos:change_catcategoriabien')],
@@ -95,8 +95,7 @@ class CatalogoViewSet(ViewSet):
             return Response(
                 {"success": False, "error": f'Catálogo "{slug}" no encontrado.'},
                 status=status.HTTP_404_NOT_FOUND,
-            )
-        
+            )        
         result = CatalogoService.listar(model)
         serializer=serializer_class(result["data"], many=True)
         return Response(

@@ -77,6 +77,7 @@ class TransferenciaViewSet(ViewSet):
         add_t   = HasJWTPermission('ms-bienes:transferencias:add_transferencia')
         add_td  = HasJWTPermission('ms-bienes:transferencias:add_transferenciadetalle')
         chg_t   = HasJWTPermission('ms-bienes:transferencias:change_transferencia')
+        view_ta   = HasJWTPermission('ms-bienes:transferencias:view_transferenciaaprobacion')
         chg_td  = HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')
         del_t   = HasJWTPermission('ms-bienes:transferencias:delete_transferencia')
 
@@ -87,20 +88,20 @@ class TransferenciaViewSet(ViewSet):
             'documento':               [OR(view_t, view_td)],
             'crear_traslado':          [add_t],
             'crear_asignacion':        [OR(add_t, add_td)],
-            'aprobar_adminsede':       [chg_t],
-            'devolver_adminsede':      [chg_t],
-            'pendientes_segur':        [chg_td],
-            'pendientes_aprobacion':   [chg_t],
+            'aprobar_adminsede':       [view_ta],
+            'devolver_adminsede':      [view_ta],
+            'pendientes_segur':        [view_ta],
+            'pendientes_aprobacion':   [view_ta],
             'reenviar':                [add_t],
             'cancelar':                [OR(del_t, HasJWTPermission('ms-bienes:transferencias:delete_transferenciadetalle'))],
             'confirmar_recepcion':     [chg_td],
             'cerrar_con_firma':        [OR(chg_t, chg_td)],
-            'aprobar_segur_salida':    [chg_td],
-            'rechazar_segur_salida':   [chg_td],
-            'aprobar_segur_entrada':   [chg_td],
-            'rechazar_segur_entrada':  [chg_td],
-            'aprobar_retorno_salida':  [chg_td],
-            'aprobar_retorno_entrada': [chg_td],
+            'aprobar_segur_salida':    [view_ta],
+            'rechazar_segur_salida':   [view_ta],
+            'aprobar_segur_entrada':   [view_ta],
+            'rechazar_segur_entrada':  [view_ta],
+            'aprobar_retorno_salida':  [view_ta],
+            'aprobar_retorno_entrada': [view_ta],
         }
         return perms.get(self.action, [IsAuthenticated()])
 
