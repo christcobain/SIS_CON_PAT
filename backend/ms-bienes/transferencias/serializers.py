@@ -63,7 +63,7 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
             'confirmado_por_usuario_destino_id', 'confirmado_por_usuario_destino_nombre', 'fecha_confirmacion_destino',
             'aprobado_retorno_salida_id', 'aprobado_retorno_salida_nombre', 'fecha_aprobacion_retorno_salida',
             'aprobado_retorno_entrada_id', 'aprobado_retorno_entrada_nombre', 'fecha_aprobacion_retorno_entrada',
-            'pdf_path', 'tiene_pdf_firmado', 'fecha_pdf',
+            'pdf_path','pdf_firmado_path', 'tiene_pdf_firmado', 'fecha_pdf',
             'motivo_devolucion',
             'fecha_cancelacion', 'motivo_cancelacion', 'cancelacion_nombre', 'detalle_cancelacion',
             'bienes', 'ultima_aprobacion', 'aprobaciones',
