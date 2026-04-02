@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Modal         from '../../../../components/modal/Modal';
 import ModalHeader   from '../../../../components/modal/ModalHeader';
 import ModalBody     from '../../../../components/modal/ModalBody';
@@ -17,7 +17,6 @@ const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
 );
 
-// --- ESTILOS Y COMPONENTES DE DISEÑO PRESERVADOS ---
 const FUNC_COLOR = {
   TRASLADO_SEDE:      { bg: 'rgb(37 99 235 / 0.1)',  tx: '#1d4ed8', icon: 'local_shipping' },
   ASIGNACION_INTERNA: { bg: 'rgb(127 29 29 / 0.1)', tx: 'var(--color-primary)', icon: 'person_add' }
@@ -56,7 +55,7 @@ const FSelect = ({ children, ...p }) => (
 export default function ModalTransferencia({ 
   open, onClose, item, actualizando, 
   crearTraslado, crearAsignacion, reenviarTransferencia, 
-  obtenerTransf, // INTEGRADO
+  obtenerTransf,
   onGuardado 
 }) {
   const toast = useToast();
@@ -76,7 +75,7 @@ export default function ModalTransferencia({
   const [bienesSelected, setBienesSelected] = useState([]);
   const [confirm, setConfirm] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [cargandoDetalle, setCargandoDetalle] = useState(false); 
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
 
   const { sedes } = useLocaciones();
   const { usuarios: destinatarios } = useUsuarios({ 
@@ -112,11 +111,12 @@ export default function ModalTransferencia({
               marca_nombre: b.marca_nombre,
               modelo: b.modelo,
               numero_serie: b.numero_serie,
-              codigo_patrimonial: b.codigo_patrimonial
+              codigo_patrimonial: b.codigo_patrimonial,
+              estado_bien: 'ACTIVO'
             })));
           }
         } catch (err) {
-          toast.error(err.respone?.data?.error||"No se pudo cargar la información completa");
+          toast.error("Error al cargar datos");
         } finally {
           setCargandoDetalle(false);
         }
@@ -168,7 +168,7 @@ export default function ModalTransferencia({
       }
       onGuardado();
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Error al procesar la solicitud');
+      toast.error(err?.response?.data?.error || 'Error al procesar');
     } finally {
       setGuardando(false);
     }
@@ -258,7 +258,7 @@ export default function ModalTransferencia({
             </div>
 
             <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
-              {loadingBienes ? (
+              {loadingBienes || cargandoDetalle ? (
                 <div className="py-10 text-center"><span className="btn-loading-spin !border-t-primary" /></div>
               ) : (
                 bienes.map(b => {
@@ -282,8 +282,8 @@ export default function ModalTransferencia({
                           CP: {b.codigo_patrimonial || '—'} · SERIE: {b.numero_serie || '—'}
                         </p>
                       </div>
-                      <div className="px-2 py-0.5 rounded text-[9px] font-black" style={ESTADO_BIEN_COLOR[b.estado_bien]}>
-                        {b.estado_bien}
+                      <div className="px-2 py-0.5 rounded text-[9px] font-black" style={ESTADO_BIEN_COLOR[b.estado_bien || 'ACTIVO']}>
+                        {b.estado_bien || 'ACTIVO'}
                       </div>
                     </div>
                   );
@@ -300,11 +300,11 @@ export default function ModalTransferencia({
                 <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-body)' }}>
                   Has seleccionado <strong>{bienesSelected.length} bien(es)</strong> para esta operación. 
                 </p>
-                <p className="text-[10px] mt-2 italic" style={{ color: 'var(--color-text-body)' }}>
+                <div className="text-[10px] mt-2 italic" style={{ color: 'var(--color-text-body)' }}>
                   {isTraslado 
-                    ? 'Solo bienes en estado ACTIVO pueden trasladarse. El flujo requiere aprobación de ADMINSEDE y Seguridad.'
-                    : 'Solo bienes en estado ACTIVO de tu sede pueden asignarse. Requiere aprobación de ADMINSEDE.'}
-                </p>
+                    ? <p>Solo bienes ACTIVO pueden trasladarse. Flujo: ADMINSEDE → SEGURSEDE salida → SEGURSEDE entrada.</p>
+                    : <p>Solo bienes ACTIVO de tu sede pueden asignarse. Requiere aprobación de ADMINSEDE.</p>}
+                </div>
               </div>
             </div>
           </div>
@@ -313,11 +313,8 @@ export default function ModalTransferencia({
 
       <ModalFooter align="right">
         <button onClick={onClose} className="btn-secondary">Cancelar</button>
-        <button 
-          onClick={handleSolicitar} 
-          disabled={guardando || actualizando || cargandoDetalle}
-          className="btn-primary flex items-center gap-2"
-        >
+        <button onClick={handleSolicitar} disabled={guardando || actualizando || cargandoDetalle}
+          className="btn-primary flex items-center gap-2">
           {(guardando || actualizando || cargandoDetalle) ? <span className="btn-loading-spin" /> : <Icon name={isEditar ? 'send' : 'add_circle'} className="text-[16px]" />}
           {isEditar ? 'Reenviar orden' : (isTraslado ? 'Registrar traslado' : 'Registrar asignación')}
         </button>
@@ -326,7 +323,7 @@ export default function ModalTransferencia({
       <ConfirmDialog
         open={confirm}
         title={isEditar ? 'Confirmar reenvío' : (isTraslado ? 'Confirmar traslado' : 'Confirmar asignación')}
-        message={`¿Está seguro de ${isEditar ? 'reenviar' : 'registrar'} esta operación con ${form.bien_ids.length} bien(es) seleccionado(s)?`}
+        message={`¿${isEditar ? 'Reenviar' : 'Registrar'} con ${form.bien_ids.length} bien(es) seleccionado(s)?`}
         confirmLabel={isEditar ? 'Sí, reenviar' : 'Sí, registrar'}
         onConfirm={onConfirmar}
         onClose={() => setConfirm(false)}
