@@ -285,6 +285,7 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
                   {esTraslado ? 'Traslado' : 'Asignación'}
                 </span>
               </div>
+              {console.log(t)}
               <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
                 Origen: <strong>{t.sede_origen_nombre ?? `Sede #${t.sede_origen_id}`}</strong>
                 {esTraslado && (

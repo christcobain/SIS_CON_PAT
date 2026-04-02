@@ -663,7 +663,7 @@ class TransferenciaService:
         return {'success': True, 'message': 'Transferencia reenviada para aprobación.'}
 
     @staticmethod
-    def listar_pendientes_segur(sede_id: int, role: str):
+    def listar_pendientes_segur(sede_id: int, role: str,token: str):
         qs = TransferenciaRepository.filter({'tipo': 'TRASLADO_SEDE'})
         qs = qs.exclude(estado_transferencia__in=['ATENDIDO', 'CANCELADO', 'DEVUELTO'])
         filtros = Q()
@@ -671,7 +671,14 @@ class TransferenciaService:
         filtros |= Q(sede_destino_id=sede_id, estado_transferencia='PENDIENTE_APROBACION', aprobado_segur_salida_id__isnull=False, aprobado_segur_entrada_id__isnull=True)
         filtros |= Q(sede_destino_id=sede_id, estado_transferencia='EN_RETORNO', aprobado_retorno_salida_id__isnull=True)
         filtros |= Q(sede_origen_id=sede_id, estado_transferencia='EN_RETORNO', aprobado_retorno_salida_id__isnull=False, aprobado_retorno_entrada_id__isnull=True)
-        return qs.filter(filtros).distinct()
+        qs.filter(filtros).distinct()
+        qs = qs.order_by('-fecha_registro')
+        lista = list(qs)
+        for tr in lista:
+            TransferenciaService._enriquecer_transferencia(tr, token)
+            _ = list(tr.detalles.all())
+        return lista
+        
 
     @staticmethod
     def listar_pendientes_aprobacion(role: str, sede_id: int, modulo_id: int, token: str):

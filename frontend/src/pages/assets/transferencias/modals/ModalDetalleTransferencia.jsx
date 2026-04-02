@@ -221,9 +221,12 @@ export default function ModalDetalleTransferencia({
   const ejecutar = async (fn, ...args) => {
     try {
       const res = await fn(...args);
-      if (res?.success === false) { toast.error(res.error); return; }
-      toast.success('Operación ejecutada correctamente.');
-      onAccionExitosa?.();
+      if (res?.success === false) { 
+        toast.error(res.error); 
+        return; 
+      }
+      toast.success(res?.message||res?.response?.data?.message||'Operación ejecutada correctamente.');
+      onAccionExitosa();
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Error en la operación.');
     }

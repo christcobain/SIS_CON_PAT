@@ -297,9 +297,10 @@ class TransferenciaViewSet(ViewSet):
     )
     @action(detail=False, methods=['get'], url_path='pendientes-segur')
     def pendientes_segur(self, request):
+        token = self._get_token(request)
         sede_id = self._get_sede(request)
         role    = self._get_role(request)
-        qs = TransferenciaService.listar_pendientes_segur(sede_id, role)
+        qs = TransferenciaService.listar_pendientes_segur(sede_id, role, token)
         return Response(TransferenciaListSerializer(qs, many=True).data)
 
     @extend_schema(
