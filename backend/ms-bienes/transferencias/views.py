@@ -92,7 +92,7 @@ class TransferenciaViewSet(ViewSet):
             'aprobar_adminsede':       [chg_t],
             'devolver_adminsede':      [chg_t],
             'pendientes_segur':        [chg_ta],
-            'pendientes_aprobacion':   [chg_t],
+            'pendientes_aprobacion':   [OR(chg_t,add_td)],
             'reenviar':                [OR(add_t, add_td)],
             'cancelar':                [OR(del_t, del_td)],
             'confirmar_recepcion':     [add_td],#asistente

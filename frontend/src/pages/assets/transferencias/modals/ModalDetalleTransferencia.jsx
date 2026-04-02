@@ -213,7 +213,7 @@ export default function ModalDetalleTransferencia({
   const bienes     = t.bienes ?? [];  
   const puedeAprobarAdmin = can('ms-bienes:transferencias:change_transferencia') && estado === 'PENDIENTE_APROBACION' && !t.aprobado_por_adminsede_id;
   const puedeAprobarSalida = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado)&& !t.aprobado_segur_salida_id && t.aprobado_por_adminsede_id;
-  const puedeAprobarEntrada = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado)&& t.aprobado_segur_salida_id && t.aprobado_segur_entrada_id;
+  const puedeAprobarEntrada = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado)&& t.aprobado_segur_salida_id && !t.aprobado_segur_entrada_id;
   const puedeRetornoSalida = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&& !t.aprobado_retorno_salida_id;
   const puedeRetornoEntrada = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&& t.aprobado_retorno_salida_id;
   const esUsuarioFinal  = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia');
@@ -379,7 +379,8 @@ export default function ModalDetalleTransferencia({
                 onClick={() => ejecutar(acciones.aprobarAdminsede, t.id)}
                 disabled={actualizando}
                 className="btn-primary flex items-center gap-2">
-                {actualizando ? <span className="btn-loading-spin" /> : <Icon name="verified" className="text-[16px]" />}
+                {actualizando ? <span className="btn-loading-spin" /> 
+                : <Icon name="verified" className="text-[16px]" />}
                 {esAsignacion ? 'Aprobar asignación' : 'Aprobar traslado'}
               </button>
             </>
