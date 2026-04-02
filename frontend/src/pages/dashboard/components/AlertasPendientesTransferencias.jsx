@@ -206,9 +206,17 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado,onDownload,su
       setBusy(false);
     }
   };
-  const handleDevolver        = async (m) => { setModalDv(null); await accion(() => transferenciasService.devolver(t.id, { motivo_devolucion: m }), 'Transferencia devuelta al registrador.'); };
-  const handleRechazarSalida  = async (m) => { setModalDv(null); await accion(() => transferenciasService.rechazarSalidaSeguridad(t.id, { motivo_devolucion: m }), 'Salida rechazada.'); };
-  const handleRechazarEntrada = async (m) => { setModalDv(null); await accion(() => transferenciasService.rechazarEntradaSeguridad(t.id, { motivo_devolucion: m }), 'Entrada rechazada. En retorno.'); };
+  const handleDevolver        = async (m) => { 
+    setModalDv(null); 
+    const result=await accion(() => transferenciasService.devolver(t.id, { motivo_devolucion: m }), result.message||result.response?.data?.message || 'Transferencia devuelta al registrador.'); };
+  const handleRechazarSalida  = async (m) => { 
+    setModalDv(null); 
+    const result=await accion(() => transferenciasService.rechazarSalidaSeguridad(t.id, { motivo_devolucion: m }), result.message||result.response?.data?.message || 'Salida física rechazada. En retorno.'); 
+  };
+  const handleRechazarEntrada = async (m) => { 
+    setModalDv(null); 
+    const result=await accion(() => transferenciasService.rechazarEntradaSeguridad(t.id, { motivo_devolucion: m }), result.message||result.response?.data?.message || 'Entrada rechazada. En retorno.'); 
+  };
 
   const handleSubirFirmado = async e => {
     const archivo = e.target.files?.[0];

@@ -165,7 +165,10 @@ export default function Alertas() {
   };
 
   // ── Bajas handlers ────────────────────────────────────────────────────────
-  const handleVerDetalleBaja = (item) => { setItemActivoBaja(item); setModalDetalleBaja(true); };
+  const handleVerDetalleBaja = (item) => { 
+    setItemActivoBaja(item); 
+    setModalDetalleBaja(true); 
+  };
   const handleGestionarBaja  = (item, modo) => {
     setItemActivoBaja(item);
     setModoGestionBaja(modo);

@@ -35,7 +35,7 @@ function AccionesFila({ item,  onVerDetalle, onEditar, onCancelar, onDownload })
   const user = useAuthStore((s) => s.user); 
   const esRegistrador = item.usuario_origen_id === user?.id;
   const puedeEditar = (estado === 'DEVUELTO') && esRegistrador && canAny('ms-bienes:transferencias:add_transferencia', 'ms-bienes:transferencias:add_transferenciadetalle');
-  const puedeCancelar = !['ATENDIDO', 'CANCELADO'].includes(estado) && canAny('ms-bienes:transferencias:delete_transferencia', 'ms-bienes:transferencias:delete_transferenciadetalle');
+  const puedeCancelar = esRegistrador&&['DEVUELTO'].includes(estado) && canAny('ms-bienes:transferencias:delete_transferencia', 'ms-bienes:transferencias:delete_transferenciadetalle');
   const puedeDownload = estado === 'ATENDIDO' && (item.pdf_path || item.tiene_pdf_firmado)&& canAny('ms-bienes:transferencias:view_transferencia', 'ms-bienes:transferencias:view_transferenciadetalle');
   
 

@@ -321,9 +321,7 @@ class TransferenciaViewSet(ViewSet):
         role      = self._get_role(request)
         sede_id   = self._get_sede(request)
         modulo_id = self._get_modulo(request)
-        qs = TransferenciaService.listar_pendientes_aprobacion(
-            role, sede_id, modulo_id, token,
-        )
+        qs = TransferenciaService.listar_pendientes_aprobacion(role, sede_id, modulo_id, token)
         return Response(TransferenciaListSerializer(qs, many=True).data)
 
     @extend_schema(

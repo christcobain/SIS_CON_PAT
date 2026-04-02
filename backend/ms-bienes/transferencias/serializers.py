@@ -40,7 +40,6 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
     aprobado_retorno_entrada_nombre        = serializers.CharField(read_only=True)
     bienes                                 = TransferenciaDetalleSerializer(source='detalles', many=True, read_only=True)
     aprobaciones                           = AprobacionSerializer(many=True, read_only=True)
-
     class Meta:
         model  = Transferencia
         fields = [
@@ -69,7 +68,6 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
             'fecha_cancelacion', 'motivo_cancelacion', 'cancelacion_nombre', 'detalle_cancelacion',
             'bienes', 'ultima_aprobacion', 'aprobaciones',
         ]
-
     def get_ultima_aprobacion(self, obj):
         ultima = obj.aprobaciones.last()
         if not ultima:
@@ -82,10 +80,8 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
             'detalle':       ultima.detalle,
             'fecha':         ultima.fecha,
         }
-
     def get_tiene_pdf_firmado(self, obj):
         return bool(obj.pdf_firmado_path)
-
     def get_cancelacion_nombre(self, obj):
         return obj.motivo_cancelacion.nombre if obj.motivo_cancelacion else None
 
