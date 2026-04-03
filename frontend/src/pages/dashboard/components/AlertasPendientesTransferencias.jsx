@@ -358,8 +358,11 @@ export default function AlertasPendientesTransferencias({ onVerDetalle,acciones}
     }
   }, [role, recargar]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => { 
+    cargar(); 
+  }, [cargar]);  
   const refresh = () => setRecargar(r => r + 1);
+
 
   if (!esSegur && !esAprobador) {
     return (

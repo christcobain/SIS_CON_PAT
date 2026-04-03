@@ -492,7 +492,8 @@ export default function ModalDetalleTransferencia({
               borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() =>  setModalDv('rechazar_salida')} />
               <ActionBtn 
               icon="output" label="V°B° Salida Sede" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" 
-              borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} />
+              borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} 
+              onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} />
             </>
               )}
               {puedeAprobarEntrada && (
