@@ -485,51 +485,6 @@ class TransferenciaService:
 
     @staticmethod
     @transaction.atomic
-    def cerrar_con_firma(pk: int, archivo, usuario_id: int,role) -> Dict[str, Any]:
-        t = TransferenciaService._get_or_404(pk)
-        if t.estado_transferencia != 'EN_ESPERA_FIRMA':
-            raise ValidationError(f'Solo se puede cerrar con firma en estado EN_ESPERA_FIRMA. Estado actual: {t.estado_transferencia}.')
-        ext = os.path.splitext(getattr(archivo, 'name', '.pdf'))[-1].lower() or '.pdf'
-        if ext not in ('.pdf', '.jpg', '.jpeg', '.png'):
-            raise ValidationError('Formato no permitido. Use PDF, JPG o PNG.')
-        archivo_bytes = b''.join(chunk for chunk in archivo.chunks())
-        try:
-            nombre_archivo = f'{t.numero_orden}_firmado{ext}'
-            ruta = subir_pdf_firmado(archivo_bytes, nombre_archivo)
-        except Exception as e:
-            logger.error('Error subiendo acta firmada a Supabase: %s', e)
-            raise ValidationError('Error al guardar el archivo. Intente nuevamente.')
-        TransferenciaService._restaurar_estado_bienes(t, 'ACTIVO')
-        TransferenciaRepository.update_fields(t, {
-            'pdf_firmado_path':     ruta,
-            'estado_transferencia': 'ATENDIDO',
-            'fecha_pdf':            timezone.now(),
-        })
-        TransferenciaService._registrar_aprobacion(
-            t, role, 'ATENDIDO', usuario_id, detalle='Acta firmada recibida. Proceso ATENDIDO.')
-        tipo_msg = 'Traslado' if t.tipo == 'TRASLADO_SEDE' else 'Asignación'
-        return {'success': True, 'message': f'{tipo_msg} completado. Acta firmada registrada en el sistema.'}
-
-    @staticmethod
-    def obtener_documento(pk: int, cookie: str = '') -> bytes:
-        t = TransferenciaService._get_or_404(pk)
-        ESTADOS_CON_DOCUMENTO = {'EN_ESPERA_FIRMA', 'ATENDIDO'}
-        if t.estado_transferencia not in ESTADOS_CON_DOCUMENTO:
-            raise ValidationError('El documento solo está disponible cuando el estado es EN_ESPERA_FIRMA o ATENDIDO.')
-        if t.pdf_firmado_path:
-            try:
-                return descargar_pdf(t.pdf_firmado_path)
-            except Exception as e:
-                logger.warning('No se pudo descargar PDF firmado %s: %s', t.pdf_firmado_path, e)
-        if t.pdf_path:
-            try:
-                return descargar_pdf(t.pdf_path)
-            except Exception as e:
-                logger.warning('No se pudo descargar PDF %s: %s', t.pdf_path, e)
-        return generar_pdf_transferencia(t, cookie=cookie)
- 
-    @staticmethod
-    @transaction.atomic
     def aprobar_retorno_salida(pk, segursede_id, motivo, role, sede_segur_id):
         if role not in ROLES_SEGURSEDE:
             raise PermissionDenied('Solo SEGURSEDE puede aprobar el retorno.')
@@ -740,3 +695,49 @@ class TransferenciaService:
             TransferenciaService._enriquecer_transferencia(tr, token)
             _ = list(tr.detalles.all())
         return lista
+    
+    @staticmethod
+    @transaction.atomic
+    def cerrar_con_firma(pk: int, archivo, usuario_id: int,role) -> Dict[str, Any]:
+        t = TransferenciaService._get_or_404(pk)
+        if t.estado_transferencia != 'EN_ESPERA_FIRMA':
+            raise ValidationError(f'Solo se puede cerrar con firma en estado EN_ESPERA_FIRMA. Estado actual: {t.estado_transferencia}.')
+        ext = os.path.splitext(getattr(archivo, 'name', '.pdf'))[-1].lower() or '.pdf'
+        if ext not in ('.pdf', '.jpg', '.jpeg', '.png'):
+            raise ValidationError('Formato no permitido. Use PDF, JPG o PNG.')
+        archivo_bytes = b''.join(chunk for chunk in archivo.chunks())
+        try:
+            nombre_archivo = f'{t.numero_orden}_firmado{ext}'
+            ruta = subir_pdf_firmado(archivo_bytes, nombre_archivo)
+        except Exception as e:
+            logger.error('Error subiendo acta firmada a Supabase: %s', e)
+            raise ValidationError('Error al guardar el archivo. Intente nuevamente.')
+        TransferenciaService._restaurar_estado_bienes(t, 'ACTIVO')
+        TransferenciaRepository.update_fields(t, {
+            'pdf_firmado_path':     ruta,
+            'estado_transferencia': 'ATENDIDO',
+            'fecha_pdf':            timezone.now(),
+        })
+        TransferenciaService._registrar_aprobacion(
+            t, role, 'ATENDIDO', usuario_id, detalle='Acta firmada recibida. Proceso ATENDIDO.')
+        tipo_msg = 'Traslado' if t.tipo == 'TRASLADO_SEDE' else 'Asignación'
+        return {'success': True, 'message': f'{tipo_msg} completado. Acta firmada registrada en el sistema.'}
+
+    @staticmethod
+    def obtener_documento(pk: int, cookie: str = '') -> bytes:
+        t = TransferenciaService._get_or_404(pk)
+        ESTADOS_CON_DOCUMENTO = {'EN_ESPERA_FIRMA', 'ATENDIDO'}
+        if t.estado_transferencia not in ESTADOS_CON_DOCUMENTO:
+            raise ValidationError('El documento solo está disponible cuando el estado es EN_ESPERA_FIRMA o ATENDIDO.')
+        if t.pdf_firmado_path:
+            try:
+                return descargar_pdf(t.pdf_firmado_path)
+            except Exception as e:
+                logger.warning('No se pudo descargar PDF firmado %s: %s', t.pdf_firmado_path, e)
+        if t.pdf_path:
+            try:
+                return descargar_pdf(t.pdf_path)
+            except Exception as e:
+                logger.warning('No se pudo descargar PDF %s: %s', t.pdf_path, e)
+        return generar_pdf_transferencia(t, cookie=cookie)
+ 

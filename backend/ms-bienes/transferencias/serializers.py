@@ -88,7 +88,6 @@ class TransferenciaListSerializer(serializers.ModelSerializer):
 
 class TransferenciaSegurSerializer(serializers.ModelSerializer):
     bienes = TransferenciaDetalleSerializer(source='detalles', many=True, read_only=True)
-
     class Meta:
         model  = Transferencia
         fields = [
@@ -104,7 +103,6 @@ class TransferenciaSegurSerializer(serializers.ModelSerializer):
             'bienes',
         ]
 
-
 class TransferenciaDetailSerializer(serializers.ModelSerializer):
     sede_origen_nombre       = serializers.CharField(read_only=True)
     sede_destino_nombre      = serializers.CharField(read_only=True)
@@ -113,11 +111,9 @@ class TransferenciaDetailSerializer(serializers.ModelSerializer):
     usuario_destino_nombre   = serializers.CharField(read_only=True)
     bienes                   = TransferenciaDetalleSerializer(source='detalles', many=True, read_only=True)
     tiene_pdf_firmado        = serializers.SerializerMethodField()
-
     class Meta:
         model  = Transferencia
         fields = '__all__'
-
     def get_tiene_pdf_firmado(self, obj):
         return bool(obj.pdf_firmado_path)
 
@@ -131,8 +127,6 @@ class TrasladoSedeWriteSerializer(serializers.Serializer):
     piso_destino         = serializers.IntegerField(required=False, allow_null=True)
     motivo_transferencia_id = serializers.IntegerField(required=False, allow_null=True)
     descripcion          = serializers.CharField(required=False, allow_blank=True)
-
-
 class AsignacionInternaWriteSerializer(serializers.Serializer):
     bien_ids             = serializers.ListField(child=serializers.IntegerField(), min_length=1)
     usuario_destino_id   = serializers.IntegerField()
@@ -142,20 +136,14 @@ class AsignacionInternaWriteSerializer(serializers.Serializer):
     piso_destino         = serializers.IntegerField(required=False, allow_null=True)
     motivo_transferencia_id = serializers.IntegerField(required=False, allow_null=True)
     descripcion          = serializers.CharField(required=False, allow_blank=True)
-
-
 class DevolucionSerializer(serializers.Serializer):
     motivo_devolucion = serializers.CharField(min_length=5)
-
-
 class AprobacionSegurSerializer(serializers.Serializer):
     observacion = serializers.CharField(required=False, allow_blank=True)
-
 
 class CancelacionSerializer(serializers.Serializer):
     motivo_cancelacion_id = serializers.IntegerField()
     detalle_cancelacion   = serializers.CharField(required=False, allow_blank=True)
-
 
 class ReenvioSerializer(serializers.Serializer):
     bien_ids             = serializers.ListField(child=serializers.IntegerField(), min_length=1, required=False)
@@ -167,10 +155,7 @@ class ReenvioSerializer(serializers.Serializer):
     ubicacion_destino_id = serializers.IntegerField(required=False, allow_null=True)
     piso_destino         = serializers.IntegerField(required=False, allow_null=True)
 
-
 class RetornoSalidaSerializer(serializers.Serializer):
     motivo_retorno = serializers.CharField(required=False, allow_blank=True)
-
-
 class RetornoEntradaSerializer(serializers.Serializer):
     observacion = serializers.CharField(required=False, allow_blank=True)

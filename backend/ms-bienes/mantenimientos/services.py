@@ -92,6 +92,7 @@ class MantenimientoService:
         qs = MantenimientoRepository.filter(real_filters)
         for m in qs:
             MantenimientoService._enriquecer(m, token)
+            _ = list(m.detalles.all())
         return qs
     @staticmethod
     def mis_mantenimientos(
@@ -346,12 +347,10 @@ class MantenimientoService:
             BienRepository.update_fields(bien, updates)
         lista_bienes = [d.bien for d in m.detalles.all()]
         TransferenciaService._cambiar_estado_bienes(lista_bienes, 'ACTIVO')
-        subido_por_nombre=MantenimientoService._get_user_name(usuario_id, cookie)
         MantenimientoRepository.update_fields(m, {
             'pdf_firmado_path':     ruta_storage,
             'fecha_pdf_firmado':    now,
             'subido_por_id':        usuario_id,
-            'subido_por_nombre':   subido_por_nombre,
             'estado_mantenimiento': 'ATENDIDO',
         })
         MantenimientoAprobacionRepository.registrar(
