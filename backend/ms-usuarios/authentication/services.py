@@ -304,7 +304,7 @@ class LoginSessionService:
         sedes = list(user.sedes.values('id', 'nombre'))
         extra_claims = {
             'role':             user.role.name if user.role else None,
-            'permissions':      permissions_grouped,
+            # 'permissions':      permissions_grouped,
             'permissions_flat': ','.join(permissions_flat),
             'sedes_ids':        [s['id'] for s in sedes],
             'sedes':            sedes, 
@@ -373,7 +373,7 @@ class LoginSessionService:
         new_refresh = RFToken.for_user(user)
         extra_claims = {
             'role':             user.role.name if user.role else None,
-            'permissions':      permissions_grouped,
+            # 'permissions':      permissions_grouped,
             'permissions_flat': permissions_flat,
             'sedes_ids':        [s['id'] for s in sedes],
             'sedes':            sedes, 
