@@ -211,6 +211,7 @@ class LogoutViewSet(ViewSet):
         response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, **cookie_kwargs)
         response.delete_cookie('csrftoken', **cookie_kwargs)
         response.delete_cookie('sessionid', **cookie_kwargs)
+        auth.logout(request)
         django_logout(request)
         return response
 
