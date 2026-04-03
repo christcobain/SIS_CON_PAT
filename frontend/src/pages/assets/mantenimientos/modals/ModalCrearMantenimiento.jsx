@@ -258,6 +258,8 @@ export default function ModalCrearMantenimiento({ open, item, onClose, onGuardad
       onGuardado();
     } catch (e) {
       toast.error(
+        e?.error ||
+        e?.response?.error ||
         e?.response?.data?.error ||
         e?.response?.data?.detail ||
         'Error al procesar la orden de mantenimiento.'
