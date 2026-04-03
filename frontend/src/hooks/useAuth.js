@@ -56,8 +56,9 @@ export function useAuth() {
       console.warn('Error en logout del servidor, limpiando estado local.', err);
     } finally {
       clearAuth();
-      sessionStorage.clear(); 
+      sessionStorage.clear();
       localStorage.removeItem('sisconpat_expired_user');
+      localStorage.removeItem('sisconpat-auth-storage');
       setLoading(false);
       navigate('/login', { replace: true });
     }

@@ -65,3 +65,16 @@ class AdminJWTAuthBackend:
             return User.objects.get(pk=user_id)
         except User.DoesNotExist:
             return None
+        
+class CookieOnlyJWTAuthentication(CookieJWTAuthentication):
+    def authenticate(self, request):
+        raw_token = request.COOKIES.get(
+            getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
+        )
+        if raw_token is None:
+            return None
+        try:
+            validated_token = self.get_validated_token(raw_token)
+        except InvalidToken:
+            return None
+        return self.get_user(validated_token), validated_token

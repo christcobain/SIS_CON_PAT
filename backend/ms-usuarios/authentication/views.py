@@ -3,6 +3,7 @@ from django.conf import settings
 from rest_framework import status
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from .backends import CookieOnlyJWTAuthentication
 from rest_framework.response import Response
 from django.core.exceptions import ValidationError
 from rest_framework.decorators import action
@@ -170,6 +171,7 @@ class LoginAttemptViewSet(ViewSet):
         return Response(LoginAttemptSerializer(result, many=True).data)
  
 class LogoutViewSet(ViewSet):    
+    authentication_classes = [CookieOnlyJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def _get_token(self, request) -> str:
         cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
@@ -212,14 +214,11 @@ class LogoutViewSet(ViewSet):
     #     return response
     
     def create(self, request):
-        token = self._get_token(request)
         refresh_token = request.COOKIES.get(settings.JWT_AUTH_REFRESH_COOKIE)
         try:
             real_user = User.objects.get(pk=request.user.id)
         except User.DoesNotExist:
             return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
-        print('real_user= ',real_user)
-        print('token= ',token)
         if not refresh_token:
             LoginSessionRepository.logout_all_user_sessions(real_user)
             response = Response(
@@ -229,8 +228,7 @@ class LogoutViewSet(ViewSet):
             auth.logout(request)
             response.delete_cookie(settings.JWT_AUTH_COOKIE, path='/')
             response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path='/')
-            session_cookie_name = getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid')
-            response.delete_cookie(session_cookie_name, path='/')
+            response.delete_cookie(getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid'), path='/')
             response.delete_cookie('csrftoken', path='/')
             return response
         result = LoginSessionService.logout(
@@ -247,8 +245,7 @@ class LogoutViewSet(ViewSet):
             auth.logout(request)
             response.delete_cookie(settings.JWT_AUTH_COOKIE, path='/')
             response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path='/')
-            session_cookie_name = getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid')
-            response.delete_cookie(session_cookie_name, path='/')
+            response.delete_cookie(getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid'), path='/')
             response.delete_cookie('csrftoken', path='/')
         return response
 
