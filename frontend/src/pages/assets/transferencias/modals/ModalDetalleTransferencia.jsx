@@ -212,10 +212,11 @@ export default function ModalDetalleTransferencia({
   const badge      = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
   const bienes     = t.bienes ?? [];  
   const puedeAprobarAdmin = can('ms-bienes:transferencias:change_transferencia') && estado === 'PENDIENTE_APROBACION' && !t.aprobado_por_adminsede_id;
-  const puedeAprobarSalida = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado)&& !t.aprobado_segur_salida_id && t.aprobado_por_adminsede_id;
-  const puedeAprobarEntrada = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION', 'EN_RETORNO'].includes(estado)&& t.aprobado_segur_salida_id && !t.aprobado_segur_entrada_id;
-  const puedeRetornoSalida = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&& !t.aprobado_retorno_salida_id;
-  const puedeRetornoEntrada = can('ms-bienes:transferencias:change_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&& t.aprobado_retorno_salida_id;
+  const puedeAprobarSalida = can('ms-bienes:transferencias:add_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION'].includes(estado)&& !t.aprobado_segur_salida_id && t.aprobado_por_adminsede_id;
+  const puedeAprobarEntrada = can('ms-bienes:transferencias:add_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION'].includes(estado)&& t.aprobado_segur_salida_id && !t.aprobado_segur_entrada_id;
+  
+  const puedeRetornoSalida = can('ms-bienes:transferencias:add_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&& !t.aprobado_retorno_salida_id;
+  const puedeRetornoEntrada = can('ms-bienes:transferencias:add_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&& t.aprobado_retorno_salida_id;
   const esUsuarioFinal  = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia');
   const mostrarDescargaPDF =(esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA' ||estado=='ATENDIDO' && (t.pdf_path || t.tiene_pdf_firmado) ;
   const mostrarSubirActa = (esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA'  && !t.tiene_pdf_firmado; 
@@ -387,8 +388,7 @@ export default function ModalDetalleTransferencia({
             </>
           )}
 
-            {puedeAprobarSalida && (
-     
+            {puedeAprobarSalida && (     
               <button onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} disabled={actualizando}
                 className="btn-primary flex items-center gap-2">
                 <Icon name="output" className="text-[16px]" />VB. Salida Sede
@@ -403,13 +403,13 @@ export default function ModalDetalleTransferencia({
           {puedeRetornoSalida && (               
             <button onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
               className="btn-primary flex items-center gap-2">
-              <Icon name="assignment_return" className="text-[16px]" />V°B° retorno Salida
+              <Icon name="assignment_return" className="text-[16px]" />Confirmar Retorno Salida
             </button>
               )}
               {puedeRetornoEntrada && t.aprobado_retorno_salida_id &&(
             <button onClick={() => ejecutar(acciones.retornoEntrada, t.id)} disabled={actualizando}
               className="btn-primary flex items-center gap-2">
-              <Icon name="assignment_return" className="text-[16px]" />VB. Retorno Entrada
+              <Icon name="assignment_return" className="text-[16px]" />Confirmar Retorno Entrada
             </button>            
           )}
 

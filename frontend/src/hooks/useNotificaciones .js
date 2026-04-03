@@ -35,7 +35,7 @@ export function useNotificaciones() {
         esAprobadorMant
           ? mantenimientosService.pendientesAprobacion()
           : Promise.resolve([]),
-        transferenciasService.listar({ estado: 'ATENDIDO' }),
+        transferenciasService.listar({ estado_transferencia: 'ATENDIDO' }),
         mantenimientosService.misMantenimientos({ estado_mantenimiento: 'ATENDIDO' }),
       ]);
       const transfData = transfPend.status === 'fulfilled'

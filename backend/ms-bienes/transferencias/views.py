@@ -77,6 +77,7 @@ class TransferenciaViewSet(ViewSet):
         view_ta = HasJWTPermission('ms-bienes:transferencias:view_transferenciaaprobacion')##Panel Notificaciones
         add_t   = HasJWTPermission('ms-bienes:transferencias:add_transferencia')##Tranferencias
         add_td  = HasJWTPermission('ms-bienes:transferencias:add_transferenciadetalle')##Asignaciones
+        add_ta  = HasJWTPermission('ms-bienes:transferencias:add_transferenciaaprobacion')##Asignaciones
         chg_t   = HasJWTPermission('ms-bienes:transferencias:change_transferencia')##Tranferencias
         chg_td   = HasJWTPermission('ms-bienes:transferencias:change_transferenciadetalle')##Asignaciones
         chg_ta   = HasJWTPermission('ms-bienes:transferencias:change_transferenciaaprobacion')
@@ -91,18 +92,18 @@ class TransferenciaViewSet(ViewSet):
             'crear_asignacion':        [add_td],#asistente
             'aprobar_adminsede':       [chg_t],
             'devolver_adminsede':      [chg_t],
-            'pendientes_segur':        [chg_ta],
+            'pendientes_segur':        [add_ta],
             'pendientes_aprobacion':   [OR(chg_t,add_td)],
             'reenviar':                [OR(add_t, add_td)],
             'cancelar':                [OR(del_t, del_td)],
             'confirmar_recepcion':     [add_td],#asistente
             'cerrar_con_firma':        [add_td],#asistente
-            'aprobar_segur_salida':    [chg_ta],
-            'rechazar_segur_salida':   [chg_ta],
-            'aprobar_segur_entrada':   [chg_ta],
-            'rechazar_segur_entrada':  [chg_ta],
-            'aprobar_retorno_salida':  [chg_ta],
-            'aprobar_retorno_entrada': [chg_ta],
+            'aprobar_segur_salida':    [add_ta],
+            'rechazar_segur_salida':   [add_ta],
+            'aprobar_segur_entrada':   [add_ta],
+            'rechazar_segur_entrada':  [add_ta],
+            'aprobar_retorno_salida':  [add_ta],
+            'aprobar_retorno_entrada': [add_ta],
         }
         return perms.get(self.action, [IsAuthenticated()])
 

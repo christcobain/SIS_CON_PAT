@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore }      from '../../../store/authStore';
 import { useToast }          from '../../../hooks/useToast';
 import transferenciasService from '../../../services/transferencias.service';
+import { usePermission } from '../../../../hooks/usePermission';
 
 
 const Icon = ({ name, className = '', style = {} }) => (
@@ -119,11 +120,12 @@ function InfoChip({ icon, label, color }) {
 }
 
 // ── Tarjeta individual de transferencia ───────────────────────────────────────
-function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado, user, acciones }) {
+function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones }) {
   const toast = useToast();
   const fileRef = useRef();
   const [busy, setBusy] = useState(false);
   const [modalDv, setModalDv] = useState(null);
+  const { can,canAny } = usePermission();
 
   const {
     aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
@@ -135,23 +137,22 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado, user, accion
   const estado = t.estado_transferencia;
   const esTraslado = t.tipo === 'TRASLADO_SEDE';
   const bienes = t.bienes ?? [];
-  const esAdminAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
-  const esSegur = ['SEGURSEDE', 'SYSADMIN'].includes(role);
-  const esASISTSISTEMA = ['ASISTSISTEMA', 'SYSADMIN'].includes(role);
+  const esAdminAprobador = can('ms-bienes:transferencias:change_transferencia') &&!!t.aprobado_por_adminsede_id;
+  const esSegur = can('ms-bienes:transferencias:add_transferenciaaprobacion')
+  const esUsuarioFinal = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia')
   const miSede = String(sedeId);
-  const adminAprobado = !!t.aprobado_por_adminsede_id;
   const segurSalidaOk = !!t.aprobado_segur_salida_id;
   const segurEntradaOk = !!t.aprobado_segur_entrada_id;
   const retornoSalidaOk = !!t.aprobado_retorno_salida_id;
   const sedeOrigen = String(t.sede_origen_id ?? '');
   const sedeDestino = String(t.sede_destino_id ?? '');
 
-  const puedeAprobarAdmin = esAdminAprobador && estado === 'PENDIENTE_APROBACION' && !adminAprobado;
-  const puedeAprobarSalida = esSegur && esTraslado && estado === 'PENDIENTE_APROBACION' && adminAprobado && !segurSalidaOk && sedeOrigen === miSede;
+  const puedeAprobarAdmin = esAdminAprobador && estado === 'PENDIENTE_APROBACION' ;
+  const puedeAprobarSalida = esSegur && esTraslado && estado === 'PENDIENTE_APROBACION'  && !segurSalidaOk && sedeOrigen === miSede;
   const puedeAprobarEntrada = esSegur && esTraslado && estado === 'PENDIENTE_APROBACION' && segurSalidaOk && !segurEntradaOk && sedeDestino === miSede;
-  const puedeConfirmarRecepcion = esASISTSISTEMA && esTraslado && estado === 'EN_ESPERA_CONFORMIDAD' && sedeDestino === miSede;
-  const soloInformativoConformidad = esAdminAprobador && !esASISTSISTEMA && esTraslado && estado === 'EN_ESPERA_CONFORMIDAD' && sedeDestino === miSede;
-  const puedeDescargarPDF = (esASISTSISTEMA) && estado === 'EN_ESPERA_FIRMA' && ((esTraslado && sedeDestino === miSede) || (!esTraslado && (sedeOrigen === miSede || sedeDestino === miSede)));
+  const puedeConfirmarRecepcion = esUsuarioFinal && esTraslado && estado === 'EN_ESPERA_CONFORMIDAD' && sedeDestino === miSede;
+  const soloInformativoConformidad = esAdminAprobador && !esUsuarioFinal && esTraslado && estado === 'EN_ESPERA_CONFORMIDAD' && sedeDestino === miSede;
+  const puedeDescargarPDF = (esUsuarioFinal) && estado === 'EN_ESPERA_FIRMA' && ((esTraslado && sedeDestino === miSede) || (!esTraslado && (sedeOrigen === miSede || sedeDestino === miSede)));
   const puedeSubirActa = puedeDescargarPDF;
   const puedeRetornoSalida = esSegur && esTraslado && estado === 'EN_RETORNO' && !retornoSalidaOk && sedeDestino === miSede;
   const puedeRetornoEntrada = esSegur && esTraslado && estado === 'EN_RETORNO' && retornoSalidaOk && !t.aprobado_retorno_entrada_id && t.aprobado_retorno_salida_id && sedeOrigen === miSede;
@@ -269,11 +270,23 @@ function TarjetaPendiente({ t, role, sedeId, onDetalle, onAprobado, user, accion
           
           <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirFirmado} />
           
-          {puedeSubirActa && <ActionBtn icon="upload_file" label="Subir Acta Firmada" color="#7c3aed" bgColor="rgb(124 58 237 / 0.12)" borderColor="rgb(124 58 237 / 0.45)" disabled={busy} onClick={() => fileRef.current?.click()} />}
+          {puedeSubirActa && 
+          <ActionBtn 
+          icon="upload_file" label="Subir Acta Firmada" 
+          color="#7c3aed" bgColor="rgb(124 58 237 / 0.12)" borderColor="rgb(124 58 237 / 0.45)" disabled={busy} 
+          onClick={() => fileRef.current?.click()} />}
 
-          {puedeRetornoSalida && <ActionBtn icon="undo" label="Confirmar Retorno Salida" color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)" disabled={busy} onClick={() => ejecutar(retornoSalida, t.id, {})} />}
+          {puedeRetornoSalida && 
+          <ActionBtn 
+          icon="undo" label="Confirmar Retorno Salida" 
+          color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)" disabled={busy} 
+          onClick={() => ejecutar(retornoSalida, t.id, {})} />}
 
-          {puedeRetornoEntrada && <ActionBtn icon="home" label="Confirmar Retorno Entrada" color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" disabled={busy} onClick={() => ejecutar(retornoEntrada, t.id, {})} />}
+          {puedeRetornoEntrada && 
+          <ActionBtn 
+          icon="home" label="Confirmar Retorno Entrada" 
+          color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" disabled={busy} 
+          onClick={() => ejecutar(retornoEntrada, t.id, {})} />}
 
           {!hayAccionPrimaria && !soloInformativoConformidad && <p className="text-[10px] italic" style={{ color: 'var(--color-text-faint)' }}>Sin acciones disponibles para tu rol en esta etapa.</p>}
         </div>

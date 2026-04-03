@@ -144,10 +144,6 @@ export default function Alertas() {
     setModalDetalleTransf(true); 
   };
 
-  // const handleDownloadTransf   = async (id) => {
-  //   try { await descargarPDFTransf(id); }
-  //   catch (e) { toast.error(e?.response?.data?.error || 'No se pudo generar el documento'); }
-  // };
 
   // ── Mantenimientos handlers ───────────────────────────────────────────────
   const handleVerDetalleMant = (item) => { setItemActivoMant(item); setModalDetalleMant(true); };
