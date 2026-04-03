@@ -214,8 +214,13 @@ class LogoutViewSet(ViewSet):
     #     return response
     def create(self, request):
         refresh_token = request.COOKIES.get(settings.JWT_AUTH_REFRESH_COOKIE)
+        token= self._get_token(request)
+        print('tokebn= ',token)
+        print('refresh= ',refresh_token)
         try:
             real_user = User.objects.get(pk=request.user.id)
+            print('real_user= ',real_user)
+            print('request.user= ',request.user)
         except User.DoesNotExist:
             return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
         if not refresh_token:
