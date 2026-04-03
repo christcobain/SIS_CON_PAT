@@ -194,7 +194,7 @@ function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
             <FInput value={detalle.procesador_tipo} onChange={v => setD('procesador_tipo', v)} placeholder="Ej: Intel Core i7-12700" />
           </div>
           <div>
-            <FLabel>Velocidad</FLabel>
+            <FLabel>Velocidad (GHZ)</FLabel>
             <FInput value={detalle.procesador_velocidad} onChange={v => setD('procesador_velocidad', v)} placeholder="Ej: 3.6 GHz" />
           </div>
           <div>
@@ -208,7 +208,7 @@ function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
 
           <SubSeccion title="Memoria RAM" color="#1d4ed8" />
           <div>
-            <FLabel>Capacidad RAM</FLabel>
+            <FLabel>Capacidad RAM (GB)</FLabel>
             <FInput value={detalle.capacidad_ram_gb} onChange={v => setD('capacidad_ram_gb', v)} placeholder="Ej: 16 GB" />
           </div>
           <div>
@@ -225,7 +225,7 @@ function SeccionDetalle({ tipoTecnico, detalle, setDetalle, catalogos }) {
             </FSelect>
           </div>
           <div>
-            <FLabel>Capacidad del disco</FLabel>
+            <FLabel>Capacidad del disco (GB)</FLabel>
             <FInput value={detalle.capacidad_disco} onChange={v => setD('capacidad_disco', v)} placeholder="Ej: 512 GB" />
           </div>
           <div>
@@ -569,15 +569,11 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
   const tipoSel     = tiposBien.find(t => String(t.id) === String(form.tipo_bien_id));
   const tipoTecnico = esInformatico ? detectarTipoTecnico(tipoSel?.nombre ?? '') : null;
 
-  // CatTipoBien no tiene FK a CatCategoriaBien — se muestran todos al elegir cualquier categoría
   const tiposFiltrados = useMemo(
     () => form.categoria_bien_id ? tiposBien.filter(t => t.is_active !== false) : [],
     [tiposBien, form.categoria_bien_id]
   );
-
   const ubicacionesActivos = (ubicaciones ?? []).filter(m => m.is_active !== false);
-
-  // Auto-asignar estados al crear nuevo bien
   const idBueno     = estadosBien.find(e => norm(e.nombre).includes('BUENO') || norm(e.nombre).includes('ACTIVO'))?.id;
   const idOperativo = estadosFuncion.find(e => norm(e.nombre).includes('OPERATIVO'))?.id;
 
@@ -637,9 +633,7 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
       onGuardado?.();
       onClose();
     } catch (e) {
-      const msg = e?.response?.data?.error
-        ?? Object.values(e?.response?.data ?? {})?.[0]?.[0]
-        ?? 'Error al guardar.';
+      const msg =e?.error|| e?.response?.error||e?.response?.data?.error ||e?.response?.data?.error||'Error al guardar.';
       toast.error(msg);
     } finally {
       setGuardando(false);

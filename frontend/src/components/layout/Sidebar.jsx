@@ -4,6 +4,27 @@ import { usePermission } from '../../hooks/usePermission';
 
 const MENU = [
   {
+    id: 'inicio',
+    grupo: null, 
+    items: [
+      { 
+        label: 'Resumen General', 
+        icon: 'grid_view', 
+        to: '/dashboard', 
+        perm: null, 
+        isDirect: true 
+      },
+      { 
+        label: 'Notificaciones', 
+        icon: 'notifications', 
+        to: '/alertas', 
+        perm: null, 
+        isDirect: true,
+        badge: true 
+      },
+    ],
+  },
+  {
     id: 'administrativa',
     grupo: 'Gestión Administrativa',
     icon: 'manage_accounts',
