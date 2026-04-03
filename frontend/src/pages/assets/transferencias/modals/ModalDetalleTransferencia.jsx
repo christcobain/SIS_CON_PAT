@@ -248,7 +248,7 @@ export default function ModalDetalleTransferencia({
 
   const handleDescargarPDF = async () => {
     try {
-      await acciones.descargarPDF?.(t.id);
+      await acciones.descargarPDFTransf?.(t.id);
     } catch {
       toast.error('Error al descargar el PDF.');
     }

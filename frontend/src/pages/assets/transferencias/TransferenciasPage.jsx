@@ -182,7 +182,7 @@ export default function TransferenciasPage() {
                         actualizando={actualizando}
                         acciones={{ aprobarAdminsede, aprobarSalidaSeguridad, 
                             aprobarEntradaSeguridad, retornoSalida, retornoEntrada, 
-                            devolver,descargarPDF,subirFirmado }}
+                            devolver,descargarPDFTransf,subirFirmado }}
                         onAccionExitosa={() => { setModalDetalle(false); refetch(); }}
                     />
                 )}

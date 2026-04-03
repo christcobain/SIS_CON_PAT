@@ -11,7 +11,7 @@ const MENU = [
       { label: 'Usuarios', icon: 'group', to: '/admin/usuarios', perm: 'ms-usuarios:users:view_user' },
       { label: 'Seguridad', icon: 'history', to: '/admin/seguridad', perm: 'ms-usuarios:authentication:view_passwordpolicy' },
       { label: 'Locaciones', icon: 'account_balance', to: '/admin/locaciones', perm: 'ms-usuarios:locations:add_sede' },
-      { label: 'Roles y Permisos', icon: 'admin_panel_settings', to: '/admin/roles', perm: 'ms-usuarios:roles:add_role' },
+      { label: 'Roles y Permisos', icon: 'admin_panel_settings', to: '/admin/roles', perm: 'ms-usuarios:roles:view_role' },
     ],
   },
   {
@@ -79,7 +79,7 @@ export default function Sidebar({ collapsed }) {
       <div className="h-20 flex items-center px-4 border-b border-white/5 bg-slate-900/50 backdrop-blur-md">
         <div className="flex items-center gap-3 overflow-hidden">
           <div className="size-10 shrink-0 bg-gradient-to-br from-primary to-blue-600 rounded-xl p-2 shadow-lg flex items-center justify-center">
-             <img src="./assets/images/ICONO.png" alt="L" className="w-full h-full object-contain brightness-0 invert" />
+             <img src="/src/assets/images/ICONO.png" alt="L" className="w-full h-full object-contain brightness-0 invert" />
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight animate-in fade-in slide-in-from-left-2">
