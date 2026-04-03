@@ -633,10 +633,6 @@ export default function ModalBienForm({ open, onClose, item = null, onGuardado }
       onGuardado?.();
       onClose();
     } catch (e) {
-      console.log('1= ',e?.error)
-      console.log('2= ',e?.response?.error)
-      console.log('3= ',e?.response?.data?.error)
-      console.log('4= ',e?.response?.data)
       const msg =e?.error|| e?.response?.error||e?.response?.data ||e?.response?.data?.error||'Error al guardar.';
       toast.error(msg);
     } finally {

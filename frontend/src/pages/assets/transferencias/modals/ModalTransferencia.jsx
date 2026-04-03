@@ -550,7 +550,7 @@ export default function ModalTransferencia({
                   <FSelect 
                     value={form.modulo_destino_id} 
                     onChange={v => { set('modulo_destino_id', v); 
-                    set('modulo_destino_id', ''); }}>
+                    set('modulo_destino_id', v); }}>
                     <option value="">Sin módulo específico</option>
                     {modulosActivos.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                   </FSelect>
