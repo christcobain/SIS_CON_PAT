@@ -85,8 +85,6 @@ export default function TransferenciasPage() {
         try {
             await descargarPDFTransf (id);
         } catch (e) {
-            console.log(e?.error)
-            console.log(e?.response?.data)
             toast.error(e?.error||e.response?.data?.error||'No se pudo generar el documento');
         }
     };

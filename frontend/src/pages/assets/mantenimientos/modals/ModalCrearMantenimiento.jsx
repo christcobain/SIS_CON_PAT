@@ -257,6 +257,7 @@ export default function ModalCrearMantenimiento({ open, item, onClose, onGuardad
       }
       onGuardado();
     } catch (e) {
+      console.log(e)
       console.log(e?.error)
       console.log(e?.response?.error )
       console.log(e?.response?.data?.error)
