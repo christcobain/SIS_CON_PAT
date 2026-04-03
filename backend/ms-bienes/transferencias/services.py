@@ -499,8 +499,7 @@ class TransferenciaService:
         except Exception as e:
             logger.error('Error subiendo acta firmada a Supabase: %s', e)
             raise ValidationError('Error al guardar el archivo. Intente nuevamente.')
-        if t.tipo == 'ASIGNACION_INTERNA':
-            TransferenciaService._restaurar_estado_bienes(t, 'ACTIVO')
+        TransferenciaService._restaurar_estado_bienes(t, 'ACTIVO')
         TransferenciaRepository.update_fields(t, {
             'pdf_firmado_path':     ruta,
             'estado_transferencia': 'ATENDIDO',

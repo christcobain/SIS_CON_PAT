@@ -17,10 +17,8 @@ from .serializers import (PasswordPolicySerializer,PasswordHistoryQuerySerialize
                           MultipleSessionSerializer,LoginAttemptSerializer,
                           AdminResetPasswordSerializer,LoginSessionHistorialSerializer,CredentialListSerializer,UnlockCredentialSerializer,
                           UserChangePasswordSerializer,SuccessResponseSerializer, ErrorResponseSerializer)
-from roles.permissions import IsSysAdmin
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model,logout as django_logout
 from roles.permissions import HasJWTPermission
-
 
 User = get_user_model()
 
@@ -195,13 +193,25 @@ class LogoutViewSet(ViewSet):
             {'success': result['success'], 'message': result['message']},
             status=status.HTTP_200_OK if result['success'] else status.HTTP_400_BAD_REQUEST,
         )
-        if result['success']:
-            auth.logout(request)
-            response.delete_cookie(settings.JWT_AUTH_COOKIE, path='/')
-            response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path='/')
-            session_cookie_name = getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid')
-            response.delete_cookie(session_cookie_name, path='/')            
-            response.delete_cookie('csrftoken', path='/')
+        # if result['success']:
+        #     auth.logout(request)
+        #     response.delete_cookie(settings.JWT_AUTH_COOKIE, path='/')
+        #     response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path='/')
+        #     session_cookie_name = getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid')
+        #     response.delete_cookie(session_cookie_name, path='/')            
+        #     response.delete_cookie('csrftoken', path='/')
+        # return response
+    
+        cookie_kwargs = {
+            'path': '/',
+            'samesite': getattr(settings, 'JWT_AUTH_COOKIE_SAMESITE', 'Lax'),
+            'domain': getattr(settings, 'SESSION_COOKIE_DOMAIN', None),
+        }
+        response.delete_cookie(settings.JWT_AUTH_COOKIE, **cookie_kwargs)
+        response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, **cookie_kwargs)
+        response.delete_cookie('csrftoken', **cookie_kwargs)
+        response.delete_cookie('sessionid', **cookie_kwargs)
+        django_logout(request)
         return response
 
 class RefreshTokenViewSet(ViewSet):

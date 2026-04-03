@@ -40,7 +40,7 @@ const getRoleName = (roleVal) => {
   return roleVal;
 };
 
-function NotificacionesDropdown({ open, onClose, transf, mant, onIrAlertas }) {
+function NotificacionesDropdown({ open,  transf, mant, onIrAlertas }) {
   const total = transf + mant;
 
   return (

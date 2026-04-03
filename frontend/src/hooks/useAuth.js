@@ -48,7 +48,6 @@ export function useAuth() {
       setLoading(false);
     }
   };
-
   const logout = async () => {
     setLoading(true);
     try {
@@ -58,10 +57,12 @@ export function useAuth() {
     } finally {
       clearAuth();
       sessionStorage.removeItem('sisconpat_expired_user');
+      localStorage.removeItem('sisconpat_expired_user');   
       setLoading(false);
-      navigate('/login');
+      navigate('/login', { replace: true });
     }
   };
+
 
   const refrescarToken = useCallback(async () => {
     try {
