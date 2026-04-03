@@ -59,7 +59,7 @@ export function useAuth() {
       sessionStorage.removeItem('sisconpat_expired_user');
       localStorage.removeItem('sisconpat_expired_user');   
       setLoading(false);
-      navigate('/login', { replace: true });
+      navigate('/login');
     }
   };
 
