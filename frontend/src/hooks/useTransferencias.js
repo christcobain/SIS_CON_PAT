@@ -24,7 +24,7 @@ export function useTransferencias(activeTab, params) {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, params]);
+  }, [activeTab]);
  
   useEffect(() => {
     fetchTransferencias();
