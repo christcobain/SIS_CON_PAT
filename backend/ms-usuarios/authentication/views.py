@@ -19,6 +19,7 @@ from .serializers import (PasswordPolicySerializer,PasswordHistoryQuerySerialize
                           UserChangePasswordSerializer,SuccessResponseSerializer, ErrorResponseSerializer)
 from django.contrib.auth import get_user_model,logout as django_logout
 from roles.permissions import HasJWTPermission
+from .repositories import LoginSessionRepository
 
 User = get_user_model()
 
