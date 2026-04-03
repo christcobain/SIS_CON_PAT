@@ -171,6 +171,14 @@ class LoginAttemptViewSet(ViewSet):
  
 class LogoutViewSet(ViewSet):    
     permission_classes = [IsAuthenticated]
+    def _get_token(self, request) -> str:
+        cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
+        token = request.COOKIES.get(cookie_name)
+        if not token:
+            auth_header = request.headers.get('Authorization', '')
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ', 1)[1]
+        return token
     @extend_schema(
         tags=['Autenticación'],
         summary='Cerrar sesión',
@@ -204,11 +212,14 @@ class LogoutViewSet(ViewSet):
     #     return response
     
     def create(self, request):
+        token = self._get_token(request)
         refresh_token = request.COOKIES.get(settings.JWT_AUTH_REFRESH_COOKIE)
         try:
             real_user = User.objects.get(pk=request.user.id)
         except User.DoesNotExist:
             return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        print('real_user= ',real_user)
+        print('token= ',token)
         if not refresh_token:
             LoginSessionRepository.logout_all_user_sessions(real_user)
             response = Response(
