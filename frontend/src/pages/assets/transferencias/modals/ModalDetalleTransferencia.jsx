@@ -413,23 +413,23 @@ export default function ModalDetalleTransferencia({
           )}
 
             {puedeAprobarSalida && (     
-              <>
-            <ActionBtn 
-              icon="output" label="V°B° Salida Sede" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" 
-              borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} />
+              <>            
               <ActionBtn 
               icon="block" label="Rechazar Salida" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" 
               borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() =>  setModalDv('rechazar_salida')} />
+              <ActionBtn 
+              icon="output" label="V°B° Salida Sede" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" 
+              borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} />
             </>
               )}
               {puedeAprobarEntrada && (
-              <>
-            <ActionBtn 
-              icon="output" label="V°B° Salida Sede" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" 
-              borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} />
+              <>            
               <ActionBtn 
               icon="block" label="Rechazar Salida" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" 
               borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() => setModalDv('rechazar_entrada')} />
+              <ActionBtn 
+              icon="output" label="V°B° Salida Sede" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" 
+              borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} />
             </>      
           )}
           {puedeRetornoSalida &&   
