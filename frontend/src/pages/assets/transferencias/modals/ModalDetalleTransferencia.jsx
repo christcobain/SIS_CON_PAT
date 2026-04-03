@@ -397,7 +397,16 @@ export default function ModalDetalleTransferencia({
         <div className="flex items-center gap-2 flex-wrap">
             { puedeAprobarAdmin  && (
             <>
-              <button
+            <ActionBtn 
+            icon="reply" label="Devolver" 
+            color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)" 
+            disabled={actualizando} onClick={() =>ejecutar(acciones.devolver, t.id)} />
+            <ActionBtn 
+            icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'} 
+            color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" 
+            disabled={actualizando} onClick={() => ejecutar(acciones.aprobarAdminsede, t.id)} />
+            
+              {/* <button
                 onClick={() => ejecutar(acciones.devolver, t.id, 'Devuelto para corrección')}
                 disabled={actualizando}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer"
@@ -411,7 +420,7 @@ export default function ModalDetalleTransferencia({
                 {actualizando ? <span className="btn-loading-spin" /> 
                 : <Icon name="verified" className="text-[16px]" />}
                 {esAsignacion ? 'Aprobar asignación' : 'Aprobar traslado'}
-              </button>
+              </button> */}
             </>
           )}
 
