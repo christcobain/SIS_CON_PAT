@@ -194,7 +194,18 @@ function TabAprobaciones({ t }) {
             {historial.map((h, i) => (
               <div key={h.id ?? i} className="p-3 rounded-xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-[10px] font-black uppercase" style={{ color: h.accion !== 'DEVUELTO'|| h.accion !=='RECHAZADO' ? '#16a34a' : h.accion === 'DEVUELTO' ? '#b45309' : 'var(--color-text-muted)' }}>
+                  <span 
+                    className="text-[10px] font-black uppercase" 
+                    style={{ 
+                      color: h.accion === 'RECHAZADO' 
+                        ? '#dc2626' 
+                        : h.accion === 'DEVUELTO' 
+                          ? '#b45309' 
+                          : ['APROBADO', 'COMPLETADO', 'ACEPTADO', 'ENTREGADO'].includes(h.accion) 
+                            ? '#16a34a' 
+                            : 'var(--color-text-muted)' 
+                    }}
+                  >
                     {h.accion}
                   </span>
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
@@ -210,7 +221,6 @@ function TabAprobaciones({ t }) {
       </div>
     </div>
   );
-}
 
 export default function ModalDetalleTransferencia({
   open, onClose, item, actualizando, acciones, onAccionExitosa
