@@ -101,7 +101,7 @@ export default function Alertas() {
     retornoEntrada,
     descargarPDFTransf,
     subirFirmado,
-    refetch: refetchTransf,
+    refetchTransf,
   } = useTransferencias('TRASLADO_SEDE', { misTransferencias: false, usuarioId: user?.id });
 
   // ── Mantenimientos ────────────────────────────────────────────────────────

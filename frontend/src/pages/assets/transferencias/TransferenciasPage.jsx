@@ -54,7 +54,7 @@ export default function TransferenciasPage() {
     const [itemDetalle, setItemDetalle] = useState(null);
     const [itemCancel, setItemCancel] = useState(null);
     const {
-        transferencias, loading, error, actualizando, refetch, obtenerTransf,
+        transferencias, loading, error, actualizando, refetchTransf, obtenerTransf,
         descargarPDFTransf, crearTraslado, crearAsignacion, aprobarAdminsede,
         devolver, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
         retornoSalida, retornoEntrada, reenviarTransferencia, cancelar,subirFirmado
@@ -103,7 +103,7 @@ export default function TransferenciasPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={refetch} disabled={loading}
+                        <button onClick={refetchTransf} disabled={loading}
                             className="btn-icon bg-surface border border-border" title="Sincronizar">
                             <Icon name="sync" className={`text-[18px] ${loading ? 'animate-spin text-primary' : 'text-faint'}`} />
                         </button>
@@ -146,7 +146,7 @@ export default function TransferenciasPage() {
                     filtros={filtros}
                     loading={loading}
                     error={error}
-                    refetch={refetch}
+                    refetch={refetchTransf}
                     activeTab={activeTab}
                     onVerDetalle={handleVerDetalle}
                     onEditar={handleEditar}
@@ -168,7 +168,7 @@ export default function TransferenciasPage() {
                         crearAsignacion={crearAsignacion}
                         reenviarTransferencia={reenviarTransferencia}
                         obtenerTransf={obtenerTransf}
-                        onGuardado={() => { setModalForm(false); setItemEditar(null); refetch(); }}
+                        onGuardado={() => { setModalForm(false); setItemEditar(null); refetchTransf(); }}
                     />
                 )}
 
@@ -181,7 +181,7 @@ export default function TransferenciasPage() {
                         acciones={{ aprobarAdminsede, aprobarSalidaSeguridad, 
                             aprobarEntradaSeguridad, retornoSalida, retornoEntrada, 
                             devolver,descargarPDFTransf,subirFirmado }}
-                        onAccionExitosa={() => { setModalDetalle(false); refetch(); }}
+                        onAccionExitosa={() => { setModalDetalle(false); refetchTransf(); }}
                     />
                 )}
             </Suspense>

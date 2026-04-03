@@ -24,7 +24,7 @@ export function useTransferencias(activeTab, params) {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, params.misTransferencias, params.usuarioId]);
+  }, [activeTab, params]);
  
   useEffect(() => {
     fetchTransferencias();
@@ -66,7 +66,7 @@ export function useTransferencias(activeTab, params) {
     loading,
     error,
     actualizando,
-    refetch: fetchTransferencias,
+    refetchTransf: fetchTransferencias,
     descargarPDFTransf,
     obtenerTransf:             (id)          => transferenciasService.obtener(id),
     crearTraslado:          (data)         => ejecutarYRefrescar(transferenciasService.crearTraslado, data),

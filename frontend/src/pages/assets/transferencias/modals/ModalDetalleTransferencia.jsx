@@ -418,37 +418,15 @@ export default function ModalDetalleTransferencia({
           )}
           {puedeRetornoSalida &&   
             <ActionBtn 
-          icon="undo" label="Confirmar Retorno Salida" 
-          color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)" disabled={actualizando} 
-          onClick={() => ejecutar(acciones.retornoSalida, t.id)} />       
-            // <button 
-            // onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
-            // className="flex items-center gap-2 px-4 py-2 rounded-xl border transition-all hover:opacity-80 disabled:opacity-50 font-bold text-[12px] uppercase tracking-wider"              
-            // style={{ 
-            //   color: "#16a34a", 
-            //   backgroundColor: "rgb(22 163 74 / 0.08)", 
-            //   borderColor: "rgb(22 163 74 / 0.3)" 
-            // }}
-            //  >
-            //   <Icon name="undo" className="text-[16px]" />Confirmar Retorno Salida
-            // </button>
-          }
+                icon="undo" label="Confirmar Retorno Salida" 
+                color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)" disabled={actualizando} 
+                onClick={() => ejecutar(acciones.retornoSalida, t.id)} />       
+                }
               {puedeRetornoEntrada && t.aprobado_retorno_salida_id &&
                 <ActionBtn 
                   icon="home" label="Confirmar Retorno Entrada" 
                   color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" disabled={actualizando} 
-                  onClick={() => ejecutar(acciones.retornoEntrada,  t.id)} />
-                    // <button 
-                    // onClick={() => ejecutar(acciones.retornoEntrada, t.id)} disabled={actualizando}
-                    //   className="flex items-center gap-2" 
-                    //   style={{ 
-                    //     color: "#16a34a", 
-                    //     backgroundColor: "rgb(22 163 74 / 0.08)", 
-                    //     borderColor: "rgb(22 163 74 / 0.3)" 
-                    //   }}             
-                    //   >
-                      // <Icon name="home" className="text-[16px]" />Confirmar Retorno Entrada
-                    // </button>            
+                  onClick={() => ejecutar(acciones.retornoEntrada,  t.id)} />         
                   }
         </div>
       </ModalFooter>
