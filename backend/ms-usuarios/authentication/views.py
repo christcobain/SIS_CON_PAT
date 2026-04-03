@@ -208,11 +208,24 @@ class LogoutViewSet(ViewSet):
             real_user = User.objects.get(pk=request.user.id)
         except User.DoesNotExist:
             return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        if not refresh_token:
+            LoginSessionRepository.logout_all_user_sessions(real_user)
+            response = Response(
+                {'success': True, 'message': 'Sesión cerrada correctamente.'},
+                status=status.HTTP_200_OK,
+            )
+            auth.logout(request)
+            response.delete_cookie(settings.JWT_AUTH_COOKIE, path='/')
+            response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path='/')
+            session_cookie_name = getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid')
+            response.delete_cookie(session_cookie_name, path='/')
+            response.delete_cookie('csrftoken', path='/')
+            return response
         result = LoginSessionService.logout(
             user=real_user,
             refresh_token=refresh_token,
             ip_address=_get_client_ip(request),
-            device_info=_get_device_info(request)
+            device_info=_get_device_info(request),
         )
         response = Response(
             {'success': result['success'], 'message': result['message']},

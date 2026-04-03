@@ -10,7 +10,6 @@ User = get_user_model()
 
 class CookieJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
-        # 1. Header Authorization: Bearer <token>  ← cross-domain (producción)
         header = self.get_header(request)
         if header is not None:
             raw_token = self.get_raw_token(header)
@@ -56,7 +55,7 @@ class AdminJWTAuthBackend:
             auth = JWTAuthentication()
             validated_token = auth.get_validated_token(raw_token)
             if validated_token.get('role') == 'SYSADMIN':
-                return User.objects.filter(username='SYSADMIN', is_staff=True).first()
+                return User.objects.filter(username='SYSADMIN', is_staff=True).first()        
         except Exception:
             return None
         return None
