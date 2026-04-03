@@ -402,14 +402,19 @@ export default function ModalDetalleTransferencia({
           )}
           {puedeRetornoSalida && (               
             <button onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
-              className="btn-primary flex items-center gap-2">
-              <Icon name="assignment_return" className="text-[16px]" />Confirmar Retorno Salida
+              className="btn-primary flex items-center gap-2"
+              style={{ 
+                color: "#b45309", 
+                backgroundColor: "rgb(180 83 9 / 0.08)", 
+                borderColor: "rgb(180 83 9 / 0.3)" 
+              }}>
+              <Icon name="undo" className="text-[16px]" />Confirmar Retorno Salida
             </button>
               )}
               {puedeRetornoEntrada && t.aprobado_retorno_salida_id &&(
             <button onClick={() => ejecutar(acciones.retornoEntrada, t.id)} disabled={actualizando}
               className="btn-primary flex items-center gap-2">
-              <Icon name="assignment_return" className="text-[16px]" />Confirmar Retorno Entrada
+              <Icon name="home" className="text-[16px]" />Confirmar Retorno Entrada
             </button>            
           )}
 
