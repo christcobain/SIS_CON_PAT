@@ -39,13 +39,14 @@ function applyInterceptors(instance) {
           );
           useAuthStore.getState().setAuth(data);
           
-          processQueue(null);
+          processQueue(null, data.access);
           return instance(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError, null);
           useAuthStore.getState().clearAuth();
           if (!window.location.pathname.startsWith('/login')) {
-            window.location.href = '/login';
+            // window.location.href = '/login';
+            window.location.replace('/login');
           }
           return Promise.reject(refreshError);
         } finally {

@@ -20,8 +20,6 @@ class CookieJWTAuthentication(JWTAuthentication):
                     return self.get_user(validated_token), validated_token
                 except InvalidToken:
                     return None
-
-        # 2. Cookie HttpOnly  ← mismo dominio (desarrollo local)
         raw_token = request.COOKIES.get(
             getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
         )

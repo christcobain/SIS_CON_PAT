@@ -205,13 +205,11 @@ class LogoutViewSet(ViewSet):
         cookie_kwargs = {
             'path': '/',
             'samesite': getattr(settings, 'JWT_AUTH_COOKIE_SAMESITE', 'Lax'),
-            'domain': getattr(settings, 'SESSION_COOKIE_DOMAIN', None),
         }
         response.delete_cookie(settings.JWT_AUTH_COOKIE, **cookie_kwargs)
         response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, **cookie_kwargs)
         response.delete_cookie('csrftoken', **cookie_kwargs)
         response.delete_cookie('sessionid', **cookie_kwargs)
-        auth.logout(request)
         django_logout(request)
         return response
 

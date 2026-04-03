@@ -10,11 +10,16 @@ const axiosUsuarios = axios.create({
 });
 
 axiosUsuarios.interceptors.request.use((config) => {
-  const accessToken = useAuthStore.getState().accessToken;
-  if (accessToken) {
-    config.headers['Authorization'] = `Bearer ${accessToken}`;
+    const accessToken = useAuthStore.getState().accessToken;
+    if (accessToken) {
+      config.headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
+
 
 export default axiosUsuarios;
