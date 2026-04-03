@@ -404,7 +404,7 @@ export default function ModalDetalleTransferencia({
             <ActionBtn 
             icon="reply" label="Devolver" 
             color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)" 
-            disabled={actualizando} onClick={() =>ejecutar(acciones.devolver, t.id)} />
+            disabled={actualizando} onClick={() =>setModalDv('devolver')} />
             <ActionBtn 
             icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'} 
             color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" 
@@ -419,7 +419,7 @@ export default function ModalDetalleTransferencia({
               borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} />
               <ActionBtn 
               icon="block" label="Rechazar Salida" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" 
-              borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() => ejecutar(acciones.rechazarSalidaSeguridad, t.id)} />
+              borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() =>  setModalDv('rechazar_salida')} />
             </>
               )}
               {puedeAprobarEntrada && (
@@ -429,7 +429,7 @@ export default function ModalDetalleTransferencia({
               borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} />
               <ActionBtn 
               icon="block" label="Rechazar Salida" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" 
-              borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() => ejecutar(acciones.rechazarEntradaSeguridad, t.id)} />
+              borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() => setModalDv('rechazar_entrada')} />
             </>      
           )}
           {puedeRetornoSalida &&   
@@ -445,7 +445,7 @@ export default function ModalDetalleTransferencia({
                   onClick={() => ejecutar(acciones.retornoEntrada,  t.id)} />         
                   }
 
-                  {/* {modalDv && MODAL_CFG[modalDv] && (
+                  {modalDv && MODAL_CFG[modalDv] && (
                     <MiniModalMotivo
                       open={!!modalDv}
                       onClose={() => setModalDv(null)}
@@ -453,12 +453,12 @@ export default function ModalDetalleTransferencia({
                       titulo={MODAL_CFG[modalDv].titulo}
                       placeholder={MODAL_CFG[modalDv].placeholder}
                       onConfirm={(m) => {
-                        const fn = modalDv === 'devolver' ? devolver : modalDv === 'rechazar_salida' ? rechazarSalidaSeguridad : rechazarEntradaSeguridad;
+                        const fn = modalDv === 'devolver' ? acciones.devolver : modalDv === 'rechazar_salida' ? acciones.rechazarSalidaSeguridad : acciones.rechazarEntradaSeguridad;
                         setModalDv(null);
                         ejecutar(fn, t.id, { motivo_devolucion: m });
                       }}
                     />
-                  )} */}
+                  )}
         </div>
       </ModalFooter>
     </Modal>

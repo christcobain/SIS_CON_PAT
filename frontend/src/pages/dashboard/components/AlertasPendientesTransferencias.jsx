@@ -245,18 +245,38 @@ function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones })
 
         <div className="flex items-center gap-2 flex-wrap border-t pt-3" style={{ borderColor: 'var(--color-border-light)' }}>
           {puedeAprobarAdmin && (<>
-            <ActionBtn icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'} color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" disabled={busy} onClick={() => ejecutar(aprobarAdminsede, t.id)} />
-            <ActionBtn icon="reply" label="Devolver" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)" disabled={busy} onClick={() => setModalDv('devolver')} />
+            <ActionBtn 
+              icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'} 
+              color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" 
+              disabled={busy} onClick={() => ejecutar(aprobarAdminsede, t.id)} />
+            <ActionBtn 
+            icon="reply" label="Devolver" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" 
+            borderColor="rgb(220 38 38 / 0.25)" 
+            disabled={busy} onClick={() => setModalDv('devolver')} />
           </>)}
 
           {puedeAprobarSalida && (<>
-            <ActionBtn icon="output" label="V°B° Salida Sede" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)" disabled={busy} onClick={() => ejecutar(aprobarSalidaSeguridad, t.id, {})} />
-            <ActionBtn icon="block" label="Rechazar Salida" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)" disabled={busy} onClick={() => setModalDv('rechazar_salida')} />
+            <ActionBtn 
+              icon="output" label="V°B° Salida Sede" color="#7c3aed" 
+              bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)" 
+              disabled={busy} onClick={() => ejecutar(aprobarSalidaSeguridad, t.id, {})} />
+            <ActionBtn 
+            icon="block" label="Rechazar Salida" color="#dc2626" 
+            bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)" 
+            disabled={busy} onClick={() => setModalDv('rechazar_salida')} />
           </>)}
 
           {puedeAprobarEntrada && (<>
-            <ActionBtn icon="input" label="V°B° Entrada Sede" color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)" disabled={busy} onClick={() => ejecutar(aprobarEntradaSeguridad, t.id, {})} />
-            <ActionBtn icon="keyboard_return" label="Rechazar Entrada" color="#c2410c" bgColor="rgb(194 65 12 / 0.06)" borderColor="rgb(194 65 12 / 0.25)" disabled={busy} onClick={() => setModalDv('rechazar_entrada')} />
+            <ActionBtn 
+              icon="input" label="V°B° Entrada Sede" 
+              color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" 
+              borderColor="rgb(37 99 235 / 0.3)" disabled={busy} 
+              onClick={() => ejecutar(aprobarEntradaSeguridad, t.id, {})} />
+            <ActionBtn 
+            icon="keyboard_return" label="Rechazar Entrada" 
+            color="#c2410c" bgColor="rgb(194 65 12 / 0.06)" 
+            borderColor="rgb(194 65 12 / 0.25)" disabled={busy} 
+            onClick={() => setModalDv('rechazar_entrada')} />
           </>)}
 
           {puedeConfirmarRecepcion && (
