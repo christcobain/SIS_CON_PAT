@@ -87,7 +87,9 @@ class LoginViewSet(ViewSet):
             'access':                   result['access'],
         }
         response = Response(user_data, status=status.HTTP_200_OK)
-        return _set_cookies(response, result['access'], result['refresh'])
+        response = _set_cookies(response, result['access'], result['refresh'])
+        print('SET-COOKIE access para user:', result['username'])
+        return response
 class CredentialViewSet(ViewSet):
     def get_permissions(self):
         perms = {
@@ -217,6 +219,10 @@ class LogoutViewSet(ViewSet):
         token= self._get_token(request)
         print('tokebn= ',token)
         print('refresh= ',refresh_token)
+        
+        print('COOKIE access:', request.COOKIES.get(settings.JWT_AUTH_COOKIE, 'NO EXISTE'))
+        print('HEADER auth:', request.headers.get('Authorization', 'NO EXISTE')[:50])
+        print('AUTH CLASS:', type(request.auth).__name__)
         try:
             real_user = User.objects.get(pk=request.user.id)
             print('real_user= ',real_user)
