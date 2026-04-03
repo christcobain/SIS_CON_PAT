@@ -284,28 +284,50 @@ function MiniModalMotivo({ open, onClose, onConfirm, loading, titulo, placeholde
 export default function ModalDetalleTransferencia({
   open, onClose, item, actualizando, acciones, onAccionExitosa
 }) {
-  const [tab, setTab] = useState('ruta');
-  const user = useAuthStore(s => s.user);
-  const { can,canAny } = usePermission();
-  const toast = useToast();
+  const [tab,     setTab]     = useState('ruta');
+  const [modalDv, setModalDv] = useState(null);
+
+  const sedes = useAuthStore(s => s.sedes);
+  const user  = useAuthStore(s => s.user);
+  const { can, canAny } = usePermission();
+  const toast   = useToast();
   const fileRef = useRef();
-    const [modalDv, setModalDv] = useState(null);
+
   if (!item) return null;
-  const t          = item;
-  const estado     = t.estado_transferencia;
-  const esTraslado = t.tipo === 'TRASLADO_SEDE';
-  const esAsignacion = t.tipo === 'ASIGNACION_INTERNA';
-  const badge      = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
-  const bienes     = t.bienes ?? [];  
-  const puedeAprobarAdmin = can('ms-bienes:transferencias:change_transferencia') && estado === 'PENDIENTE_APROBACION' && !t.aprobado_por_adminsede_id;
-  const puedeAprobarSalida = can('ms-bienes:transferencias:add_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION'].includes(estado)&& !t.aprobado_segur_salida_id && t.aprobado_por_adminsede_id;
-  const puedeAprobarEntrada = can('ms-bienes:transferencias:add_transferenciaaprobacion') && esTraslado && ['PENDIENTE_APROBACION'].includes(estado)&& t.aprobado_segur_salida_id && !t.aprobado_segur_entrada_id;
-  
-  const puedeRetornoSalida = can('ms-bienes:transferencias:add_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&& !t.aprobado_retorno_salida_id;
-  const puedeRetornoEntrada = can('ms-bienes:transferencias:add_transferenciaaprobacion') && esTraslado && ['EN_RETORNO'].includes(estado)&& t.aprobado_retorno_salida_id;
-  const esUsuarioFinal  = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia');
-  const mostrarDescargaPDF =(esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA' ||estado=='ATENDIDO' && (t.pdf_path || t.tiene_pdf_firmado) ;
-  const mostrarSubirActa = (esUsuarioFinal ) && estado === 'EN_ESPERA_FIRMA'  && !t.tiene_pdf_firmado; 
+
+  const t      = item;
+  const estado = t.estado_transferencia;
+
+  // ── Clasificación del tipo ────────────────────────────────────────────────
+  const esTraslado   = t.tipo === 'TRASLADO_SEDE';
+  const badge        = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
+  const bienes       = t.bienes ?? [];
+  // ── Sede del usuario autenticado ─────────────────────────────────────────
+  const miSede     = String(sedes?.[0]?.id ?? '');
+  const sedeOrigen  = String(t.sede_origen_id  ?? '');
+  const sedeDestino = String(t.sede_destino_id ?? '');
+  // ── Roles base  ─────────────
+  const esAdminAprobador = can('ms-bienes:transferencias:change_transferencia') && !t.aprobado_por_adminsede_id;
+  const esSegur          = can('ms-bienes:transferencias:add_transferenciaaprobacion');
+  const esUsuarioFinal   = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia');
+  // ── Flags de aprobación ───────────────────────────────────────────────────
+  const segurSalidaOk   = !!t.aprobado_segur_salida_id;
+  const segurEntradaOk  = !!t.aprobado_segur_entrada_id;
+  const retornoSalidaOk = !!t.aprobado_retorno_salida_id;
+  // ── Permisos de acción ─
+  const puedeAprobarAdmin       = esAdminAprobador && estado === 'PENDIENTE_APROBACION';
+  const puedeAprobarSalida      = esSegur && esTraslado && estado === 'PENDIENTE_APROBACION' && !segurSalidaOk  && sedeOrigen  === miSede;
+  const puedeAprobarEntrada     = esSegur && esTraslado && estado === 'PENDIENTE_APROBACION' &&  segurSalidaOk  && !segurEntradaOk && sedeDestino === miSede;
+  const puedeConfirmarRecepcion = esUsuarioFinal && esTraslado && estado === 'EN_ESPERA_CONFORMIDAD' && sedeDestino === miSede;
+  const puedeRetornoSalida      = esSegur && esTraslado && estado === 'EN_RETORNO' && !retornoSalidaOk                           && sedeDestino === miSede;
+  const puedeRetornoEntrada     = esSegur && esTraslado && estado === 'EN_RETORNO' &&  retornoSalidaOk && !t.aprobado_retorno_entrada_id && sedeOrigen === miSede;
+
+  // ── Documentación ─────────────────────────────────────────────────────────
+  const puedeDescargarPDF = (
+    (esUsuarioFinal && estado === 'EN_ESPERA_FIRMA') ||
+    (estado === 'ATENDIDO' && (t.pdf_path || t.tiene_pdf_firmado))
+  );
+  const mostrarSubirActa = esUsuarioFinal && estado === 'EN_ESPERA_FIRMA' && !t.tiene_pdf_firmado;
 
   const ejecutar = async (fn, ...args) => {
     try {
@@ -422,9 +444,8 @@ export default function ModalDetalleTransferencia({
             {/* ── Documentación ── */}
             <div className="space-y-2">
               <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
-
-              {/* Descargar PDF — visible cuando estado es EN_ESPERA_FIRMA */}
-              {mostrarDescargaPDF && (
+              {/* Descargar PDF — visible cuando estado es EN_ESPERA_FIRMA o ATENDIDO */}
+              {puedeDescargarPDF && (
                 <button
                   onClick={handleDescargarPDF}
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
@@ -472,53 +493,61 @@ export default function ModalDetalleTransferencia({
       <ModalFooter align="space">        
         <button onClick={onClose} className="btn-secondary">Cerrar</button>
         <div className="flex items-center gap-2 flex-wrap">
-            { puedeAprobarAdmin  && (
-            <>
-            <ActionBtn 
-            icon="reply" label="Devolver" 
-            color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)" 
-            disabled={actualizando} onClick={() =>setModalDv('devolver')} />
-            <ActionBtn 
-            icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'} 
-            color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" 
-            disabled={actualizando} onClick={() => ejecutar(acciones.aprobarAdminsede, t.id)} />
-            </>
+
+          {puedeAprobarAdmin && (<>
+            <ActionBtn
+              icon="reply" label="Devolver"
+              color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
+              disabled={actualizando} onClick={() => setModalDv('devolver')} />
+            <ActionBtn
+              icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'}
+              color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
+              disabled={actualizando} onClick={() => ejecutar(acciones.aprobarAdminsede, t.id)} />
+          </>)}
+
+          {puedeAprobarSalida && (<>
+            <ActionBtn
+              icon="block" label="Rechazar Salida"
+              color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
+              disabled={actualizando} onClick={() => setModalDv('rechazar_salida')} />
+            <ActionBtn
+              icon="output" label="V°B° Salida Sede"
+              color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)"
+              disabled={actualizando} onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} />
+          </>)}
+
+          {puedeAprobarEntrada && (<>
+            <ActionBtn
+              icon="keyboard_return" label="Rechazar Entrada"
+              color="#c2410c" bgColor="rgb(194 65 12 / 0.06)" borderColor="rgb(194 65 12 / 0.25)"
+              disabled={actualizando} onClick={() => setModalDv('rechazar_entrada')} />
+            <ActionBtn
+              icon="input" label="V°B° Entrada Sede"
+              color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
+              disabled={actualizando} onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} />
+          </>)}
+
+          {puedeConfirmarRecepcion && (
+            <ActionBtn
+              icon="front_hand" label="Confirmar Recepción"
+              color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
+              disabled={actualizando} onClick={() => ejecutar(acciones.confirmarRecepcion, t.id, {})} />
           )}
 
-            {puedeAprobarSalida && (     
-              <>            
-              <ActionBtn 
-              icon="block" label="Rechazar Salida" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" 
-              borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() =>  setModalDv('rechazar_salida')} />
-              <ActionBtn 
-              icon="output" label="V°B° Salida Sede" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" 
-              borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} 
-              onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} />
-            </>
-              )}
-              {puedeAprobarEntrada && (
-              <>            
-              <ActionBtn 
-              icon="block" label="Rechazar Salida" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" 
-              borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() => setModalDv('rechazar_entrada')} />
-              <ActionBtn 
-              icon="output" label="V°B° Salida Sede" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" 
-              borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} />
-            </>      
+          {puedeRetornoSalida && (
+            <ActionBtn
+              icon="undo" label="Confirmar Retorno Salida"
+              color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)"
+              disabled={actualizando} onClick={() => ejecutar(acciones.retornoSalida, t.id)} />
           )}
-          {puedeRetornoSalida &&   
-            <ActionBtn 
-                icon="undo" label="Confirmar Retorno Salida" 
-                color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)" disabled={actualizando} 
-                onClick={() => ejecutar(acciones.retornoSalida, t.id)} />       
-                }
-              {puedeRetornoEntrada && t.aprobado_retorno_salida_id &&
-                <ActionBtn 
-                  icon="home" label="Confirmar Retorno Entrada" 
-                  color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" disabled={actualizando} 
-                  onClick={() => ejecutar(acciones.retornoEntrada,  t.id)} />         
-                  }
-                  
+
+          {puedeRetornoEntrada && (
+            <ActionBtn
+              icon="home" label="Confirmar Retorno Entrada"
+              color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
+              disabled={actualizando} onClick={() => ejecutar(acciones.retornoEntrada, t.id)} />
+          )}
+
         </div>
       </ModalFooter>
     </Modal>
