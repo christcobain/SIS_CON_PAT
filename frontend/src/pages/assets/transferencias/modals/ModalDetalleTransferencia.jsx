@@ -402,8 +402,7 @@ export default function ModalDetalleTransferencia({
           )}
           {puedeRetornoSalida && (               
             <button onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
-              className="flex items-center gap-2"
-              style={{ 
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border transition-all hover:opacity-80 disabled:opacity-50 font-bold text-[12px] uppercase tracking-wider"              style={{ 
                 color: "#b45309", 
                 backgroundColor: "rgb(180 83 9 / 0.08)", 
                 borderColor: "rgb(180 83 9 / 0.3)" 
