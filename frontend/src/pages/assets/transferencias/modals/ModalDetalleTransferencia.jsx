@@ -348,6 +348,21 @@ export default function ModalDetalleTransferencia({
   };
 
   return (
+    <>  
+    {modalDv && MODAL_CFG[modalDv] && (
+                    <MiniModalMotivo
+                      open={!!modalDv}
+                      onClose={() => setModalDv(null)}
+                      loading={actualizando}
+                      titulo={MODAL_CFG[modalDv].titulo}
+                      placeholder={MODAL_CFG[modalDv].placeholder}
+                      onConfirm={(m) => {
+                        const fn = modalDv === 'devolver' ? acciones.devolver : modalDv === 'rechazar_salida' ? acciones.rechazarSalidaSeguridad : acciones.rechazarEntradaSeguridad;
+                        setModalDv(null);
+                        ejecutar(fn, t.id, { motivo_devolucion: m });
+                      }}
+                    />
+                  )}
     <Modal open={open} onClose={onClose} size="xl">
       <ModalHeader
         icon={esTraslado ? 'local_shipping' : 'person_add'}
@@ -502,24 +517,10 @@ export default function ModalDetalleTransferencia({
                   color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" disabled={actualizando} 
                   onClick={() => ejecutar(acciones.retornoEntrada,  t.id)} />         
                   }
-
-                  {modalDv && MODAL_CFG[modalDv] && (
-                    <MiniModalMotivo
-                      open={!!modalDv}
-                      onClose={() => setModalDv(null)}
-                      loading={actualizando}
-                      titulo={MODAL_CFG[modalDv].titulo}
-                      placeholder={MODAL_CFG[modalDv].placeholder}
-                      onConfirm={(m) => {
-                        const fn = modalDv === 'devolver' ? acciones.devolver : modalDv === 'rechazar_salida' ? acciones.rechazarSalidaSeguridad : acciones.rechazarEntradaSeguridad;
-                        setModalDv(null);
-                        ejecutar(fn, t.id, { motivo_devolucion: m });
-                      }}
-                    />
-                  )}
+                  
         </div>
       </ModalFooter>
     </Modal>
-    
+    </>
   );
 }
