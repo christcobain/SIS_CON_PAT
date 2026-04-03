@@ -187,7 +187,6 @@ class LoginSessionRepository:
     @staticmethod
     def logout_all_user_sessions(user, except_session_id=None):
         qs = LoginSession.objects.filter(user=user, status='active')
-        print('SESIONES= ',qs)
         if except_session_id:
             qs = qs.exclude(id=except_session_id)
         qs.update(status='logout', logout_at=timezone.now())

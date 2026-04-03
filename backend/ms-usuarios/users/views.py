@@ -7,7 +7,6 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from .services import UserService,DependencyService,BDEmpleadosService
 from .serializers import (BDEmpleadosSerializer, UserListSerializer,UserDetailSerializer,UserCreateSerializer,UserUpdateSerializer,
                           DependencySerializer, DependencyCreateUpdateSerializer)
-from roles.permissions import IsSysAdmin
 from rest_framework.decorators import action
 from roles.permissions import HasJWTPermission
 

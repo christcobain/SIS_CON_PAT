@@ -305,7 +305,7 @@ class LoginSessionService:
         extra_claims = {
             'role':             user.role.name if user.role else None,
             # 'permissions':      permissions_grouped,
-            'permissions_flat': ','.join(permissions_flat),
+            'permissions_flat': permissions_flat,
             'sedes_ids':        [s['id'] for s in sedes],
             'sedes':            sedes, 
             'modulo_id':        user.modulo_id,
