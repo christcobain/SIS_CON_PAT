@@ -32,35 +32,26 @@ export function useNotificaciones() {
               ? transferenciasService.pendientesSegur()
               : transferenciasService.pendientesAprobacion())
           : Promise.resolve([]),
-
         esAprobadorMant
           ? mantenimientosService.pendientesAprobacion()
           : Promise.resolve([]),
-
         transferenciasService.listar({ estado: 'ATENDIDO' }),
-
         mantenimientosService.misMantenimientos({ estado_mantenimiento: 'ATENDIDO' }),
       ]);
-
       const transfData = transfPend.status === 'fulfilled'
         ? (Array.isArray(transfPend.value) ? transfPend.value : transfPend.value?.results ?? [])
         : [];
-
       const mantData = mantPend.status === 'fulfilled'
         ? (Array.isArray(mantPend.value) ? mantPend.value : mantPend.value?.results ?? [])
         : [];
-
       setTransferenciasPendientes(transfData);
       setMantenimientosPendientes(mantData);
-
       const transfAtendidas = transfHist.status === 'fulfilled'
         ? (Array.isArray(transfHist.value) ? transfHist.value : transfHist.value?.results ?? [])
         : [];
-
       const mantAtendidos = mantHist.status === 'fulfilled'
         ? (Array.isArray(mantHist.value) ? mantHist.value : mantHist.value?.results ?? [])
         : [];
-
       const histTransf = transfAtendidas.slice(0, 8).map(t => {
         const ultimaAprob = t.aprobaciones?.slice(-1)[0];
         const fechaRef    = t.fecha_aprobacion_adminsede ?? ultimaAprob?.fecha ?? null;
@@ -125,6 +116,6 @@ export function useNotificaciones() {
     transfPendientes,
     mantPendientes,
     historialHoy,
-    refetch: fetchAll,
+    refetchNotif: fetchAll,
   };
 }

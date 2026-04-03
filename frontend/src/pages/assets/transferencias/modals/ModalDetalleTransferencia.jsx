@@ -197,7 +197,7 @@ function TabAprobaciones({ t }) {
 }
 
 export default function ModalDetalleTransferencia({
-  open, onClose, item, actualizando, acciones, onAccionExitosa,
+  open, onClose, item, actualizando, acciones, onAccionExitosa
 }) {
   const [tab, setTab] = useState('ruta');
   const user = useAuthStore(s => s.user);
@@ -228,7 +228,8 @@ export default function ModalDetalleTransferencia({
         return; 
       }
       toast.success(res?.message||res?.response?.data?.message||'Operación ejecutada correctamente.');
-      onAccionExitosa();
+      onClose();
+      onAccionExitosa?.();
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Error en la operación.');
     }

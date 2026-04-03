@@ -82,7 +82,7 @@ export default function Alertas() {
     transfPendientes,
     mantPendientes,
     historialHoy,
-    refetch:         refetchNotif,
+    refetchNotif,
   } = useNotificaciones();
 
   // ── Transferencias ────────────────────────────────────────────────────────
@@ -320,7 +320,7 @@ export default function Alertas() {
               retornoSalida, retornoEntrada, devolver,
               descargarPDFTransf, subirFirmado,
             }}
-            onAccionExitosa={() => { setModalDetalleTransf(false); refetchTransf(); notificarYRefrescar(); }}
+            onAccionExitosa={() => {  refetchTransf(); notificarYRefrescar(); }}
           />
         )}
       </Suspense>
@@ -337,7 +337,7 @@ export default function Alertas() {
             onEnviar={handleEnviarMant}
             onConformar={handleConformarMant}
             onCancelar={handleCancelarMant}
-            onSubirFirmado={handleAccionMantExitosa}
+            onSubirFirmado={handleAccionMantExitosa}            
           />
         )}
         {modalEnviar && (
