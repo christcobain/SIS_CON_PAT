@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuthStore }      from '../../../store/authStore';
-import { useToast }          from '../../../hooks/useToast';
-import transferenciasService from '../../../services/transferencias.service';
-import { usePermission } from '../../../hooks/usePermission';
+import { useAuthStore }      from '../../store/authStore';
+import { useToast }          from '../../hooks/useToast';
+import transferenciasService from '../../services/transferencias.service';
+import { usePermission } from '../../hooks/usePermission';
 
 
 const Icon = ({ name, className = '', style = {} }) => (
