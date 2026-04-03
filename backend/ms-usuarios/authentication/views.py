@@ -3,7 +3,6 @@ from django.conf import settings
 from rest_framework import status
 from rest_framework.viewsets import ViewSet
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .backends import CookieOnlyJWTAuthentication
 from rest_framework.response import Response
 from django.core.exceptions import ValidationError
 from rest_framework.decorators import action
@@ -172,7 +171,6 @@ class LoginAttemptViewSet(ViewSet):
         return Response(LoginAttemptSerializer(result, many=True).data)
  
 class LogoutViewSet(ViewSet):    
-    authentication_classes = [CookieOnlyJWTAuthentication]
     permission_classes = [IsAuthenticated]
     def _get_token(self, request) -> str:
         cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')

@@ -10,23 +10,37 @@ class IsSysAdmin(BasePermission):
             return False
         return user.role.name == "SYSADMIN" and user.role.is_active
 
+# class HasJWTPermission(BasePermission):
+#     message = "No tiene permisos para realizar esta acción."
+#     def __init__(self, codename: str):
+#         self.codename = codename
+#         super().__init__()
+#     def has_permission(self, request, view):
+#         user = request.user
+#         if not user or not user.is_authenticated:
+#             return False
+#         role = None
+#         if hasattr(user, 'role') and user.role:
+#             role = user.role.name        
+#         elif request.auth:
+#             role = request.auth.get('role')
+#         if role == 'SYSADMIN':
+#             return True
+#         if not request.auth:
+#             return False
+#         permissions_flat = request.auth.get('permissions_flat', [])
+#         return self.codename in set(permissions_flat)
+    
 class HasJWTPermission(BasePermission):
     message = "No tiene permisos para realizar esta acción."
     def __init__(self, codename: str):
         self.codename = codename
-        super().__init__()
     def has_permission(self, request, view):
-        user = request.user
-        if not user or not user.is_authenticated:
+        if not request.user or not request.user.is_authenticated:
             return False
-        role = None
-        if hasattr(user, 'role') and user.role:
-            role = user.role.name        
-        elif request.auth:
-            role = request.auth.get('role')
-        if role == 'SYSADMIN':
+        if request.auth.get('role') == 'SYSADMIN':
             return True
-        if not request.auth:
-            return False
         permissions_flat = request.auth.get('permissions_flat', [])
         return self.codename in set(permissions_flat)
+
+ 
