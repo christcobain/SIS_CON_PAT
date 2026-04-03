@@ -137,7 +137,7 @@ function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones })
   const estado = t.estado_transferencia;
   const esTraslado = t.tipo === 'TRASLADO_SEDE';
   const bienes = t.bienes ?? [];
-  const esAdminAprobador = can('ms-bienes:transferencias:change_transferencia') &&!!t.aprobado_por_adminsede_id;
+  const esAdminAprobador = can('ms-bienes:transferencias:change_transferencia') &&!t.aprobado_por_adminsede_id;
   const esSegur = can('ms-bienes:transferencias:add_transferenciaaprobacion')
   const esUsuarioFinal = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia')
   const miSede = String(sedeId);
