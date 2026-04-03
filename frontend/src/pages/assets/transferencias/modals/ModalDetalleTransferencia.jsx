@@ -28,6 +28,22 @@ const TABS = [
   { id: 'bienes',      label: 'Bienes',              icon: 'inventory_2'   },
   { id: 'aprobaciones',label: 'Flujo aprobaciones',  icon: 'verified_user' },
 ];
+function ActionBtn({ icon, label, onClick, disabled, color, bgColor, borderColor }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      style={{ background: bgColor, color, border: `1px solid ${borderColor}` }}
+    >
+      {disabled
+        ? <span className="btn-loading-spin" style={{ borderColor: `${color}40`, borderTopColor: color }} />
+        : <Icon name={icon} className="text-[14px]" />
+      }
+      {label}
+    </button>
+  );
+}
 
 function Campo({ label, value, icon }) {
   if (!value && value !== 0) return null;
@@ -400,33 +416,40 @@ export default function ModalDetalleTransferencia({
                 <Icon name="input" className="text-[16px]" />VB. Entrada Sede
               </button>       
           )}
-          {puedeRetornoSalida && (               
-            <button 
-            onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border transition-all hover:opacity-80 disabled:opacity-50 font-bold text-[12px] uppercase tracking-wider"              
-            style={{ 
-              color: "#16a34a", 
-              backgroundColor: "rgb(22 163 74 / 0.08)", 
-              borderColor: "rgb(22 163 74 / 0.3)" 
-            }}
-             >
-              <Icon name="undo" className="text-[16px]" />Confirmar Retorno Salida
-            </button>
-          )}
-              {puedeRetornoEntrada && t.aprobado_retorno_salida_id &&(
-            <button 
-            onClick={() => ejecutar(acciones.retornoEntrada, t.id)} disabled={actualizando}
-              className="flex items-center gap-2" 
-              style={{ 
-                color: "#16a34a", 
-                backgroundColor: "rgb(22 163 74 / 0.08)", 
-                borderColor: "rgb(22 163 74 / 0.3)" 
-              }}             
-              >
-              <Icon name="home" className="text-[16px]" />Confirmar Retorno Entrada
-            </button>            
-          )}
-
+          {puedeRetornoSalida &&   
+            <ActionBtn 
+          icon="undo" label="Confirmar Retorno Salida" 
+          color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)" disabled={actualizando} 
+          onClick={() => ejecutar(acciones.retornoSalida, t.id)} />       
+            // <button 
+            // onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
+            // className="flex items-center gap-2 px-4 py-2 rounded-xl border transition-all hover:opacity-80 disabled:opacity-50 font-bold text-[12px] uppercase tracking-wider"              
+            // style={{ 
+            //   color: "#16a34a", 
+            //   backgroundColor: "rgb(22 163 74 / 0.08)", 
+            //   borderColor: "rgb(22 163 74 / 0.3)" 
+            // }}
+            //  >
+            //   <Icon name="undo" className="text-[16px]" />Confirmar Retorno Salida
+            // </button>
+          }
+              {puedeRetornoEntrada && t.aprobado_retorno_salida_id &&
+                <ActionBtn 
+                  icon="home" label="Confirmar Retorno Entrada" 
+                  color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" disabled={actualizando} 
+                  onClick={() => ejecutar(acciones.retornoEntrada,  t.id)} />
+                    // <button 
+                    // onClick={() => ejecutar(acciones.retornoEntrada, t.id)} disabled={actualizando}
+                    //   className="flex items-center gap-2" 
+                    //   style={{ 
+                    //     color: "#16a34a", 
+                    //     backgroundColor: "rgb(22 163 74 / 0.08)", 
+                    //     borderColor: "rgb(22 163 74 / 0.3)" 
+                    //   }}             
+                    //   >
+                      // <Icon name="home" className="text-[16px]" />Confirmar Retorno Entrada
+                    // </button>            
+                  }
         </div>
       </ModalFooter>
     </Modal>
