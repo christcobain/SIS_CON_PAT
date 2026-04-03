@@ -8,7 +8,7 @@ const authService = {
     return response.data;
   },
   logout: async () => {
-    const response = await axiosUsuarios.post('/auth/logout/');
+    const response = await axiosUsuarios.post('/auth/logout/', {}, { withCredentials: true });
     return response.data;
   },
   refreshToken: async () => {

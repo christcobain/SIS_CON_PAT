@@ -31,10 +31,16 @@ class CookieJWTAuthentication(JWTAuthentication):
             return None
         return self.get_user(validated_token), validated_token
 
+    # def get_user(self, validated_token):
+    #     user = TokenUser(validated_token)
+    #     user.get_session_auth_hash = lambda: None
+    #     return user
     def get_user(self, validated_token):
-        user = TokenUser(validated_token)
-        user.get_session_auth_hash = lambda: None
-        return user
+        try:
+            user_id = validated_token['user_id']
+            return User.objects.get(pk=user_id)
+        except (KeyError, User.DoesNotExist):
+            return None
 
 
 class AdminJWTAuthBackend:

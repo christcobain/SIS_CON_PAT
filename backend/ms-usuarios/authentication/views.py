@@ -181,13 +181,37 @@ class LogoutViewSet(ViewSet):
             ),
         }
     )
+    # def create(self, request):
+    #     refresh_token = request.COOKIES.get(settings.JWT_AUTH_REFRESH_COOKIE)
+    #     result = LoginSessionService.logout(
+    #         user          = request.user,
+    #         refresh_token = refresh_token,
+    #         ip_address    = _get_client_ip(request),
+    #         device_info   = _get_device_info(request),
+    #     )
+    #     response = Response(
+    #         {'success': result['success'], 'message': result['message']},
+    #         status=status.HTTP_200_OK if result['success'] else status.HTTP_400_BAD_REQUEST,
+    #     )
+    #     if result['success']:
+    #         auth.logout(request)
+    #         response.delete_cookie(settings.JWT_AUTH_COOKIE, path='/')
+    #         response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path='/')
+    #         session_cookie_name = getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid')
+    #         response.delete_cookie(session_cookie_name, path='/')            
+    #         response.delete_cookie('csrftoken', path='/')
+    #     return response
     def create(self, request):
         refresh_token = request.COOKIES.get(settings.JWT_AUTH_REFRESH_COOKIE)
+        try:
+            real_user = User.objects.get(pk=request.user.id)
+        except User.DoesNotExist:
+            return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
         result = LoginSessionService.logout(
-            user          = request.user,
-            refresh_token = refresh_token,
-            ip_address    = _get_client_ip(request),
-            device_info   = _get_device_info(request),
+            user=real_user,
+            refresh_token=refresh_token,
+            ip_address=_get_client_ip(request),
+            device_info=_get_device_info(request),
         )
         response = Response(
             {'success': result['success'], 'message': result['message']},
@@ -198,20 +222,10 @@ class LogoutViewSet(ViewSet):
             response.delete_cookie(settings.JWT_AUTH_COOKIE, path='/')
             response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, path='/')
             session_cookie_name = getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid')
-            response.delete_cookie(session_cookie_name, path='/')            
+            response.delete_cookie(session_cookie_name, path='/')
             response.delete_cookie('csrftoken', path='/')
         return response
-    
-        # cookie_kwargs = {
-        #     'path': '/',
-        #     'samesite': getattr(settings, 'JWT_AUTH_COOKIE_SAMESITE', 'Lax'),
-        # }
-        # response.delete_cookie(settings.JWT_AUTH_COOKIE, **cookie_kwargs)
-        # response.delete_cookie(settings.JWT_AUTH_REFRESH_COOKIE, **cookie_kwargs)
-        # response.delete_cookie('csrftoken', **cookie_kwargs)
-        # response.delete_cookie('sessionid', **cookie_kwargs)
-        # django_logout(request)
-        # return response
+
 
 class RefreshTokenViewSet(ViewSet):
     permission_classes = [AllowAny]
