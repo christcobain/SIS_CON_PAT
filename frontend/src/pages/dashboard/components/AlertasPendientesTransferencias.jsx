@@ -331,7 +331,7 @@ function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones })
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function AlertasPendientesTransferencias({ onVerDetalle,acciones}) {
+export default function AlertasPendientesTransferencias({ onVerDetalle, acciones, onRefreshReady }) {
   const role   = useAuthStore(s => s.role);
   const sedes  = useAuthStore(s => s.sedes);
   const user = useAuthStore(s => s.user);
@@ -360,8 +360,14 @@ export default function AlertasPendientesTransferencias({ onVerDetalle,acciones}
 
   useEffect(() => { 
     cargar(); 
-  }, [cargar]);  
-  const refresh = () => setRecargar(r => r + 1);
+  }, [cargar]);
+
+  const refresh = useCallback(() => setRecargar(r => r + 1), []);
+
+  // Exponer refresh al padre para que el modal pueda dispararlo
+  useEffect(() => {
+    onRefreshReady?.(refresh);
+  }, [refresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   if (!esSegur && !esAprobador) {
