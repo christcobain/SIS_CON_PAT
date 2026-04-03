@@ -402,7 +402,7 @@ export default function ModalDetalleTransferencia({
           )}
           {puedeRetornoSalida && (               
             <button onClick={() => ejecutar(acciones.retornoSalida, t.id)} disabled={actualizando}
-              className="btn-primary flex items-center gap-2"
+              className="flex items-center gap-2"
               style={{ 
                 color: "#b45309", 
                 backgroundColor: "rgb(180 83 9 / 0.08)", 
@@ -413,7 +413,12 @@ export default function ModalDetalleTransferencia({
               )}
               {puedeRetornoEntrada && t.aprobado_retorno_salida_id &&(
             <button onClick={() => ejecutar(acciones.retornoEntrada, t.id)} disabled={actualizando}
-              className="btn-primary flex items-center gap-2">
+              className="flex items-center gap-2"
+              style={{ 
+                color: "#16a34a", 
+                backgroundColor: "rgb(22 163 74 / 0.08)", 
+                borderColor: "rgb(22 163 74 / 0.3)" 
+              }}>
               <Icon name="home" className="text-[16px]" />Confirmar Retorno Entrada
             </button>            
           )}
