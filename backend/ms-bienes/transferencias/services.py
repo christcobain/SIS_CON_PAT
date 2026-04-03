@@ -33,22 +33,6 @@ class TransferenciaService:
         return role if role == 'COORDSISTEMA' else 'ADMINSEDE'
 
     @staticmethod
-    def _validar_aprobador_adminsede(role, sede_aprobador_id, modulo_aprobador_id, sede_origen_id, modulo_origen_id):
-        if role == 'SYSADMIN':
-            return
-        es_coord_informatica = (sede_origen_id == 1 and modulo_origen_id == MODULO_COORD_INFORMATICA)
-        if es_coord_informatica:
-            if role != 'COORDSISTEMA':
-                raise PermissionDenied('Solo COORDSISTEMA puede aprobar traslados del módulo Coordinación de Informática.')
-            if sede_aprobador_id != sede_origen_id:
-                raise PermissionDenied('COORDSISTEMA debe pertenecer a la sede central para aprobar.')
-        else:
-            if role != 'ADMINSEDE':
-                raise PermissionDenied('Solo ADMINSEDE puede aprobar traslados de esta sede.')
-            if sede_aprobador_id != sede_origen_id:
-                raise PermissionDenied('Solo puede aprobar traslados de su propia sede.')
-
-    @staticmethod
     def _validar_sede_segursede(sede_segur_id: int, sede_transferencia_id: int, role: str):
         if role == 'SYSADMIN':
             return
@@ -320,6 +304,22 @@ class TransferenciaService:
         TransferenciaDetalleRepository.bulk_create(transferencia, bienes)
         TransferenciaService._cambiar_estado_bienes(bienes, 'EN_ASIGNACION')
         return {'success': True, 'message': f'Asignación interna Nro. {transferencia.numero_orden} registrada exitosamente.'}
+
+    @staticmethod
+    def _validar_aprobador_adminsede(role, sede_aprobador_id, modulo_aprobador_id, sede_origen_id, modulo_origen_id):
+        if role == 'SYSADMIN':
+            return
+        es_coord_informatica = (sede_origen_id == 1 and modulo_origen_id == MODULO_COORD_INFORMATICA)
+        if es_coord_informatica:
+            if role != 'COORDSISTEMA':
+                raise PermissionDenied('Solo COORDSISTEMA puede aprobar traslados del módulo Coordinación de Informática.')
+            if sede_aprobador_id != sede_origen_id:
+                raise PermissionDenied('COORDSISTEMA debe pertenecer a la sede central para aprobar.')
+        else:
+            if role != 'ADMINSEDE':
+                raise PermissionDenied('Solo ADMINSEDE puede aprobar traslados de esta sede.')
+            if sede_aprobador_id != sede_origen_id:
+                raise PermissionDenied('Solo puede aprobar traslados de su propia sede.')
 
     @staticmethod
     @transaction.atomic
@@ -674,7 +674,6 @@ class TransferenciaService:
 
     @staticmethod
     def listar_pendientes_segur(user_id: int,sede_id: int, role: str, token: str):
-        # 1. Base: Solo traslados que no han terminado
         qs = TransferenciaRepository.filter({'tipo': 'TRASLADO_SEDE'})
         qs = qs.exclude(estado_transferencia__in=['ATENDIDO', 'CANCELADO', 'DEVUELTO'])        
         if role == 'SYSADMIN':

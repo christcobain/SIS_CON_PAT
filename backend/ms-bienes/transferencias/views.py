@@ -114,16 +114,13 @@ class TransferenciaViewSet(ViewSet):
             if auth_header.startswith('Bearer '):
                 token = auth_header.split(' ', 1)[1]
         return token
-
     def _get_role(self, request) -> str:
         return request.auth.get('role', '') if request.auth else ''
-
     def _get_sede(self, request) -> int:
         sedes = request.auth.get('sedes_ids', []) if request.auth else []
         if not sedes:
             raise ValidationError('El usuario no tiene sede asignada.')
         return sedes[0]
-
     def _get_modulo(self, request):
         return request.auth.get('modulo_id', None) if request.auth else None
 
@@ -171,35 +168,6 @@ class TransferenciaViewSet(ViewSet):
             self._get_token(request),
         )
         return Response(TransferenciaListSerializer(qs, many=True).data)
-
-    @extend_schema(
-        tags=['Transferencias'],
-        summary='Descargar documento del acta de transferencia',
-        description=(
-            'Retorna el documento del acta de la transferencia.\n\n'
-            'Prioridad de entrega:\n'
-            '1. **PDF firmado** (scan físico subido por ASISTSISTEMA), si existe.\n'
-            '2. **PDF oficial** generado automáticamente y almacenado en Supabase Storage.\n'
-            '3. **PDF generado en tiempo real** si por algún motivo no existe en Storage.\n\n'
-            'Disponible cuando `estado = EN_ESPERA_FIRMA` o `estado = ATENDIDO`.\n\n'
-            '- **ASIGNACION_INTERNA**: PDF generado al aprobar por ADMINSEDE.\n'
-            '- **TRASLADO_SEDE**: PDF generado cuando el usuario destino confirmó recepción.'
-        ),
-        parameters=[_PK],
-        responses={
-            200: OpenApiResponse(description='Archivo PDF (application/pdf)', response=OpenApiTypes.BINARY),
-            400: _ERR,
-            403: _403,
-            404: _404,
-        },
-    )
-    @action(detail=True, methods=['get'], url_path='documento')
-    def documento(self, request, pk=None):
-        cookie    = self._get_token(request)
-        pdf_bytes = TransferenciaService.obtener_documento(pk, cookie=cookie)
-        response  = HttpResponse(pdf_bytes, content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="TRF-{pk}.pdf"'
-        return response
 
     @extend_schema(
         tags=['Transferencias'],
@@ -591,6 +559,36 @@ class TransferenciaViewSet(ViewSet):
             self._get_token(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=['Transferencias'],
+        summary='Descargar documento del acta de transferencia',
+        description=(
+            'Retorna el documento del acta de la transferencia.\n\n'
+            'Prioridad de entrega:\n'
+            '1. **PDF firmado** (scan físico subido por ASISTSISTEMA), si existe.\n'
+            '2. **PDF oficial** generado automáticamente y almacenado en Supabase Storage.\n'
+            '3. **PDF generado en tiempo real** si por algún motivo no existe en Storage.\n\n'
+            'Disponible cuando `estado = EN_ESPERA_FIRMA` o `estado = ATENDIDO`.\n\n'
+            '- **ASIGNACION_INTERNA**: PDF generado al aprobar por ADMINSEDE.\n'
+            '- **TRASLADO_SEDE**: PDF generado cuando el usuario destino confirmó recepción.'
+        ),
+        parameters=[_PK],
+        responses={
+            200: OpenApiResponse(description='Archivo PDF (application/pdf)', response=OpenApiTypes.BINARY),
+            400: _ERR,
+            403: _403,
+            404: _404,
+        },
+    )
+    @action(detail=True, methods=['get'], url_path='documento')
+    def documento(self, request, pk=None):
+        cookie    = self._get_token(request)
+        pdf_bytes = TransferenciaService.obtener_documento(pk, cookie=cookie)
+        response  = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="TRF-{pk}.pdf"'
+        return response
+
 
     @extend_schema(
         tags=['Transferencias'],

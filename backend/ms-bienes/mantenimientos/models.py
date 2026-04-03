@@ -12,7 +12,6 @@ class Mantenimiento(models.Model):
         ('DEVUELTO',              'Devuelto'),
         ('CANCELADO',             'Cancelado'),
     ]
-
     numero_orden           = models.CharField(max_length=20, unique=True)
     usuario_realiza_id     = models.IntegerField()
     sede_id                = models.IntegerField()
