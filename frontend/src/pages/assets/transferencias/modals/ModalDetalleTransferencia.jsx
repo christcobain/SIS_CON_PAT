@@ -221,6 +221,7 @@ function TabAprobaciones({ t }) {
       </div>
     </div>
   );
+}
 
 export default function ModalDetalleTransferencia({
   open, onClose, item, actualizando, acciones, onAccionExitosa
