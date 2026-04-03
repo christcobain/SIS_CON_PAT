@@ -201,6 +201,7 @@ class LogoutViewSet(ViewSet):
     #         response.delete_cookie(session_cookie_name, path='/')            
     #         response.delete_cookie('csrftoken', path='/')
     #     return response
+    
     def create(self, request):
         refresh_token = request.COOKIES.get(settings.JWT_AUTH_REFRESH_COOKIE)
         try:
@@ -211,7 +212,7 @@ class LogoutViewSet(ViewSet):
             user=real_user,
             refresh_token=refresh_token,
             ip_address=_get_client_ip(request),
-            device_info=_get_device_info(request),
+            device_info=_get_device_info(request)
         )
         response = Response(
             {'success': result['success'], 'message': result['message']},
