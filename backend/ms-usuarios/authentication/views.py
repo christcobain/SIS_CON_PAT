@@ -212,16 +212,10 @@ class LogoutViewSet(ViewSet):
     #         response.delete_cookie(session_cookie_name, path='/')            
     #         response.delete_cookie('csrftoken', path='/')
     #     return response
-    
     def create(self, request):
         refresh_token = request.COOKIES.get(settings.JWT_AUTH_REFRESH_COOKIE)
-        token=self._get_token(request)
-        print('refresh_token=',refresh_token)
-        print('access_token=',token)
-        print('user_id=',request.user.id)
         try:
             real_user = User.objects.get(pk=request.user.id)
-            print('real_user=',real_user)
         except User.DoesNotExist:
             return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
         if not refresh_token:
@@ -253,7 +247,7 @@ class LogoutViewSet(ViewSet):
             response.delete_cookie(getattr(settings, 'SESSION_COOKIE_NAME', 'sessionid'), path='/')
             response.delete_cookie('csrftoken', path='/')
         return response
-
+   
 
 class RefreshTokenViewSet(ViewSet):
     permission_classes = [AllowAny]

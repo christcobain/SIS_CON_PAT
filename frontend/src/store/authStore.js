@@ -47,13 +47,15 @@ const useAuthStore = create(
           role: null,
           permissions: {},
           permissionsFlat: [],
+          modulo_id: null,
+          modulo_nombre: null,
           sedes: [],
           empresaId: null,
           empresaNombre: null,
           passwordExpiresInDays: null,
           needsPasswordWarning: false,
           isAuthenticated: false,
-          accessToken: null 
+          accessToken: null,
         }),
     }),
     {

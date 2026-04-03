@@ -48,22 +48,22 @@ export function useAuth() {
       setLoading(false);
     }
   };
+
   const logout = async () => {
     setLoading(true);
     try {
-      await authService.logout();
+        await authService.logout();
     } catch (err) {
-      console.warn('Error en logout del servidor, limpiando estado local.', err);
+        console.warn('Error en logout del servidor, limpiando estado local.', err);
     } finally {
-      clearAuth();
-      sessionStorage.clear();
-      localStorage.removeItem('sisconpat_expired_user');
-      localStorage.removeItem('sisconpat-auth-storage');
-      setLoading(false);
-      navigate('/login', { replace: true });
+        clearAuth();
+        sessionStorage.clear();
+        localStorage.removeItem('sisconpat_expired_user');
+        localStorage.removeItem('sisconpat-auth-storage');
+        setLoading(false);
+        navigate('/login', { replace: true });
     }
-  };
-
+};
 
   const refrescarToken = useCallback(async () => {
     try {
