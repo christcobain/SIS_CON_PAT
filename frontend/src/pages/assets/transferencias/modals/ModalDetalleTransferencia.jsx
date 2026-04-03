@@ -223,6 +223,64 @@ function TabAprobaciones({ t }) {
   );
 }
 
+function MiniModalMotivo({ open, onClose, onConfirm, loading, titulo, placeholder }) {
+  const [motivo, setMotivo] = useState('');
+  if (!open) return null;
+  const handleConfirm = () => {
+    if (motivo.trim().length < 5) return;
+    onConfirm(motivo.trim());
+    setMotivo('');
+  };
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.5)' }}
+      onClick={e => { if (e.target === e.currentTarget) { onClose(); setMotivo(''); } }}
+    >
+      <div className="rounded-2xl p-5 w-[400px] space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200"
+        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="size-8 rounded-xl flex items-center justify-center" style={{ background: 'rgb(220 38 38 / 0.1)' }}>
+              <Icon name="reply" className="text-[16px]" style={{ color: '#dc2626' }} />
+            </div>
+            <p className="text-sm font-black" style={{ color: 'var(--color-text-primary)' }}>{titulo}</p>
+          </div>
+          <button onClick={() => { onClose(); setMotivo(''); }} style={{ color: 'var(--color-text-faint)' }}>
+            <Icon name="close" className="text-[18px]" />
+          </button>
+        </div>
+        <textarea
+          value={motivo}
+          onChange={e => setMotivo(e.target.value)}
+          rows={3}
+          placeholder={placeholder}
+          className="w-full text-sm rounded-xl px-3 py-2.5 resize-none"
+          style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', outline: 'none' }}
+          onFocus={e => { e.currentTarget.style.border = '1px solid var(--color-primary)'; }}
+          onBlur={e => { e.currentTarget.style.border = '1px solid var(--color-border)'; }}
+        />
+        {motivo.trim().length > 0 && motivo.trim().length < 5 && (
+          <p className="text-[10px] text-red-500 font-semibold -mt-2">Mínimo 5 caracteres.</p>
+        )}
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => { onClose(); setMotivo(''); }} className="btn-secondary text-xs">Cancelar</button>
+          <button
+            onClick={handleConfirm}
+            disabled={loading || motivo.trim().length < 5}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+            style={{ background: 'rgb(220 38 38 / 0.1)', color: '#dc2626', border: '1px solid rgb(220 38 38 / 0.25)' }}
+          >
+            {loading && <span className="btn-loading-spin" style={{ borderColor: '#fca5a5', borderTopColor: '#dc2626' }} />}
+            <Icon name="reply" className="text-[14px]" />
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ModalDetalleTransferencia({
   open, onClose, item, actualizando, acciones, onAccionExitosa
 }) {
