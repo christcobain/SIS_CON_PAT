@@ -57,7 +57,9 @@ export default function TransferenciasPage() {
         transferencias, loading, error, actualizando, refetchTransf, obtenerTransf,
         descargarPDFTransf, crearTraslado, crearAsignacion, aprobarAdminsede,
         devolver, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
-        retornoSalida, retornoEntrada, reenviarTransferencia, cancelar,subirFirmado
+        retornoSalida, retornoEntrada, reenviarTransferencia, cancelar,subirFirmado,  
+        rechazarSalidaSeguridad,
+        rechazarEntradaSeguridad,
     } = useTransferencias(activeTab, { misTransferencias: filtros.misTransferencias, usuarioId: user?.id });
 
     const currentTabConfig = useMemo(() => 
@@ -180,7 +182,7 @@ export default function TransferenciasPage() {
                         actualizando={actualizando}
                         acciones={{ aprobarAdminsede, aprobarSalidaSeguridad, 
                             aprobarEntradaSeguridad, retornoSalida, retornoEntrada, 
-                            devolver,descargarPDFTransf,subirFirmado }}
+                            devolver,descargarPDFTransf,subirFirmado,rechazarSalidaSeguridad, rechazarEntradaSeguridad, }}
                         onAccionExitosa={() => { setModalDetalle(false); refetchTransf(); }}
                     />
                 )}

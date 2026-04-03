@@ -231,6 +231,7 @@ export default function ModalDetalleTransferencia({
   const { can,canAny } = usePermission();
   const toast = useToast();
   const fileRef = useRef();
+    const [modalDv, setModalDv] = useState(null);
   if (!item) return null;
   const t          = item;
   const estado     = t.estado_transferencia;
@@ -282,6 +283,11 @@ export default function ModalDetalleTransferencia({
       toast.error('Error al descargar el PDF.');
     }
   }; 
+  const MODAL_CFG = {
+    devolver: { titulo: 'Devolver al registrador', placeholder: 'Describe el motivo de la devolución...' },
+    rechazar_salida: { titulo: 'Rechazar salida física', placeholder: 'Describe el motivo del rechazo de salida...' },
+    rechazar_entrada: { titulo: 'Rechazar entrada — retorno', placeholder: 'Describe el motivo del rechazo de entrada...' },
+  };
 
   return (
     <Modal open={open} onClose={onClose} size="xl">
@@ -390,10 +396,8 @@ export default function ModalDetalleTransferencia({
         </div>
       </ModalBody>
 
-      <ModalFooter align="space">
-        
+      <ModalFooter align="space">        
         <button onClick={onClose} className="btn-secondary">Cerrar</button>
-
         <div className="flex items-center gap-2 flex-wrap">
             { puedeAprobarAdmin  && (
             <>
@@ -405,36 +409,28 @@ export default function ModalDetalleTransferencia({
             icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'} 
             color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" 
             disabled={actualizando} onClick={() => ejecutar(acciones.aprobarAdminsede, t.id)} />
-            
-              {/* <button
-                onClick={() => ejecutar(acciones.devolver, t.id, 'Devuelto para corrección')}
-                disabled={actualizando}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer"
-                style={{ background: 'rgb(180 83 9 / 0.1)', color: '#b45309', border: '1px solid rgb(180 83 9 / 0.25)' }}>
-                <Icon name="reply" className="text-[16px]" />Devolver
-              </button>
-              <button
-                onClick={() => ejecutar(acciones.aprobarAdminsede, t.id)}
-                disabled={actualizando}
-                className="btn-primary flex items-center gap-2">
-                {actualizando ? <span className="btn-loading-spin" /> 
-                : <Icon name="verified" className="text-[16px]" />}
-                {esAsignacion ? 'Aprobar asignación' : 'Aprobar traslado'}
-              </button> */}
             </>
           )}
 
             {puedeAprobarSalida && (     
-              <button onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} disabled={actualizando}
-                className="btn-primary flex items-center gap-2">
-                <Icon name="output" className="text-[16px]" />VB. Salida Sede
-              </button>
+              <>
+            <ActionBtn 
+              icon="output" label="V°B° Salida Sede" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" 
+              borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} />
+              <ActionBtn 
+              icon="block" label="Rechazar Salida" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" 
+              borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() => ejecutar(acciones.rechazarSalidaSeguridad, t.id)} />
+            </>
               )}
               {puedeAprobarEntrada && (
-              <button onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} disabled={actualizando}
-                className="btn-primary flex items-center gap-2">
-                <Icon name="input" className="text-[16px]" />VB. Entrada Sede
-              </button>       
+              <>
+            <ActionBtn 
+              icon="output" label="V°B° Salida Sede" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" 
+              borderColor="rgb(124 58 237 / 0.3)" disabled={actualizando} onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} />
+              <ActionBtn 
+              icon="block" label="Rechazar Salida" color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" 
+              borderColor="rgb(220 38 38 / 0.25)" disabled={actualizando} onClick={() => ejecutar(acciones.rechazarEntradaSeguridad, t.id)} />
+            </>      
           )}
           {puedeRetornoSalida &&   
             <ActionBtn 
@@ -448,8 +444,24 @@ export default function ModalDetalleTransferencia({
                   color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" disabled={actualizando} 
                   onClick={() => ejecutar(acciones.retornoEntrada,  t.id)} />         
                   }
+
+                  {/* {modalDv && MODAL_CFG[modalDv] && (
+                    <MiniModalMotivo
+                      open={!!modalDv}
+                      onClose={() => setModalDv(null)}
+                      loading={actualizando}
+                      titulo={MODAL_CFG[modalDv].titulo}
+                      placeholder={MODAL_CFG[modalDv].placeholder}
+                      onConfirm={(m) => {
+                        const fn = modalDv === 'devolver' ? devolver : modalDv === 'rechazar_salida' ? rechazarSalidaSeguridad : rechazarEntradaSeguridad;
+                        setModalDv(null);
+                        ejecutar(fn, t.id, { motivo_devolucion: m });
+                      }}
+                    />
+                  )} */}
         </div>
       </ModalFooter>
     </Modal>
+    
   );
 }
