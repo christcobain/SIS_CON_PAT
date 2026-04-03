@@ -315,8 +315,8 @@ export default function ModalDetalleTransferencia({
         return; 
       }
       toast.success(res?.message||res?.response?.data?.message||'Operación ejecutada correctamente.');
-      onClose();
       onAccionExitosa?.();
+      onClose();      
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Error en la operación.');
     }
