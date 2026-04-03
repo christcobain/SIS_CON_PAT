@@ -40,25 +40,56 @@ const getRoleName = (roleVal) => {
   return roleVal;
 };
 
-function NotificacionesDropdown({ open,  transf, mant, onIrAlertas }) {
-  const total = transf + mant;
+function NotificacionesDropdown({ open, transf, mant, bajas, loading, onIrAlertas }) {
+  const total = transf + mant + bajas;
+
+  const categorias = [
+    transf > 0 && {
+      key:    'transf',
+      icon:   'swap_horiz',
+      label:  `${transf} Transferencia${transf !== 1 ? 's' : ''}`,
+      sub:    `pendiente${transf !== 1 ? 's' : ''} de aprobación`,
+      count:  transf,
+      color:  '#b45309',
+      bg:     'rgb(180 83 9 / 0.07)',
+      border: 'rgb(180 83 9 / 0.18)',
+      iconBg: 'rgb(180 83 9 / 0.14)',
+    },
+    mant > 0 && {
+      key:    'mant',
+      icon:   'build',
+      label:  `${mant} Mantenimiento${mant !== 1 ? 's' : ''}`,
+      sub:    `pendiente${mant !== 1 ? 's' : ''} de aprobación`,
+      count:  mant,
+      color:  '#7F1D1D',
+      bg:     'rgb(127 29 29 / 0.07)',
+      border: 'rgb(127 29 29 / 0.18)',
+      iconBg: 'rgb(127 29 29 / 0.14)',
+    },
+    bajas > 0 && {
+      key:    'bajas',
+      icon:   'delete_sweep',
+      label:  `${bajas} Baja${bajas !== 1 ? 's' : ''}`,
+      sub:    `pendiente${bajas !== 1 ? 's' : ''} de aprobación`,
+      count:  bajas,
+      color:  '#0f766e',
+      bg:     'rgb(15 118 110 / 0.07)',
+      border: 'rgb(15 118 110 / 0.18)',
+      iconBg: 'rgb(15 118 110 / 0.14)',
+    },
+  ].filter(Boolean);
 
   return (
     <div
-      className={`absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl shadow-2xl z-[100] transition-all duration-200 overflow-hidden ${
+      className={`absolute right-0 top-[calc(100%+8px)] w-80 rounded-2xl shadow-2xl z-[100] transition-all duration-200 overflow-hidden ${
         open ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-2 pointer-events-none'
       }`}
-      style={{
-        background: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
-      }}
+      style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
     >
+      {/* ── Cabecera ── */}
       <div
         className="px-4 py-3 flex items-center justify-between"
-        style={{
-          borderBottom: '1px solid var(--color-border-light)',
-          background: 'var(--color-surface-alt)',
-        }}
+        style={{ borderBottom: '1px solid var(--color-border-light)', background: 'var(--color-surface-alt)' }}
       >
         <div className="flex items-center gap-2">
           <Icon name="notifications_active" className="text-[16px] text-primary" />
@@ -66,16 +97,21 @@ function NotificacionesDropdown({ open,  transf, mant, onIrAlertas }) {
             Pendientes
           </span>
         </div>
-        {total > 0 && (
-          <span
-            className="text-[10px] font-black px-2 py-0.5 rounded-full"
-            style={{ background: 'rgb(127 29 29 / 0.12)', color: '#7F1D1D' }}
-          >
-            {total}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {loading && (
+            <span className="size-3 rounded-full border-2 animate-spin"
+              style={{ borderColor: 'var(--color-border)', borderTopColor: 'var(--color-primary)' }} />
+          )}
+          {total > 0 && (
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+              style={{ background: 'rgb(127 29 29 / 0.12)', color: '#7F1D1D' }}>
+              {total}
+            </span>
+          )}
+        </div>
       </div>
 
+      {/* ── Cuerpo ── */}
       <div className="p-3 space-y-2">
         {total === 0 ? (
           <div className="py-6 text-center">
@@ -83,74 +119,35 @@ function NotificacionesDropdown({ open,  transf, mant, onIrAlertas }) {
             <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text-faint)' }}>
               Sin pendientes por ahora
             </p>
+            <p className="text-[9px] mt-0.5" style={{ color: 'var(--color-text-faint)' }}>
+              Se actualiza automáticamente cada minuto
+            </p>
           </div>
         ) : (
-          <>
-            {transf > 0 && (
-              <div
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                style={{
-                  background: 'rgb(180 83 9 / 0.06)',
-                  border: '1px solid rgb(180 83 9 / 0.15)',
-                }}
-              >
-                <div
-                  className="size-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: 'rgb(180 83 9 / 0.12)' }}
-                >
-                  <Icon name="swap_horiz" className="text-[16px]" style={{ color: '#b45309' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-black" style={{ color: '#b45309' }}>
-                    {transf} Transferencia{transf !== 1 ? 's' : ''}
-                  </p>
-                  <p className="text-[9px] font-semibold" style={{ color: 'var(--color-text-faint)' }}>
-                    pendiente{transf !== 1 ? 's' : ''} de aprobación
-                  </p>
-                </div>
-                <span
-                  className="size-6 rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
-                  style={{ background: '#b45309', color: '#fff' }}
-                >
-                  {transf}
-                </span>
+          categorias.map(cat => (
+            <div
+              key={cat.key}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+              style={{ background: cat.bg, border: `1px solid ${cat.border}` }}
+            >
+              <div className="size-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: cat.iconBg }}>
+                <Icon name={cat.icon} className="text-[16px]" style={{ color: cat.color }} />
               </div>
-            )}
-
-            {mant > 0 && (
-              <div
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                style={{
-                  background: 'rgb(127 29 29 / 0.06)',
-                  border: '1px solid rgb(127 29 29 / 0.15)',
-                }}
-              >
-                <div
-                  className="size-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: 'rgb(127 29 29 / 0.12)' }}
-                >
-                  <Icon name="build" className="text-[16px]" style={{ color: '#7F1D1D' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-black" style={{ color: '#7F1D1D' }}>
-                    {mant} Mantenimiento{mant !== 1 ? 's' : ''}
-                  </p>
-                  <p className="text-[9px] font-semibold" style={{ color: 'var(--color-text-faint)' }}>
-                    pendiente{mant !== 1 ? 's' : ''} de aprobación
-                  </p>
-                </div>
-                <span
-                  className="size-6 rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
-                  style={{ background: '#7F1D1D', color: '#fff' }}
-                >
-                  {mant}
-                </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-black" style={{ color: cat.color }}>{cat.label}</p>
+                <p className="text-[9px] font-semibold" style={{ color: 'var(--color-text-faint)' }}>{cat.sub}</p>
               </div>
-            )}
-          </>
+              <span className="size-6 rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
+                style={{ background: cat.color, color: '#fff' }}>
+                {cat.count}
+              </span>
+            </div>
+          ))
         )}
       </div>
 
+      {/* ── Pie ── */}
       <div style={{ borderTop: '1px solid var(--color-border-light)' }}>
         <button
           onClick={onIrAlertas}
@@ -185,7 +182,9 @@ export default function Navbar({ onToggleSidebar }) {
   const {
     transferenciasPendientes,
     mantenimientosPendientes,
+    bajasPendientes,
     totalPendientes,
+    loading: loadingNotif,
   } = useNotificaciones();
 
   useEffect(() => {
@@ -294,6 +293,8 @@ export default function Navbar({ onToggleSidebar }) {
               onClose={() => setDropdownOpen(false)}
               transf={transferenciasPendientes.length}
               mant={mantenimientosPendientes.length}
+              bajas={bajasPendientes.length}
+              loading={loadingNotif}
               onIrAlertas={handleIrAlertas}
             />
           </div>
