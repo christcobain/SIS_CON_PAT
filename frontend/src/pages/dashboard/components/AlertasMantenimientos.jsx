@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useAuthStore }       from '../../../store/authStore';
+import { useState, useEffect, useCallback,useRef } from 'react';
 import { useToast }           from '../../../hooks/useToast';
 import mantenimientosService  from '../../../services/mantenimientos.service';
+import { usePermission } from '../../../hooks/usePermission';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
@@ -13,7 +13,7 @@ const fmtT = iso => !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateS
 const ESTADO_CFG = {
   EN_PROCESO:            { label: 'En Proceso',         bg: 'rgb(37 99 235 / 0.1)',  color: '#1d4ed8' },
   PENDIENTE_APROBACION:  { label: 'Pend. Aprobación',   bg: 'rgb(180 83 9 / 0.1)',   color: '#b45309' },
-  EN_ESPERA_CONFORMIDAD: { label: 'Espera Conformidad', bg: 'rgb(124 58 237 / 0.1)', color: '#7c3aed' },
+  APROBADO: { label: 'Aprobado', bg: 'rgb(124 58 237 / 0.1)', color: '#7c3aed' },
   DEVUELTO:              { label: 'Devuelto',           bg: 'rgb(220 38 38 / 0.1)',  color: '#dc2626' },
   ATENDIDO:              { label: 'Atendido',           bg: 'rgb(22 163 74 / 0.1)',  color: '#16a34a' },
   CANCELADO:             { label: 'Cancelado',          bg: 'rgb(100 116 139 / 0.1)', color: '#64748b' },
@@ -116,64 +116,96 @@ function ActionBtn({ icon, label, onClick, disabled, color, bgColor, borderColor
   );
 }
 
+// ── Chip meramente informativo (sin acción) ───────────────────────────────────
+function InfoChip({ icon, label, color }) {
+  return (
+    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold italic"
+      style={{ background: `${color}08`, color, border: `1px dashed ${color}30` }}>
+      <Icon name={icon} className="text-[13px]" />
+      {label}
+    </div>
+  );
+}
+
 // ── Tarjeta individual de mantenimiento pendiente ─────────────────────────────
-function TarjetaMantenimiento({ m, role, onDetalle }) {
+function TarjetaMantenimiento({ m, sedeId,userId, onDetalle, onAprobado,  acciones  }) {
   const toast = useToast();
+  const fileRef = useRef();
   const [busy,    setBusy]    = useState(false);
   const [modalDv, setModalDv] = useState(false);
+  const { can } = usePermission();
+  const {aprobarMant,devolverMant,descargarPDFMant,subirFirmadoMant}=acciones;
+
   const estado   = m.estado_mantenimiento;
   const detalles = m.detalles ?? m.detalles_mantenimiento ?? [];
   const totalBienes = m.total_bienes ?? detalles.length;
+  const esAdminAprobador = can('ms-bienes:mantenimientos:add_mantenimientoaprobacion') &&!m.aprobado_por_adminsede_id;
+  const esUsuarioFinal = can('ms-bienes:mantenimientos:add_mantenimiento')
+  const miSede = String(sedeId);
+  const sedeOrigen = String(m.sede_id ?? '');
 
-  // ── Flags de rol ──────────────────────────────────────────────────────────
-  const esAdminAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
-  const puedeAprobar =
-    esAdminAprobador &&
-    estado === 'PENDIENTE_APROBACION' &&
-    !m.aprobado_por_adminsede_id;
+  const puedeAprobar =    esAdminAprobador && estado === 'PENDIENTE_APROBACION' && !m.aprobado_por_adminsede_id&& sedeOrigen === miSede;
   const puedeDevolver = puedeAprobar; 
+  const soloInformativoConformidad = esAdminAprobador && !esUsuarioFinal  && estado === 'PENDIENTE_APROBACION' && sedeOrigen === miSede;
+
+  const puedeDescargarPDF = esUsuarioFinal&& estado === 'APROBADO' && sedeOrigen === miSede ;
+  const puedeSubirActa = puedeDescargarPDF;
   const hayAccion = puedeAprobar || puedeDevolver;
- 
-  const handleAprobar = async() =>{    
-    try{
-      const result = await mantenimientosService.aprobar(m.id, '');
-      toast.success(result?.message || 'Acta firmada subida correctamente.');
-    }catch (err) {
-      toast.error(err?.response?.data?.error || 'Error al subir el acta.');
-    }finally {
+
+  const ejecutar = async (fn, ...args) => {
+    if (!fn) return;
+    setBusy(true);
+    try {
+      const res = await fn(...args);
+      toast.success(res?.message || res?.response?.data?.message || 'Operación realizada con éxito');
+      onAprobado();
+    } catch (e) {
+      toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Error al procesar la solicitud');
+    } finally {
       setBusy(false);
-    }    
+    }
   };
 
-  const handleDevolver = async(motivo) => {
-    setModalDv(false);
-    try{
-      const result = await mantenimientosService.devolver(m.id, motivo);
-      toast.success(result?.message||result?.response?.data?.message|| 'Mant. Devuelto.');
-    }catch (err) {
-      toast.error(err?.response?.data?.error || 'Error al subir el acta.');
-    }finally {
-      setBusy(false);
-    }    
+  const handleSubirFirmado = async (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+    await ejecutar(subirFirmadoMant, m.id, archivo, userId);
+    if (fileRef.current) fileRef.current.value = "";
   };
+ 
+  // const handleAprobar = async() =>{    
+  //   try{
+  //     const result = await mantenimientosService.aprobar(m.id, '');
+  //     toast.success(result?.message || 'Acta firmada subida correctamente.');
+  //   }catch (err) {
+  //     toast.error(err?.response?.data?.error || 'Error al subir el acta.');
+  //   }finally {
+  //     setBusy(false);
+  //   }    
+  // };
+
+  // const handleDevolver = async(motivo) => {
+  //   setModalDv(false);
+  //   try{
+  //     const result = await mantenimientosService.devolver(m.id, motivo);
+  //     toast.success(result?.message||result?.response?.data?.message|| 'Mant. Devuelto.');
+  //   }catch (err) {
+  //     toast.error(err?.response?.data?.error || 'Error al subir el acta.');
+  //   }finally {
+  //     setBusy(false);
+  //   }    
+  // };
 
   // ── Indicador de paso activo ───────────────────────────────────────────────
   const getPaso = () => {
-    if (puedeAprobar) return {
-      paso: '①',
-      desc: 'Requiere V°B° de Admin Sede para continuar el flujo',
-      color: 'var(--color-primary)',
-    };
+    if (puedeAprobar) return {paso: '①', desc: 'Requiere V°B° de Admin Sede para continuar el flujo', color: 'var(--color-primary)',};
     return null;
   };
   const paso = getPaso();
 
   return (
     <>
-      <div
-        className="card p-4 hover:shadow-md transition-shadow"
-        style={{
-          borderLeft: puedeAprobar ? '3px solid rgb(127 29 29 / 0.4)' : undefined,
+      <div className="card p-4 hover:shadow-md transition-shadow" style={{ borderLeft: puedeAprobar ? '3px solid rgb(127 29 29 / 0.4)' : undefined,
         }}
       >
         {/* ── Cabecera ── */}
@@ -183,6 +215,7 @@ function TarjetaMantenimiento({ m, role, onDetalle }) {
               style={{ background: 'rgb(127 29 29 / 0.08)' }}>
               <Icon name="engineering" className="text-[20px]" style={{ color: 'var(--color-primary)' }} />
             </div>
+
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-xs font-black" style={{ color: 'var(--color-text-primary)' }}>
@@ -209,8 +242,7 @@ function TarjetaMantenimiento({ m, role, onDetalle }) {
                 <p className="text-[10px] mt-0.5 font-mono truncate max-w-sm"
                   style={{ color: 'var(--color-text-muted)' }}>
                   {detalles.slice(0, 2).map(d =>
-                    `${d.tipo_bien_nombre ?? 'Bien'} ${d.codigo_patrimonial ?? d.numero_serie ?? ''}`
-                  ).join(' · ')}
+                    `${d.tipo_bien_nombre ?? 'Bien'} ${d.codigo_patrimonial ?? d.numero_serie ?? ''}`).join(' · ')}
                   {detalles.length > 2 && ` +${detalles.length - 2} más`}
                 </p>
               )}
@@ -234,8 +266,7 @@ function TarjetaMantenimiento({ m, role, onDetalle }) {
               color: 'var(--color-text-body)',
             }}
           >
-            <Icon name="visibility" className="text-[14px]" />
-            Detalle
+            <Icon name="visibility" className="text-[14px]" /> Detalle
           </button>
         </div>
 
@@ -261,28 +292,31 @@ function TarjetaMantenimiento({ m, role, onDetalle }) {
           {/* V°B° Aprobar */}
           {puedeAprobar && (
             <ActionBtn
-              icon="check_circle"
-              label="Aprobar"
-              color="#16a34a"
-              bgColor="rgb(22 163 74 / 0.08)"
-              borderColor="rgb(22 163 74 / 0.3)"
-              disabled={busy}
-              onClick={handleAprobar}
+              icon="check_circle" label="Aprobar"
+              color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
+              disabled={busy}  onClick={() => ejecutar(aprobarMant, m.id)} 
             />
           )}
-
-          {/* Devolver */}
           {puedeDevolver && (
             <ActionBtn
-              icon="reply"
-              label="Devolver"
-              color="#dc2626"
-              bgColor="rgb(220 38 38 / 0.06)"
-              borderColor="rgb(220 38 38 / 0.25)"
-              disabled={busy}
-              onClick={() => setModalDv(true)}
+              icon="reply" label="Devolver"
+              color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
+              disabled={busy}  onClick={() => setModalDv('devolverMant')}
             />
-          )}
+          )}   
+
+          {soloInformativoConformidad && <InfoChip icon="hourglass_top" label="Esperando confirmación del asistente" color="#64748b" />}
+
+          {puedeDescargarPDF && 
+          <ActionBtn icon="download" label="Descargar Acta PDF" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)" 
+            disabled={busy} onClick={() => ejecutar(descargarPDFMant, m.id, {})} />}
+          <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirFirmado} />
+
+          {puedeSubirActa && 
+          <ActionBtn 
+          icon="upload_file" label="Subir Acta Firmada" 
+          color="#7c3aed" bgColor="rgb(124 58 237 / 0.12)" borderColor="rgb(124 58 237 / 0.45)" disabled={busy} 
+          onClick={() => fileRef.current?.click()} />}
 
           {/* Sin acciones disponibles */}
           {!hayAccion && (
@@ -294,25 +328,35 @@ function TarjetaMantenimiento({ m, role, onDetalle }) {
       </div>
 
       {/* Mini-modal de motivo devolución */}
+      {modalDv && (
       <MiniModalMotivo
         open={modalDv}
-        onClose={() => setModalDv(false)}
+        onClose={() => setModalDv(null)}
         loading={busy}
         titulo="Devolver mantenimiento"
         placeholder="Describe el motivo de la devolución al asistente..."
-        onConfirm={handleDevolver}
+        onConfirm={(m) => {
+            const fn = modalDv === 'devolverMant' ? devolverMant:null;
+            setModalDv(null);
+            ejecutar(fn, m.id, { motivo_devolucion: m });
+        }}
       />
+       )}
     </>
   );
 }
 
 // ── Componente principal exportado ────────────────────────────────────────────
-export default function AlertasMantenimientos({ onVerDetalle }) {
-  const role = useAuthStore(s => s.role);
+export default function AlertasMantenimientos({ onVerDetalle,sedeId,userId, acciones, onRefreshReady }) {
   const [pendientes, setPendientes] = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [recargar,   setRecargar]   = useState(0);
-  const esAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
+  const { canAny } = usePermission();
+  // const esAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
+  const esAprobador = canAny(
+    'ms-bienes:mantenimientos:add_mantenimientoaprobacion',
+    'ms-bienes:mantenimientos:add_mantenimiento'
+  );
   const cargar = useCallback(async () => {
     if (!esAprobador) { setPendientes([]); return; }
     setLoading(true);
@@ -324,10 +368,14 @@ export default function AlertasMantenimientos({ onVerDetalle }) {
     } finally {
       setLoading(false);
     }
-  }, [role, recargar]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ recargar]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { cargar(); }, [cargar]);
   const refresh = () => setRecargar(r => r + 1);
+
+  useEffect(() => {
+    onRefreshReady?.(refresh);
+  }, [refresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!esAprobador) {
     return (
@@ -388,9 +436,11 @@ export default function AlertasMantenimientos({ onVerDetalle }) {
         <TarjetaMantenimiento
           key={m.id}
           m={m}
-          role={role}
+          sedeId={sedeId}
+          user={userId}
           onDetalle={onVerDetalle}
           onAprobado={refresh}
+          acciones={acciones}
         />
       ))}
     </div>

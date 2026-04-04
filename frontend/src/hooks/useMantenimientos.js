@@ -60,7 +60,7 @@ export function useMantenimientos(filtrosIniciales = {}) {
     }
   };
 
-  const descargarPDF = async (id) => {
+  const descargarPDFMant = async (id) => {
     try {
       const blob = await mantenimientosService.descargarPDF(id);
       const url  = window.URL.createObjectURL(new Blob([blob]));
@@ -91,14 +91,13 @@ export function useMantenimientos(filtrosIniciales = {}) {
     refetchMant: fetchMantenimientos,
     obtener:             (id)          => mantenimientosService.obtener(id),
     misMantenimientos:   (params)      => mantenimientosService.misMantenimientos(params),
-    descargarPDF,
+    descargarPDFMant,
     subirImagen,
     crear:               (data)        => ejecutarYRefrescar(mantenimientosService.crear, data),
     enviarAprobacion:    (id, data)    => ejecutarYRefrescar(mantenimientosService.enviarAprobacion, id, data),
-    aprobar:             (id, obs)     => ejecutarYRefrescar(mantenimientosService.aprobar, id, obs),
-    devolver:            (id, motivo)  => ejecutarYRefrescar(mantenimientosService.devolver, id, motivo),
-    // confirmarConformidad:(id)          => ejecutarYRefrescar(mantenimientosService.confirmarConformidad, id),
-    cancelar:            (id, data)    => ejecutarYRefrescar(mantenimientosService.cancelar, id, data),
+    aprobarMant:             (id, obs)     => ejecutarYRefrescar(mantenimientosService.aprobar, id, obs),
+    devolverMant:            (id, motivo)  => ejecutarYRefrescar(mantenimientosService.devolver, id, motivo),
+    cancelarMant:            (id, data)    => ejecutarYRefrescar(mantenimientosService.cancelar, id, data),
     subirFirmadoMant:        (id, archivo) => ejecutarYRefrescar(mantenimientosService.subirFirmado, id, archivo),
   };
 }

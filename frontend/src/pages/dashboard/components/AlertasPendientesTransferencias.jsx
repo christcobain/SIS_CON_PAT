@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuthStore }      from '../../../store/authStore';
 import { useToast }          from '../../../hooks/useToast';
 import transferenciasService from '../../../services/transferencias.service';
 import { usePermission } from '../../../hooks/usePermission';
@@ -120,13 +119,12 @@ function InfoChip({ icon, label, color }) {
 }
 
 // ── Tarjeta individual de transferencia ───────────────────────────────────────
-function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones }) {
+function TarjetaPendiente({ t,  sedeId,userId, onDetalle, onAprobado,  acciones }) {
   const toast = useToast();
   const fileRef = useRef();
   const [busy, setBusy] = useState(false);
   const [modalDv, setModalDv] = useState(null);
   const { can,canAny } = usePermission();
-
   const {
     aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
     rechazarSalidaSeguridad, rechazarEntradaSeguridad,
@@ -176,7 +174,7 @@ function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones })
   const handleSubirFirmado = async (e) => {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
-    await ejecutar(subirFirmado, t.id, archivo, user?.id);
+    await ejecutar(subirFirmado, t.id, archivo, userId);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -191,7 +189,6 @@ function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones })
     if (puedeRetornoEntrada) return { paso: '⑥', desc: 'Bien en retorno — confirmar llegada a sede origen', color: '#16a34a' };
     return null;
   };
-
   const paso = getPaso();
 
   const MODAL_CFG = {
@@ -205,24 +202,32 @@ function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones })
       <div className="card p-4 hover:shadow-md transition-shadow" style={{ borderLeft: puedeSubirActa ? '3px solid rgb(124 58 237 / 0.5)' : soloInformativoConformidad ? '3px solid rgb(37 99 235 / 0.3)' : undefined }}>
         <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="size-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: esTraslado ? 'rgb(37 99 235 / 0.08)' : 'rgb(127 29 29 / 0.08)' }}>
+            <div className="size-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5" 
+            style={{ background: esTraslado ? 'rgb(37 99 235 / 0.08)' : 'rgb(127 29 29 / 0.08)' }}>
               <Icon name={esTraslado ? 'local_shipping' : 'person_add'} className="text-[20px]" style={{ color: esTraslado ? '#1d4ed8' : 'var(--color-primary)' }} />
             </div>
+
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-xs font-black" style={{ color: 'var(--color-text-primary)' }}>{t.numero_orden}</p>
+                <p className="text-xs font-black" style={{ color: 'var(--color-text-primary)' }}>
+                  {t.numero_orden}
+                  </p>
                 <EstadoChip estado={estado} />
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
                   {esTraslado ? 'Traslado' : 'Asignación'}
                 </span>
               </div>
+              {/* Sede  */}
               <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-muted)' }}>
                 Origen: <strong>{t.sede_origen_nombre ?? `Sede #${t.sede_origen_id}`}</strong>
                 {esTraslado && <> <span className="mx-1 opacity-40">→</span> Destino: <strong>{t.sede_destino_nombre ?? `Sede #${t.sede_destino_id}`}</strong></>}
               </p>
+              {/* Fecha registro */}
               <p className="text-[10px]" style={{ color: 'var(--color-text-faint)' }}>
                 Fecha / Hora registro: {fmtT(t.fecha_registro)} - Cantidad: {bienes.length} bien(es)
               </p>
+
+              {/* Resumen de bienes */}
               {bienes.length > 0 && (
                 <p className="text-[10px] mt-0.5 font-mono truncate max-w-sm" style={{ color: 'var(--color-text-muted)' }}>
                   {bienes.slice(0, 2).map(b => `${b.tipo_bien_nombre ?? 'Bien'} ${b.codigo_patrimonial ?? b.numero_serie ?? ''}`).join(' · ')}
@@ -231,19 +236,34 @@ function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones })
               )}
             </div>
           </div>
-          <button onClick={() => onDetalle(t)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer shrink-0" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-body)' }}>
+          {/* Botón Detalle */}
+          <button onClick={() => onDetalle(t)} 
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer shrink-0" 
+          style={{ 
+            background: 'var(--color-surface-alt)', 
+            border: '1px solid var(--color-border)', 
+            color: 'var(--color-text-body)' 
+            }}>
             <Icon name="visibility" className="text-[14px]" /> Detalle
           </button>
         </div>
 
+        {/* ── Indicador de paso activo ── */}
         {paso && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3" style={{ background: `${paso.color}08`, border: `1px dashed ${paso.color}30` }}>
-            <span className="text-[12px] font-black shrink-0" style={{ color: paso.color }}>{paso.paso}</span>
-            <p className="text-[10px] font-semibold" style={{ color: 'var(--color-text-muted)' }}>{paso.desc}</p>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3" 
+          style={{ background: `${paso.color}08`, border: `1px dashed ${paso.color}30` }}
+          >
+            <span className="text-[12px] font-black shrink-0" style={{ color: paso.color }}>
+              {paso.paso}
+              </span>
+            <p className="text-[10px] font-semibold" style={{ color: 'var(--color-text-muted)' }}>
+              {paso.desc}
+              </p>
           </div>
         )}
-
-        <div className="flex items-center gap-2 flex-wrap border-t pt-3" style={{ borderColor: 'var(--color-border-light)' }}>
+        {/* ── Barra de acciones ── */}
+        <div className="flex items-center gap-2 flex-wrap border-t pt-3" 
+            style={{ borderColor: 'var(--color-border-light)' }}>
           {puedeAprobarAdmin && (<>
             <ActionBtn 
               icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'} 
@@ -286,8 +306,8 @@ function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones })
           {soloInformativoConformidad && <InfoChip icon="hourglass_top" label="Esperando confirmación del asistente de destino" color="#64748b" />}
           
           {puedeDescargarPDF && 
-          <ActionBtn icon="download" label="Descargar Acta PDF" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)" disabled={busy} onClick={() => ejecutar(descargarPDFTransf, t.id, {})} />}
-          
+          <ActionBtn icon="download" label="Descargar Acta PDF" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)" 
+            disabled={busy} onClick={() => ejecutar(descargarPDFTransf, t.id, {})} />}
           <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirFirmado} />
           
           {puedeSubirActa && 
@@ -308,7 +328,10 @@ function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones })
           color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)" disabled={busy} 
           onClick={() => ejecutar(retornoEntrada, t.id, {})} />}
 
-          {!hayAccionPrimaria && !soloInformativoConformidad && <p className="text-[10px] italic" style={{ color: 'var(--color-text-faint)' }}>Sin acciones disponibles para tu rol en esta etapa.</p>}
+          {!hayAccionPrimaria && !soloInformativoConformidad && 
+          <p className="text-[10px] italic" style={{ color: 'var(--color-text-faint)' }}>
+            Sin acciones disponibles para tu rol en esta etapa.
+            </p>}
         </div>
       </div>
 
@@ -331,18 +354,17 @@ function TarjetaPendiente({ t,  sedeId, onDetalle, onAprobado, user, acciones })
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function AlertasPendientesTransferencias({ onVerDetalle, acciones, onRefreshReady }) {
-  const role   = useAuthStore(s => s.role);
-  const sedes  = useAuthStore(s => s.sedes);
-  const user = useAuthStore(s => s.user);
-  const sedeId = sedes?.[0]?.id;
+export default function AlertasPendientesTransferencias({ onVerDetalle,sedeId,userId, acciones, onRefreshReady }) {
   const [pendientes, setPendientes] = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [recargar,   setRecargar]   = useState(0);
-
-  const esSegur     = role === 'SEGURSEDE';
-  const esAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN', 'ASISTSISTEMA'].includes(role);
-
+  const { can,canAny } = usePermission();
+  // const esAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN', 'ASISTSISTEMA'].includes(role); 
+  const esSegur          = can('ms-bienes:transferencias:add_transferenciaaprobacion');
+  const esAprobador = canAny(
+    'ms-bienes:transferencias:change_transferencia',
+    'ms-bienes:transferencias:change_transferenciadetalle',
+    'ms-bienes:transferencias:add_transferenciadetalle');
   const cargar = useCallback(async () => {
     if (!esSegur && !esAprobador) { setPendientes([]); return; }
     setLoading(true);
@@ -356,7 +378,7 @@ export default function AlertasPendientesTransferencias({ onVerDetalle, acciones
     } finally {
       setLoading(false);
     }
-  }, [role, recargar]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [recargar]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { 
     cargar(); 
@@ -364,7 +386,7 @@ export default function AlertasPendientesTransferencias({ onVerDetalle, acciones
 
   const refresh = useCallback(() => setRecargar(r => r + 1), []);
 
-  // Exponer refresh al padre para que el modal pueda dispararlo
+
   useEffect(() => {
     onRefreshReady?.(refresh);
   }, [refresh]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -417,12 +439,11 @@ export default function AlertasPendientesTransferencias({ onVerDetalle, acciones
         <TarjetaPendiente
           key={t.id}
           t={t}
-          role={role}
           sedeId={sedeId}
           onDetalle={onVerDetalle}
           onAprobado={refresh}
           acciones={acciones}
-          user={user}
+          user={userId}
         />
       ))}
     </div>

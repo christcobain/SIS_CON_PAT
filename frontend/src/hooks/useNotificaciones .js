@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import transferenciasService from '../services/transferencias.service';
 import mantenimientosService from '../services/mantenimientos.service';
+import { usePermission }                 from '../../hooks/usePermission';
 
 const EVENTO_REFETCH = 'notificaciones:refetch';
 
@@ -13,6 +14,7 @@ const POLLING_MS = 60_000;
 export function useNotificaciones() {
   const role = useAuthStore(s => s.role);
   const user = useAuthStore(s => s.user);
+   const {  can } = usePermission();
   const [transferenciasPendientes, setTransferenciasPendientes] = useState([]);
   const [mantenimientosPendientes, setMantenimientosPendientes] = useState([]);
   const [bajasPendientes,          setBajasPendientes]          = useState([]);
@@ -21,7 +23,8 @@ export function useNotificaciones() {
   const fetchIdRef = useRef(0);
   const esAprobadorTransf = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN', 'ASISTSISTEMA'].includes(role);
   const esSegur           = role === 'SEGURSEDE';
-  const esAprobadorMant   = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
+  // const esAprobadorMant   = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
+  const esAprobadorMant   = can('ms-bienes:mantenimientos:add_mantenimientoaprobacion');
   const esAprobadorBajas  = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
 
   const fetchAll = useCallback(async () => {
@@ -53,14 +56,11 @@ export function useNotificaciones() {
         r.status === 'fulfilled'
           ? (Array.isArray(r.value) ? r.value : r.value?.results ?? [])
           : [];
-
       setTransferenciasPendientes(toArray(transfPend));
       setMantenimientosPendientes(toArray(mantPend));
       setBajasPendientes(toArray(bajasPend));
-
       const transfAtendidas = toArray(transfHist);
       const mantAtendidos   = toArray(mantHist);
-
       const histTransf = transfAtendidas.slice(0, 8).map(t => {
         const ultimaAprob = t.aprobaciones?.slice(-1)[0];
         const fechaRef    = t.fecha_aprobacion_adminsede ?? ultimaAprob?.fecha ?? null;

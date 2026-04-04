@@ -37,6 +37,15 @@ const mantenimientosService = {
     });
     return response.data;
   },
+  eliminarImagen: async (id, imagen_id) => {
+    const response = await axiosBienes.delete(`/mantenimientos/${id}/imagenes/${imagen_id}/`);
+    return response.data;
+  },
+
+
+
+
+
   enviarAprobacion: async (id, data) => {
     const response = await axiosBienes.patch(`/mantenimientos/${id}/enviar-aprobacion/`, data);
     return response.data;
@@ -51,10 +60,6 @@ const mantenimientosService = {
     });
     return response.data;
   },
-  // confirmarConformidad: async (id) => {
-  //   const response = await axiosBienes.patch(`/mantenimientos/${id}/confirmar-conformidad/`);
-  //   return response.data;
-  // },
   cancelar: async (id, data) => {
     const response = await axiosBienes.patch(`/mantenimientos/${id}/cancelar/`, data);
     return response.data;

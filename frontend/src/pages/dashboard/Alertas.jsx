@@ -3,9 +3,9 @@ import { useTransferencias }             from '../../hooks/useTransferencias';
 import { useMantenimientos }             from '../../hooks/useMantenimientos';
 import { useNotificaciones,
          dispararRefetchNotificaciones } from '../../hooks/useNotificaciones ';
-import { useAuth }                       from '../../hooks/useAuth';
 import { useToast }                      from '../../hooks/useToast';
 import { usePermission }                 from '../../hooks/usePermission';
+import { useAuthStore }      from '../../store/authStore';
 import AlertasStats                      from './components/AlertasStats';
 import AlertasMantenimientos             from './components/AlertasMantenimientos';
 import AlertasHistorial                  from './components/AlertasHistorial';
@@ -36,7 +36,10 @@ const Icon = ({ name, className = '' }) => (
 );
 
 export default function Alertas() {
-  const { user } = useAuth();
+  const sedes  = useAuthStore(s => s.sedes);
+  const user = useAuthStore(s => s.user);
+  const userId= user?.id;
+  const sedeId = sedes?.[0]?.id;
   const toast    = useToast();
   const { canAny, can } = usePermission();
   const [activeTab,   setActiveTab]   = useState('pendientes');
@@ -84,7 +87,7 @@ export default function Alertas() {
 
   const {
     historial,
-    loading:         loadingNotif,
+    loadingNotif,
     totalPendientes,
     transfPendientes,
     mantPendientes,
@@ -120,11 +123,10 @@ export default function Alertas() {
 
   const {
     refetchMant,
-    enviarAprobacion,
-    aprobar:             aprobarMant,
-    devolver:            devolverMant,
-    confirmarConformidad,
-    cancelar:            cancelarMant,
+    aprobarMant,
+    devolverMant,
+    descargarPDFMant,
+    subirFirmadoMant,
   } = useMantenimientos({});
 
   // ── Bajas ─────────────────────────────────────────────────────────────────
@@ -234,7 +236,7 @@ export default function Alertas() {
         </div>
       </div>
 
-      {/* ── Contenido ── */}
+      {/* ── stats ── */}
       <div className="page-content mt-6">
         <AlertasStats
           loading={loadingSync || loadingNotif}
@@ -246,7 +248,7 @@ export default function Alertas() {
 
         <div className="mt-6">
 
-          {/* Transferencias */}
+          {/* ---------------Transferencias ------------------*/}
           {activeTab === 'pendientes' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
@@ -257,7 +259,8 @@ export default function Alertas() {
               </div>
               <AlertasPendientesTransferencias
                 onVerDetalle={handleVerDetalleTransf}
-                item={itemDetalleTransf}
+                userId={userId}
+                sedeId={sedeId}
                 acciones={{
                   aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
                   rechazarSalidaSeguridad, rechazarEntradaSeguridad,
@@ -268,50 +271,6 @@ export default function Alertas() {
               />
             </div>
           )}
-
-          {/* Mantenimientos */}
-          {activeTab === 'mantenimiento' && can('ms-bienes:mantenimientos:view_mantenimiento') && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
-                <Icon name="engineering" className="text-[18px]" />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">
-                  Mantenimientos que requieren tu aprobación
-                </p>
-              </div>
-              <AlertasMantenimientos onVerDetalle={handleVerDetalleMant} />
-            </div>
-          )}
-
-          {/* Bajas */}
-          {activeTab === 'bajas' && can('ms-bienes:bajas:view_baja') && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
-                <Icon name="delete_sweep" className="text-[18px]" />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">
-                  Informes de baja que requieren tu aprobación
-                </p>
-              </div>
-              <AlertasBajas onVerDetalle={handleVerDetalleBaja} />
-            </div>
-          )}
-
-          {/* Historial */}
-          {activeTab === 'historial' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
-                <Icon name="history" className="text-[18px]" />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">
-                  Registro de Actividad Reciente
-                </p>
-              </div>
-              <AlertasHistorial items={historial} loading={loadingSync || loadingNotif} />
-            </div>
-          )}
-
-        </div>
-      </div>
-
-      {/* ── Modales Transferencias ── */}
       <Suspense fallback={null}>
         {modalDetalleTransf && (
           <ModalDetalleTransferencia
@@ -336,7 +295,26 @@ export default function Alertas() {
         )}
       </Suspense>
 
-      {/* ── Modales Mantenimientos ── */}
+          {/*------- Mantenimientos--------------- */}
+          {activeTab === 'mantenimiento' && can('ms-bienes:mantenimientos:view_mantenimiento') && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
+                <Icon name="engineering" className="text-[18px]" />
+                <p className="text-[10px] font-black uppercase tracking-[0.2em]">
+                  Mantenimientos que requieren tu aprobación
+                </p>
+              </div>
+              <AlertasMantenimientos 
+                onVerDetalle={handleVerDetalleMant} 
+                userId={userId}
+                sedeId={sedeId}
+                acciones={{aprobarMant,devolverMant,descargarPDFMant,subirFirmadoMant}}
+                onAccionExitosa={() => { refetchMant(); notificarYRefrescar(); }}
+                onRefreshReady={(fn) => { refreshPendientesRef.current = fn; }}
+                />
+            </div>
+          )}
+          {/* ── Modales Mantenimientos ── */}
       <Suspense fallback={null}>
         {modalDetalleMant && (
           <ModalDetalleMantenimiento
@@ -347,19 +325,10 @@ export default function Alertas() {
             onDevolver={handleDevolverMant}
             onEnviar={handleEnviarMant}
             onConformar={handleConformarMant}
-            onCancelar={handleCancelarMant}
             onSubirFirmado={handleAccionMantExitosa}            
           />
         )}
-        {modalEnviar && (
-          <ModalEnviarAprobacion
-            open={modalEnviar}
-            onClose={() => { setModalEnviar(false); setItemActivoMant(null); }}
-            item={itemActivoMant}
-            onEnviar={async (id, data) => { await enviarAprobacion(id, data); handleAccionMantExitosa(); }}
-          />
-        )}
-        {modalAprobacion && (
+        {/* {modalAprobacion && (
           <ModalAprobacionMantenimiento
             open={modalAprobacion}
             onClose={() => { setModalAprobacion(false); setItemActivoMant(null); }}
@@ -369,9 +338,26 @@ export default function Alertas() {
             onDevolver={async (id, motivo) => { await devolverMant(id, motivo); handleAccionMantExitosa(); }}
             onConformar={async (id) => { await confirmarConformidad(id); handleAccionMantExitosa(); }}
           />
-        )}
+        )} */}
       </Suspense>
 
+
+          {/* ----------------Bajas -----------------------*/}
+          {activeTab === 'bajas' && can('ms-bienes:bajas:view_baja') && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
+                <Icon name="delete_sweep" className="text-[18px]" />
+                <p className="text-[10px] font-black uppercase tracking-[0.2em]">
+                  Informes de baja que requieren tu aprobación
+                </p>
+              </div>
+              <AlertasBajas 
+                onVerDetalle={handleVerDetalleBaja} 
+                />
+            </div>
+          )}
+        </div>
+      </div>     
       {/* ── Modales Bajas ── */}
       <Suspense fallback={null}>
         {modalDetalleBaja && (
@@ -383,7 +369,7 @@ export default function Alertas() {
             onCancelar={() => {}}
             puedeAccionesRegistrador={false}
             puedeAccionesAprobador={can('ms-bienes:bajas:change_baja')}
-            onUser={user?.id}
+            onUser={userId}
             descargarPDF={async (id, firmado) => {
               const { default: bajasService } = await import('../../services/bajas.service');
               const blob = await bajasService.descargarPDF(id, firmado);
@@ -418,6 +404,18 @@ export default function Alertas() {
           />
         )}
       </Suspense>
+      {/* ----------------Historial ----------------------- */}
+          {activeTab === 'historial' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
+                <Icon name="history" className="text-[18px]" />
+                <p className="text-[10px] font-black uppercase tracking-[0.2em]">
+                  Registro de Actividad Reciente
+                </p>
+              </div>
+              <AlertasHistorial items={historial} loading={loadingSync || loadingNotif} />
+            </div>
+          )}
     </div>
   );
 }
