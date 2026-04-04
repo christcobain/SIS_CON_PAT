@@ -84,8 +84,8 @@ export default function ModalEnviarAprobacion({ open, onClose, item, onEnviar })
       await onEnviar(item.id, payload);
       onClose();
     } catch (e) {
-      console.error("Error al enviar aprobación:", e);
-      toast.error(e?.response?.data?.error || 'Error al enviar el informe técnico.');
+      console.error("Error al enviar aprobación:", e?.response?.error);
+      toast.error(e?.response?.error||e?.response?.data?.error || 'Error al enviar el informe técnico.');
     } finally {
       setEnviando(false);
     }
