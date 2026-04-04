@@ -49,21 +49,28 @@ export default function Alertas() {
         label: 'Transferencias',
         icon: 'bolt',
         visible: canAny(
-          'ms-bienes:transferencias:view_transferencia',
-          'ms-bienes:transferencias:view_transferenciadetalle'
+          'ms-bienes:transferencias:add_transferenciadetalle',
+          'ms-bienes:transferencias:add_transferenciaaprobacion',
+          'ms-bienes:transferencias:change_transferencia'
         ),
       },
       {
         id: 'mantenimiento',
         label: 'Mantenimientos',
         icon: 'build',
-        visible: can('ms-bienes:mantenimientos:view_mantenimiento'),
+        visible: canAny(
+          'ms-bienes:mantenimientos:add_mantenimiento',
+          'ms-bienes:mantenimientos:add_mantenimientoaprobacion'
+        ),
       },
       {
         id: 'bajas',
         label: 'Bajas',
         icon: 'delete_sweep',
-        visible: can('ms-bienes:bajas:view_baja'),
+        visible: canAny(
+          'ms-bienes:bajas:view_baja',
+          'ms-bienes:bajas:view_bajaaprobacion'
+        ),
       },
       {
         id: 'historial',
@@ -73,7 +80,7 @@ export default function Alertas() {
       },
     ];
     return allTabs.filter((tab) => tab.visible);
-  }, [can, canAny]);
+  }, [ canAny]);
 
   const {
     historial,
