@@ -41,9 +41,10 @@ const mantenimientosService = {
     const response = await axiosBienes.delete(`/mantenimientos/${id}/imagenes/${imagen_id}/`);
     return response.data;
   },
-
-
-
+  obtenerImagen: async (id, imagen_id) => {
+    const response = await axiosBienes.delete(`/mantenimientos/${id}/imagenes/${imagen_id}/url/`);
+    return response.data;
+  },
 
 
   enviarAprobacion: async (id, data) => {

@@ -91,9 +91,9 @@ function TabInfo({ m }) {
       <div>
         <p className="text-[9px] font-black uppercase tracking-widest mb-3" style={{ color: 'var(--color-text-muted)' }}>Flujo de aprobaciones</p>
         <div className="relative pl-3.5" style={{ borderLeft: '2px solid var(--color-border)' }}>
-          <FlujoPaso label="Registrado"           nombre={null}                               fecha={m.fecha_registro}                hecho={true} />
-          <FlujoPaso label="Aprobado Admin Sede"  nombre={m.aprobado_por_adminsede_nombre}    fecha={m.fecha_aprobacion_adminsede}    hecho={!!m.aprobado_por_adminsede_id} />
-          <FlujoPaso label="Confirmado propietario" nombre={m.usuario_propietario_nombre} fecha={m.fecha_pdf_firmado} hecho={m.estado_mantenimiento=='ATENDIDO'} />
+          <FlujoPaso label="Registrado por:"           nombre={null}                               fecha={m.fecha_registro}                hecho={true} />
+          <FlujoPaso label="Aprobado Admin. Sede:"  nombre={m.aprobado_por_adminsede_nombre}    fecha={m.fecha_aprobacion_adminsede}    hecho={!!m.aprobado_por_adminsede_id} />
+          <FlujoPaso label="Confirmado por:" nombre={m.usuario_propietario_nombre} fecha={m.fecha_pdf_firmado} hecho={m.estado_mantenimiento=='ATENDIDO'} />
         </div>
       </div>
     </div>

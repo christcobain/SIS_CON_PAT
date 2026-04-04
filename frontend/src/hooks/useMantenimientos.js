@@ -93,6 +93,8 @@ export function useMantenimientos(filtrosIniciales = {}) {
     misMantenimientos:   (params)      => mantenimientosService.misMantenimientos(params),
     descargarPDFMant,
     subirImagen,
+    eliminarImagen:     (id,imagen_id)          => mantenimientosService.eliminarImagen(id, imagen_id),
+    obtenerImagen:     (id,imagen_id)          => mantenimientosService.obtenerImagen(id, imagen_id),
     crear:               (data)        => ejecutarYRefrescar(mantenimientosService.crear, data),
     enviarAprobacion:    (id, data)    => ejecutarYRefrescar(mantenimientosService.enviarAprobacion, id, data),
     aprobarMant:             (id, obs)     => ejecutarYRefrescar(mantenimientosService.aprobar, id, obs),
