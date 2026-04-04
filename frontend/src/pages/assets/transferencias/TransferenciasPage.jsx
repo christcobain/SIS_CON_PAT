@@ -25,9 +25,7 @@ const FILTROS_INICIALES = {
 function aplicarFiltros(items, filtros, activeTab) {
   let res = [...items];
   const q = filtros.search?.trim().toLowerCase();
-
   switch (activeTab) {
-
     case 'TRASLADO_SEDE':
       if (q) res = res.filter(t =>
         t.numero_orden?.toLowerCase().includes(q)     ||
@@ -37,7 +35,6 @@ function aplicarFiltros(items, filtros, activeTab) {
       );
       if (filtros.estado) res = res.filter(t => t.estado === filtros.estado);
       break;
-
     case 'ASIGNACION_INTERNA':
       if (q) res = res.filter(t =>
         t.numero_orden?.toLowerCase().includes(q)     ||
@@ -61,9 +58,6 @@ export default function TransferenciasPage() {
   const { can }    = usePermission();
 
   // ── Destructuring condicional de métodos según permisos ───────────────────
-  // Se obtienen todos los métodos del hook pero sólo se invocarán
-  // los que correspondan al tab activo y al permiso del usuario,
-  // evitando llamadas innecesarias al backend.
   const {
     transferencias, loading, error, actualizando,
     refetchTransf, obtenerTransf,

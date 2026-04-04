@@ -55,7 +55,9 @@ const MENU = [
         label: 'Transferencias', 
         icon: 'swap_horiz', 
         to: '/transferencias', 
-        perm: ['ms-bienes:transferencias:view_transferencia'] 
+        perm: ['ms-bienes:transferencias:view_transferencia',
+                  'ms-bienes:transferencias:view_transferenciadetalle'
+        ] 
       },
       { label: 'Bajas de Activos', icon: 'delete_sweep', to: '/bajas', perm: 'ms-bienes:bajas:view_baja' },
     ],
