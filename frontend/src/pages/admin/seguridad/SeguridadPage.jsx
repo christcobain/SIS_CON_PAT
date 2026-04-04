@@ -246,8 +246,8 @@ export default function SeguridadPage() {
         </div>
 
         <div className="flex gap-6 border-t overflow-x-auto pt-3" style={{ borderColor: 'var(--color-border)' }}>
-          {TABS.map(({ id, label, icon, permission }) => (
-            <Can key={id} perform={permission}>
+          {TABS.map(({ id, label, icon }) => (
+          
               <button
                 onClick={() => setActiveTab(id)}
                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all whitespace-nowrap shrink-0"
@@ -258,7 +258,7 @@ export default function SeguridadPage() {
               >
                 <Icon name={icon} className="text-[16px]" />{label}
               </button>
-            </Can>
+          
           ))}
         </div>
       </div>
