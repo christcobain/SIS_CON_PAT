@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import IsAuthenticated,OR
+from rest_framework.permissions import IsAuthenticated, OR
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
@@ -30,11 +30,7 @@ from .serializers import (
 )
 
 
-_PK  = OpenApiParameter(
-    'id', OpenApiTypes.INT,
-    location=OpenApiParameter.PATH,
-    description='ID del mantenimiento.',
-)
+_PK  = OpenApiParameter('id', OpenApiTypes.INT, location=OpenApiParameter.PATH, description='ID del mantenimiento.')
 _OK  = OpenApiResponse(description='Operación exitosa.',         response=OpenApiTypes.OBJECT)
 _ERR = OpenApiResponse(description='Error de validación (400).', response=OpenApiTypes.OBJECT)
 _403 = OpenApiResponse(description='Sin permisos (403).',        response=OpenApiTypes.OBJECT)
@@ -49,8 +45,12 @@ _ESTADO_ENUM = [
     'CANCELADO',
 ]
 
+
 @extend_schema_view(
-    list=extend_schema( tags=['Mantenimientos'],summary='Listar mantenimientos',description=(
+    list=extend_schema(
+        tags=['Mantenimientos'],
+        summary='Listar mantenimientos',
+        description=(
             'Retorna mantenimientos filtrados según el rol del usuario autenticado.\n\n'
             '- **SYSADMIN / COORDSISTEMA**: todos los mantenimientos de todas las sedes.\n'
             '- **ADMINSEDE**: solo los de su propia sede.\n'
@@ -58,11 +58,7 @@ _ESTADO_ENUM = [
             '- **userCorte**: solo los mantenimientos donde es propietario de los bienes.'
         ),
         parameters=[
-            OpenApiParameter(
-                'estado', OpenApiTypes.STR,
-                required=False, enum=_ESTADO_ENUM,
-                description='Filtrar por estado del mantenimiento.',
-            ),
+            OpenApiParameter('estado', OpenApiTypes.STR, required=False, enum=_ESTADO_ENUM, description='Filtrar por estado del mantenimiento.'),
             OpenApiParameter('sede_id',                OpenApiTypes.INT, required=False),
             OpenApiParameter('usuario_realiza_id',     OpenApiTypes.INT, required=False),
             OpenApiParameter('usuario_propietario_id', OpenApiTypes.INT, required=False),
@@ -95,39 +91,34 @@ _ESTADO_ENUM = [
             'La sede y módulo se obtienen del token JWT.'
         ),
         request=MantenimientoCreateSerializer,
-        responses={
-            201: MantenimientoDetailSerializer,
-            400: _ERR,
-            403: _403,
-        },
+        responses={201: MantenimientoDetailSerializer, 400: _ERR, 403: _403},
     ),
 )
 class MantenimientoViewSet(ViewSet):
     def get_permissions(self):
-        view_m  = HasJWTPermission('ms-bienes:mantenimientos:view_mantenimiento')
-        view_md = HasJWTPermission('ms-bienes:mantenimientos:view_mantenimientodetalle')
-        view_ma = HasJWTPermission('ms-bienes:mantenimientos:view_mantenimientoaprobacion')
-        add_m   = HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')
-        add_md  = HasJWTPermission('ms-bienes:mantenimientos:add_mantenimientodetalle')
+        view_m   = HasJWTPermission('ms-bienes:mantenimientos:view_mantenimiento')
+        view_md  = HasJWTPermission('ms-bienes:mantenimientos:view_mantenimientodetalle')
+        view_ma  = HasJWTPermission('ms-bienes:mantenimientos:view_mantenimientoaprobacion')
+        add_m    = HasJWTPermission('ms-bienes:mantenimientos:add_mantenimiento')
         add_ma   = HasJWTPermission('ms-bienes:mantenimientos:add_mantenimientoaprobacion')
-        chg_m   = HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')
-        chg_md   = HasJWTPermission('ms-bienes:mantenimientos:change_mantenimientodetalle')
-        chg_ma   = HasJWTPermission('ms-bienes:mantenimientos:change_mantenimientoaprobacion')
-        del_m   = HasJWTPermission('ms-bienes:mantenimientos:delete_mantenimiento'),
+        chg_m    = HasJWTPermission('ms-bienes:mantenimientos:change_mantenimiento')
+        del_m    = HasJWTPermission('ms-bienes:mantenimientos:delete_mantenimiento'),
         del_md   = HasJWTPermission('ms-bienes:mantenimientos:delete_mantenimientodetalle')
         perms = {
-            'list':               [OR(view_m, view_md)],
-            'retrieve':           [OR(view_m, view_md)],
-            'mis_mantenimientos': [OR(view_m, view_md)],
-            'create':             [add_m],
-            'enviar_aprobacion':  [add_m],
-            'pendientes_aprobacion': [view_ma],
-            'subir_imagen':       [add_m],
-            'aprobar':            [add_ma],
-            'devolver':           [add_ma],
-            'cancelar':           [del_m],
-            'subir_pdf_firmado':  [add_m],
-            'documento':          [view_m],
+            'list':                   [OR(view_m, view_md)],
+            'retrieve':               [OR(view_m, view_md)],
+            'mis_mantenimientos':     [OR(view_m, view_md)],
+            'create':                 [add_m],
+            'enviar_aprobacion':      [add_m],
+            'pendientes_aprobacion':  [view_ma],
+            'aprobar':                [add_ma],
+            'devolver':               [add_ma],
+            'cancelar':               [del_m],
+            'subir_imagen':           [add_m],
+            'eliminar_imagen':        [add_m],
+            'url_imagen':             [OR(view_m, view_md)],
+            'subir_pdf_firmado':      [add_m],
+            'documento':              [OR(view_m, view_md)],
         }
         return perms.get(self.action, [IsAuthenticated()])
 
@@ -139,33 +130,28 @@ class MantenimientoViewSet(ViewSet):
             if auth_header.startswith('Bearer '):
                 token = auth_header.split(' ', 1)[1]
         return token
+
     def _get_role(self, request) -> str:
         return request.auth.get('role', '') if request.auth else ''
+
     def _get_sede(self, request) -> int:
         sedes = request.auth.get('sedes_ids', []) if request.auth else []
         if not sedes:
             raise ValidationError('El usuario no tiene sede asignada.')
         return sedes[0]
+
     def _get_modulo(self, request):
         return request.auth.get('modulo_id', None) if request.auth else None
 
     def list(self, request):
         filtros = {k: v for k, v in request.query_params.items()}
-        qs = MantenimientoService.listar(
-            filtros,
-            self._get_token(request),
-        )
-        return Response(
-            MantenimientoListSerializer(qs, many=True).data,
-            status=status.HTTP_200_OK,
-        )
+        qs = MantenimientoService.listar(filtros, self._get_token(request))
+        return Response(MantenimientoListSerializer(qs, many=True).data, status=status.HTTP_200_OK)
 
     def retrieve(self, request, pk=None):
         m = MantenimientoService.obtener(pk, self._get_token(request))
-        return Response(
-            MantenimientoDetailSerializer(m).data,
-            status=status.HTTP_200_OK,
-        )
+        return Response(MantenimientoDetailSerializer(m).data, status=status.HTTP_200_OK)
+
     def create(self, request):
         ser = MantenimientoCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
@@ -176,7 +162,7 @@ class MantenimientoViewSet(ViewSet):
             modulo_id=self._get_modulo(request),
             role=self._get_role(request),
         )
-        return Response(mant,status=status.HTTP_201_CREATED)    
+        return Response(mant, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         tags=['Mantenimientos'],
@@ -189,10 +175,7 @@ class MantenimientoViewSet(ViewSet):
             '- **userCorte**: solo los de sus propios bienes.'
         ),
         parameters=[
-            OpenApiParameter(
-                'estado', OpenApiTypes.STR,
-                required=False, enum=_ESTADO_ENUM,
-            ),
+            OpenApiParameter('estado', OpenApiTypes.STR, required=False, enum=_ESTADO_ENUM),
         ],
         responses={200: MantenimientoListSerializer(many=True), 401: _ERR},
     )
@@ -206,10 +189,8 @@ class MantenimientoViewSet(ViewSet):
             filters=filters,
             token=self._get_token(request),
         )
-        return Response(
-            MantenimientoListSerializer(qs, many=True).data,
-            status=status.HTTP_200_OK,
-        )
+        return Response(MantenimientoListSerializer(qs, many=True).data, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Mantenimientos'],
         summary='Enviar a aprobación (ASISTSISTEMA)',
@@ -240,24 +221,29 @@ class MantenimientoViewSet(ViewSet):
             role=self._get_role(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Mantenimientos'],
-        summary='Lista de pendientes de aprobacion.',
+        summary='Pendientes de aprobación',
         description=(
-            'Aprueba el mantenimiento según su sede.'
-            
+            'Retorna los mantenimientos en estado `PENDIENTE_APROBACION` '
+            'filtrando por sede del usuario autenticado.\n\n'
+            '- **SYSADMIN**: todos los pendientes.\n'
+            '- **ADMINSEDE / COORDSISTEMA**: solo los de su sede.'
         ),
-        responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
+        responses={200: MantenimientoListSerializer(many=True), 403: _403},
     )
     @action(detail=False, methods=['get'], url_path='pendientes-aprobacion')
     def pendientes_aprobacion(self, request):
-        user_id=request.user.id
-        token = self._get_token(request)
-        role    = self._get_role(request)
-        sede_id = self._get_sede(request)
-        modulo_id = self._get_modulo(request)
-        qs = MantenimientoService.listar_pendientes_aprobacion(user_id,role, sede_id, modulo_id, token)
+        qs = MantenimientoService.listar_pendientes_aprobacion(
+            user_id=request.user.id,
+            role=self._get_role(request),
+            sede_id=self._get_sede(request),
+            modulo_id=self._get_modulo(request),
+            token=self._get_token(request),
+        )
         return Response(MantenimientoListSerializer(qs, many=True).data)
+
     @extend_schema(
         tags=['Mantenimientos'],
         summary='Aprobar mantenimiento (ADMINSEDE / COORDSISTEMA)',
@@ -290,6 +276,7 @@ class MantenimientoViewSet(ViewSet):
             cookie=self._get_token(request),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Mantenimientos'],
         summary='Devolver mantenimiento (ADMINSEDE desaprueba)',
@@ -317,12 +304,14 @@ class MantenimientoViewSet(ViewSet):
             motivo=ser.validated_data['motivo_devolucion'],
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Mantenimientos'],
         summary='Cancelar mantenimiento',
         description=(
             'Cancela el mantenimiento en cualquier estado activo.\n\n'
             '**No se puede cancelar** si estado = `ATENDIDO` o `CANCELADO`.\n\n'
+            'Los bienes vuelven a estado `ACTIVO`.\n\n'
             'El registro queda como historial con estado `CANCELADO`.'
         ),
         parameters=[_PK],
@@ -341,6 +330,7 @@ class MantenimientoViewSet(ViewSet):
             detalle=ser.validated_data.get('detalle_cancelacion', ''),
         )
         return Response(result, status=status.HTTP_200_OK)
+
     @extend_schema(
         tags=['Mantenimientos'],
         summary='Subir imagen de evidencia fotográfica',
@@ -349,20 +339,22 @@ class MantenimientoViewSet(ViewSet):
             '**Solo disponible cuando:** estado = `EN_PROCESO` o `DEVUELTO`.\n\n'
             '**Formato:** `multipart/form-data`\n\n'
             '**Campos:**\n'
-            '- `imagen` *(requerido)*: archivo de imagen (JPG, PNG, etc.).\n'
+            '- `imagen` *(requerido)*: archivo de imagen (JPG, PNG, WEBP, GIF).\n'
             '- `descripcion` *(opcional)*: descripción breve de la imagen.\n\n'
+            'La imagen se sube a Supabase Storage en `mantenimientos/imagenes/`.\n\n'
             'Se pueden subir múltiples imágenes con llamadas sucesivas.'
         ),
         parameters=[_PK],
         responses={201: _OK, 400: _ERR, 403: _403, 404: _404},
     )
-    @action(detail=True, methods=['post'],url_path='imagenes',parser_classes=[MultiPartParser, FormParser],)
+    @action(detail=True, methods=['post'], url_path='imagenes', parser_classes=[MultiPartParser, FormParser])
     def subir_imagen(self, request, pk=None):
         imagen = request.FILES.get('imagen')
         if not imagen:
             return Response(
                 {'success': False, 'error': 'Se requiere el campo "imagen".'},
-                status=status.HTTP_400_BAD_REQUEST)
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         result = MantenimientoService.subir_imagen(
             pk=pk,
             imagen=imagen,
@@ -370,6 +362,48 @@ class MantenimientoViewSet(ViewSet):
             usuario_id=request.user.id,
         )
         return Response(result, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        tags=['Mantenimientos'],
+        summary='Eliminar imagen de evidencia',
+        description=(
+            'Elimina una imagen de evidencia del bucket de Supabase Storage y de la base de datos.\n\n'
+            '**Solo disponible cuando:** estado = `EN_PROCESO` o `DEVUELTO`.\n\n'
+            'Si era la última imagen, desactiva el flag `tiene_imagenes` del mantenimiento.'
+        ),
+        parameters=[
+            _PK,
+            OpenApiParameter('imagen_id', OpenApiTypes.INT, location=OpenApiParameter.PATH, description='ID de la imagen a eliminar.'),
+        ],
+        responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
+    )
+    @action(detail=True, methods=['delete'], url_path='imagenes/(?P<imagen_id>[0-9]+)')
+    def eliminar_imagen(self, request, pk=None, imagen_id=None):
+        result = MantenimientoService.eliminar_imagen(
+            pk=pk,
+            imagen_id=imagen_id,
+            usuario_id=request.user.id,
+        )
+        return Response(result, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=['Mantenimientos'],
+        summary='Obtener URL firmada de imagen de evidencia',
+        description=(
+            'Retorna una URL temporal firmada de Supabase Storage para visualizar '
+            'una imagen de evidencia directamente en el frontend.\n\n'
+            'La URL expira en **1 hora** por defecto.'
+        ),
+        parameters=[
+            _PK,
+            OpenApiParameter('imagen_id', OpenApiTypes.INT, location=OpenApiParameter.PATH, description='ID de la imagen.'),
+        ],
+        responses={200: OpenApiResponse(description='URL firmada temporal.', response=OpenApiTypes.OBJECT), 404: _404},
+    )
+    @action(detail=True, methods=['get'], url_path='imagenes/(?P<imagen_id>[0-9]+)/url')
+    def url_imagen(self, request, pk=None, imagen_id=None):
+        url = MantenimientoService.obtener_url_imagen(imagen_id=imagen_id)
+        return Response({'url': url}, status=status.HTTP_200_OK)
 
     @extend_schema(
         tags=['Mantenimientos'],
@@ -381,9 +415,8 @@ class MantenimientoViewSet(ViewSet):
             '1. El `ADMINSEDE` aprueba el mantenimiento → el PDF se genera automáticamente.\n'
             '2. El `ASISTSISTEMA` descarga el PDF con este endpoint.\n'
             '3. El PDF se imprime y el propietario de los bienes lo firma físicamente.\n'
-            '4. El `ASISTSISTEMA` escanea el documento firmado y lo sube con '
-            '`POST /{id}/pdf-firmado/`.\n'
-            '5. Al subir el PDF firmado el proceso cierra automáticamente (estado → ATENDIDO).\n\n'
+            '4. El `ASISTSISTEMA` escanea el documento firmado y lo sube con `POST /{id}/pdf-firmado/`.\n'
+            '5. Al subir el PDF firmado el proceso cierra automáticamente (estado → `ATENDIDO`).\n\n'
             '**Prioridad de archivo retornado:**\n'
             '1. PDF firmado (si ya fue subido).\n'
             '2. PDF generado al aprobar.\n'
@@ -391,10 +424,7 @@ class MantenimientoViewSet(ViewSet):
         ),
         parameters=[_PK],
         responses={
-            200: OpenApiResponse(
-                description='Archivo PDF (application/pdf).',
-                response=OpenApiTypes.BINARY,
-            ),
+            200: OpenApiResponse(description='Archivo PDF (application/pdf).', response=OpenApiTypes.BINARY),
             400: _ERR,
             403: _403,
             404: _404,
@@ -403,8 +433,8 @@ class MantenimientoViewSet(ViewSet):
     @action(detail=True, methods=['get'], url_path='documento')
     def documento(self, request, pk=None):
         cookie    = self._get_token(request)
-        pdf_bytes = MantenimientoService.obtener_documento(pk,cookie)
-        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        pdf_bytes = MantenimientoService.obtener_documento(pk, cookie)
+        response  = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="MNT-{pk}.pdf"'
         return response
 
@@ -417,20 +447,19 @@ class MantenimientoViewSet(ViewSet):
             '**Formato:** `multipart/form-data`\n\n'
             '**Campo requerido:** `archivo` (PDF, JPG o PNG del documento firmado).\n\n'
             '**Al subir el archivo el sistema:**\n'
-            '1. Guarda el documento firmado en `media/mantenimientos/pdfs/firmados/`.\n'
-            '2. Actualiza `estado_funcionamiento` de cada bien al valor final indicado '
-            'en el informe técnico.\n'
+            '1. Guarda el documento firmado en Supabase Storage (`mantenimientos/firmados/`).\n'
+            '2. Actualiza `estado_funcionamiento` de cada bien al valor final indicado en el informe técnico.\n'
             '3. Actualiza `fecha_ultimo_mantenimiento` en cada bien.\n'
-            '4. Cambia el estado del mantenimiento a **ATENDIDO** (proceso cerrado).\n\n'
+            '4. Cambia el estado de los bienes a `ACTIVO`.\n'
+            '5. Cambia el estado del mantenimiento a **ATENDIDO** (proceso cerrado).\n\n'
             'Este es el **último paso** del flujo de mantenimiento. '
-            'Una vez en ATENDIDO el proceso no puede ser modificado.'
+            'Una vez en `ATENDIDO` el proceso no puede ser modificado.'
         ),
         parameters=[_PK],
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
-    @action(detail=True, methods=['post'],url_path='pdf-firmado',parser_classes=[MultiPartParser, FormParser],)
+    @action(detail=True, methods=['post'], url_path='pdf-firmado', parser_classes=[MultiPartParser, FormParser])
     def subir_pdf_firmado(self, request, pk=None):
-        cookie    = self._get_token(request)
         archivo = request.FILES.get('archivo')
         if not archivo:
             return Response(
@@ -442,6 +471,6 @@ class MantenimientoViewSet(ViewSet):
             archivo=archivo,
             usuario_id=request.user.id,
             role=self._get_role(request),
-            cookie=cookie,
+            cookie=self._get_token(request),
         )
         return Response(result, status=status.HTTP_200_OK)

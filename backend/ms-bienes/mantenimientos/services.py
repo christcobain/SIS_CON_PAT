@@ -32,13 +32,11 @@ logger = logging.getLogger(__name__)
 COORD_SEDE_ID   = 1
 COORD_MODULO_ID = 1
 
-# Extensiones permitidas para imágenes de evidencia
 _EXT_IMAGEN_PERMITIDAS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 
 
 class MantenimientoService:
 
-    # ── Helpers internos ──────────────────────────────────────────────────────
     @staticmethod
     def _get_or_404(pk: int) -> Mantenimiento:
         m = MantenimientoRepository.get_by_id(pk)
@@ -65,7 +63,6 @@ class MantenimientoService:
             m.sede_nombre = sede.get('nombre') if sede else None
         except Exception:
             m.sede_nombre = None
-
         if m.modulo_id:
             try:
                 modulo = MsUsuariosClient.validar_modulo(m.modulo_id, token)
@@ -74,7 +71,6 @@ class MantenimientoService:
                 m.modulo_nombre = None
         else:
             m.modulo_nombre = None
-
         m.usuario_propietario_nombre    = MantenimientoService._get_user_name(m.usuario_propietario_id, token)
         m.aprobado_por_adminsede_nombre = MantenimientoService._get_user_name(m.aprobado_por_adminsede_id, token)
         m.subido_por_nombre             = MantenimientoService._get_user_name(m.subido_por_id, token)
@@ -93,17 +89,16 @@ class MantenimientoService:
         except Exception as e:
             logger.error('Error generando/subiendo PDF mantenimiento id=%s: %s', m.pk, e)
 
-    # ── Listados ──────────────────────────────────────────────────────────────
     @staticmethod
     def listar(filters: Dict[str, Any], token: str) -> QuerySet:
         real_filters = dict(filters)
         if real_filters.get('estado'):
             real_filters['estado_mantenimiento'] = real_filters.pop('estado')
         qs = MantenimientoRepository.filter(real_filters)
-        for m in qs:
+        lista = list(qs)
+        for m in lista:
             MantenimientoService._enriquecer(m, token)
-            _ = list(m.detalles.all())
-        return qs
+        return lista
 
     @staticmethod
     def mis_mantenimientos(
@@ -112,20 +107,20 @@ class MantenimientoService:
         sede_id: int,
         filters: Dict[str, Any],
         token: str,
-    ) -> QuerySet:
+    ) -> list:
         qs = MantenimientoRepository.filter_mis_mantenimientos(usuario_id, role, sede_id)
         if filters.get('estado'):
             qs = qs.filter(estado_mantenimiento=filters['estado'])
-        for m in qs:
+        lista = list(qs)
+        for m in lista:
             MantenimientoService._enriquecer(m, token)
-        return qs
+        return lista
 
     @staticmethod
     def obtener(pk: int, token: str) -> Mantenimiento:
         m = MantenimientoService._get_or_404(pk)
         return MantenimientoService._enriquecer(m, token)
 
-    # ── Crear ─────────────────────────────────────────────────────────────────
     @staticmethod
     @transaction.atomic
     def crear(
@@ -176,7 +171,6 @@ class MantenimientoService:
             'message': f'Mant. Nro. {mantenimiento.numero_orden} registrado exitosamente.',
         }
 
-    # ── Enviar a aprobación ───────────────────────────────────────────────────
     @staticmethod
     @transaction.atomic
     def enviar_a_aprobacion(
@@ -203,13 +197,14 @@ class MantenimientoService:
             ef = CatEstadoFuncionamiento.objects.filter(pk=ef_id).first()
             if not ef:
                 raise ValidationError(f'Estado de funcionamiento id={ef_id} no encontrado.')
-            MantenimientoDetalleRepository.update_detalle(det, {
-                'estado_funcionamiento_final': ef,
-                'diagnostico_inicial':         item.get('diagnostico_inicial', ''),
-                'trabajo_realizado':           item.get('trabajo_realizado', ''),
-                'diagnostico_final':           item.get('diagnostico_final', ''),
-                'observacion_detalle':         item.get('observacion_detalle', ''),
-            })
+            MantenimientoDetalleRepository.update_detalle(
+                det,
+                estado_funcionamiento_final_id=ef.pk,
+                diagnostico_inicial=item.get('diagnostico_inicial', ''),
+                trabajo_realizado=item.get('trabajo_realizado', ''),
+                diagnostico_final=item.get('diagnostico_final', ''),
+                observacion_detalle=item.get('observacion_detalle', ''),
+            )
         MantenimientoRepository.update_fields(m, {
             'estado_mantenimiento': 'PENDIENTE_APROBACION',
             'fecha_termino_mant':   timezone.now().date(),
@@ -220,11 +215,10 @@ class MantenimientoService:
         )
         return {'success': True, 'message': 'Mantenimiento enviado a aprobación.'}
 
-    # ── Pendientes de aprobación ──────────────────────────────────────────────
     @staticmethod
     def listar_pendientes_aprobacion(
         user_id: int, role: str, sede_id: int, modulo_id: int, token: str,
-    ):
+    ) -> list:
         qs = MantenimientoRepository.filter({})
         qs = qs.exclude(estado_mantenimiento__in=['ATENDIDO', 'CANCELADO'])
         if role == 'SYSADMIN':
@@ -241,11 +235,8 @@ class MantenimientoService:
         lista = list(qs)
         for m in lista:
             MantenimientoService._enriquecer(m, token)
-            if hasattr(m, 'detalles'):
-                _ = list(m.detalles.all())
         return lista
 
-    # ── Aprobar ───────────────────────────────────────────────────────────────
     @staticmethod
     @transaction.atomic
     def aprobar(
@@ -282,7 +273,6 @@ class MantenimientoService:
             ),
         }
 
-    # ── Devolver ──────────────────────────────────────────────────────────────
     @staticmethod
     @transaction.atomic
     def devolver(
@@ -308,7 +298,6 @@ class MantenimientoService:
         )
         return {'success': True, 'message': 'Mantenimiento devuelto para corrección.'}
 
-    # ── Cancelar ──────────────────────────────────────────────────────────────
     @staticmethod
     @transaction.atomic
     def cancelar(
@@ -323,7 +312,7 @@ class MantenimientoService:
             raise ValidationError(
                 f'No se puede cancelar un mantenimiento en estado "{m.estado_mantenimiento}".'
             )
-        detalles = m.detalles.all()
+        detalles = list(m.detalles.all())
         if not detalles:
             raise ValidationError('El mantenimiento no tiene bienes asociados.')
         lista_bienes = [d.bien for d in detalles]
@@ -339,7 +328,6 @@ class MantenimientoService:
         )
         return {'success': True, 'message': 'Mantenimiento cancelado exitosamente.'}
 
-    # ── Subir imagen de evidencia ─────────────────────────────────────────────
     @staticmethod
     def subir_imagen(
         pk: int,
@@ -347,19 +335,6 @@ class MantenimientoService:
         descripcion: str,
         usuario_id: int,
     ) -> Dict[str, Any]:
-        """
-        Sube una imagen de evidencia fotográfica a Supabase Storage y registra
-        la ruta relativa en MantenimientoImagen.imagen_path.
-
-        Flujo:
-          1. Valida estado del mantenimiento.
-          2. Valida extensión del archivo.
-          3. Lee los bytes del archivo en memoria.
-          4. Construye el nombre único: MNT-{pk}-{timestamp}.{ext}
-          5. Sube a Supabase → mantenimientos/imagenes/
-          6. Persiste la ruta en BD via repositorio.
-          7. Activa tiene_imagenes=True en el mantenimiento si es la primera imagen.
-        """
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento not in ('EN_PROCESO', 'DEVUELTO'):
             raise ValidationError(
@@ -367,68 +342,45 @@ class MantenimientoService:
                 f'está EN_PROCESO o DEVUELTO. '
                 f'Estado actual: "{m.estado_mantenimiento}".'
             )
-
-        # ── Validar extensión ─────────────────────────────────────────────────
         nombre_original = getattr(imagen, 'name', '') or ''
         ext = os.path.splitext(nombre_original)[-1].lower()
         if not ext:
-            ext = '.jpg'                       # fallback seguro
+            ext = '.jpg'
         if ext not in _EXT_IMAGEN_PERMITIDAS:
             raise ValidationError(
                 f'Formato "{ext}" no permitido. '
                 f'Use: {", ".join(sorted(_EXT_IMAGEN_PERMITIDAS))}.'
             )
-
-        # ── Leer bytes ────────────────────────────────────────────────────────
-        imagen_bytes = b''.join(chunk for chunk in imagen.chunks())
-
-        # ── Nombre único en Supabase ──────────────────────────────────────────
-        # Patrón: MNT-{id_mantenimiento}-{timestamp}{ext}
-        # Ejemplo: MNT-12-20250403143022.jpg
-        timestamp     = timezone.now().strftime('%Y%m%d%H%M%S')
+        imagen_bytes   = b''.join(chunk for chunk in imagen.chunks())
+        timestamp      = timezone.now().strftime('%Y%m%d%H%M%S')
         nombre_archivo = f'MNT-{m.pk}-{timestamp}{ext}'
-
-        # ── Subir a Supabase ──────────────────────────────────────────────────
         try:
             ruta_storage = subir_imagen_mantenimiento(imagen_bytes, nombre_archivo)
         except ValueError as e:
-            # Extensión no permitida según storage_client
             raise ValidationError(str(e))
         except Exception as e:
-            logger.error(
-                'Error subiendo imagen de mantenimiento id=%s a Supabase: %s', pk, e,
-            )
+            logger.error('Error subiendo imagen de mantenimiento id=%s a Supabase: %s', pk, e)
             raise ValidationError('Error al guardar la imagen. Intente nuevamente.')
-
-        # ── Persistir en BD ───────────────────────────────────────────────────
         MantenimientoImagenRepository.create(
             mantenimiento=m,
             imagen_path=ruta_storage,
             descripcion=descripcion,
             subido_por_id=usuario_id,
         )
-
-        # ── Marcar que el mantenimiento ya tiene imágenes ─────────────────────
         if not m.tiene_imagenes:
             MantenimientoRepository.update_fields(m, {'tiene_imagenes': True})
-
         return {
-            'success':   True,
-            'message':   'Imagen subida exitosamente.',
+            'success':     True,
+            'message':     'Imagen subida exitosamente.',
             'imagen_path': ruta_storage,
         }
 
-    # ── Eliminar imagen de evidencia ──────────────────────────────────────────
     @staticmethod
     def eliminar_imagen(
         pk: int,
         imagen_id: int,
         usuario_id: int,
     ) -> Dict[str, Any]:
-        """
-        Elimina una imagen de evidencia del bucket de Supabase y de la BD.
-        Solo disponible cuando el mantenimiento está EN_PROCESO o DEVUELTO.
-        """
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento not in ('EN_PROCESO', 'DEVUELTO'):
             raise ValidationError(
@@ -438,32 +390,19 @@ class MantenimientoService:
         imagen = MantenimientoImagenRepository.get_by_id(imagen_id)
         if not imagen or imagen.mantenimiento_id != m.pk:
             raise ValidationError('Imagen no encontrada en este mantenimiento.')
-
-        # Eliminar del bucket (idempotente — no lanza error si ya no existe)
         eliminar_imagen_mantenimiento(imagen.imagen_path)
-
-        # Eliminar registro de BD
         MantenimientoImagenRepository.delete(imagen)
-
-        # Si ya no quedan imágenes, desactivar el flag
         if not m.imagenes.exists():
             MantenimientoRepository.update_fields(m, {'tiene_imagenes': False})
-
         return {'success': True, 'message': 'Imagen eliminada exitosamente.'}
 
-    # ── Obtener URL firmada de imagen ─────────────────────────────────────────
     @staticmethod
     def obtener_url_imagen(imagen_id: int, expiracion_segundos: int = 3600) -> str:
-        """
-        Retorna una URL firmada temporal de Supabase para mostrar una imagen
-        de evidencia directamente en el frontend.
-        """
         imagen = MantenimientoImagenRepository.get_by_id(imagen_id)
         if not imagen:
             raise NotFound(f'Imagen id={imagen_id} no encontrada.')
         return obtener_url_imagen(imagen.imagen_path, expiracion_segundos)
 
-    # ── Obtener documento (PDF) ───────────────────────────────────────────────
     @staticmethod
     def obtener_documento(pk: int, cookie: str = '') -> bytes:
         m = MantenimientoService._get_or_404(pk)
@@ -475,28 +414,22 @@ class MantenimientoService:
             try:
                 return descargar_pdf(m.pdf_firmado_path)
             except Exception as e:
-                logger.warning(
-                    'No se pudo descargar PDF firmado de mantenimiento %s: %s',
-                    m.pdf_firmado_path, e,
-                )
+                logger.warning('No se pudo descargar PDF firmado de mantenimiento %s: %s', m.pdf_firmado_path, e)
         if m.pdf_path:
             try:
                 return descargar_pdf(m.pdf_path)
             except Exception as e:
-                logger.warning(
-                    'No se pudo descargar PDF de mantenimiento %s: %s',
-                    m.pdf_path, e,
-                )
+                logger.warning('No se pudo descargar PDF de mantenimiento %s: %s', m.pdf_path, e)
         return generar_pdf_mantenimiento(m, cookie=cookie)
 
-    # ── Subir PDF firmado ─────────────────────────────────────────────────────
     @staticmethod
     @transaction.atomic
     def subir_pdf_firmado(
         pk: int,
         archivo,
         usuario_id: int,
-        role: str
+        role: str,
+        cookie: str = '',
     ) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento != 'APROBADO':

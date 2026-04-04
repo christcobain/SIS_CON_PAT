@@ -37,6 +37,8 @@ class MantenimientoRepository:
                 'detalles__bien__tipo_bien',
                 'detalles__estado_funcionamiento_inicial',
                 'detalles__estado_funcionamiento_final',
+                'aprobaciones',
+                'imagenes',
             )
             .select_related('motivo_cancelacion')
         )
@@ -58,7 +60,13 @@ class MantenimientoRepository:
     ) -> QuerySet:
         qs = (
             Mantenimiento.objects
-            .prefetch_related('detalles')
+            .prefetch_related(
+                'detalles__bien__tipo_bien',
+                'detalles__estado_funcionamiento_inicial',
+                'detalles__estado_funcionamiento_final',
+                'aprobaciones',
+                'imagenes',
+            )
             .select_related('motivo_cancelacion')
         )
         if role in ('SYSADMIN', 'COORDSISTEMA'):
@@ -70,14 +78,17 @@ class MantenimientoRepository:
                 Q(usuario_realiza_id=usuario_id) | Q(sede_id=sede_id)
             )
         return qs.filter(usuario_propietario_id=usuario_id)
+
     @staticmethod
     def create(data: Dict[str, Any]) -> Mantenimiento:
         return Mantenimiento.objects.create(**data)
+
     @staticmethod
     def update_fields(m: Mantenimiento, fields: Dict[str, Any]) -> None:
         for attr, val in fields.items():
             setattr(m, attr, val)
         m.save(update_fields=list(fields.keys()))
+
     @staticmethod
     def generate_numero_orden() -> str:
         year   = timezone.now().year
@@ -91,7 +102,6 @@ class MantenimientoRepository:
         )
         seq = int(last[-4:]) + 1 if last else 1
         return f'{prefix}{seq:04d}'
-
 
 
 class MantenimientoDetalleRepository:
@@ -164,7 +174,12 @@ class MantenimientoDetalleRepository:
 
 class MantenimientoAprobacionRepository:
     @staticmethod
-    def registrar(mantenimiento: Mantenimiento,rol: str,accion: str,usuario_id: int, observacion: str = '',
+    def registrar(
+        mantenimiento: Mantenimiento,
+        rol: str,
+        accion: str,
+        usuario_id: int,
+        observacion: str = '',
     ) -> MantenimientoAprobacion:
         return MantenimientoAprobacion.objects.create(
             mantenimiento=mantenimiento,
@@ -179,14 +194,25 @@ class MantenimientoImagenRepository:
     @staticmethod
     def create(
         mantenimiento: Mantenimiento,
-        imagen,
+        imagen_path: str,
         descripcion: str = '',
+        subido_por_id: int = None,
     ) -> MantenimientoImagen:
         return MantenimientoImagen.objects.create(
             mantenimiento=mantenimiento,
-            imagen=imagen,
+            imagen_path=imagen_path,
             descripcion=descripcion,
+            subido_por_id=subido_por_id,
         )
+
+    @staticmethod
+    def get_by_id(pk: int) -> Optional[MantenimientoImagen]:
+        return MantenimientoImagen.objects.filter(pk=pk).first()
+
+    @staticmethod
+    def delete(imagen: MantenimientoImagen) -> None:
+        imagen.delete()
+
     @staticmethod
     def get_by_mantenimiento(m: Mantenimiento) -> QuerySet:
         return MantenimientoImagen.objects.filter(
