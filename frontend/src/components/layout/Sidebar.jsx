@@ -30,7 +30,15 @@ const MENU = [
     icon: 'manage_accounts',
     items: [
       { label: 'Usuarios', icon: 'group', to: '/admin/usuarios', perm: 'ms-usuarios:users:view_user' },
-      { label: 'Seguridad', icon: 'history', to: '/admin/seguridad', perm: 'ms-usuarios:authentication:view_passwordpolicy' },
+      { label: 'Seguridad', icon: 'history', to: '/admin/seguridad', 
+        perm: ['ms-usuarios:authentication:view_passwordpolicy',
+                  'ms-usuarios:authentication:view_passwordhistory',
+                'ms-usuarios:authentication:view_loginsession',
+                'ms-usuarios:authentication:view_loginattempt',
+                'ms-usuarios:authentication:view_credential'
+
+        ]
+       },
       { label: 'Locaciones', icon: 'account_balance', to: '/admin/locaciones', perm: 'ms-usuarios:locations:add_sede' },
       { label: 'Roles y Permisos', icon: 'admin_panel_settings', to: '/admin/roles', perm: 'ms-usuarios:roles:view_role' },
     ],

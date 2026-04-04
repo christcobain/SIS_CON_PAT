@@ -68,8 +68,8 @@ export default function Alertas() {
         label: 'Bajas',
         icon: 'delete_sweep',
         visible: canAny(
-          'ms-bienes:bajas:view_baja',
-          'ms-bienes:bajas:view_bajaaprobacion'
+          'ms-bienes:bajas:add_baja',
+          'ms-bienes:bajas:add_bajaaprobacion'
         ),
       },
       {

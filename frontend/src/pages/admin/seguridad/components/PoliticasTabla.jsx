@@ -109,7 +109,7 @@ function ModalPolitica({ open, onClose, item, onGuardado }) {
       warning_days:    item.warning_days     ?? 10,
       history_count:   item.history_count    ?? 5,
     } : { ...FORM_VACIO });
-  }, [open, item?.id]);
+  }, [open, item?.id]);// eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -288,7 +288,7 @@ export default function PoliticasTabla({ items = [], loading, onReload }) {
                 </div>
                 
                 {/* Botones de acción protegidos con change_passwordpolicy */}
-                <Can perform="ms-usuarios:authentication:change_passwordpolicy">
+                <Can perform="ms-usuarios:authentication:add_passwordpolicy">
                   <div className="flex items-center gap-1 shrink-0">
                     <button onClick={() => { setItemEditar(p); setModalForm(true); }}
                       className="size-8 flex items-center justify-center rounded-lg transition-all cursor-pointer"

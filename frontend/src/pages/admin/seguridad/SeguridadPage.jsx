@@ -3,6 +3,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../hooks/useToast';
 import ConfirmDialog from '../../../components/feedback/ConfirmDialog';
 import Can from '../../../components/auth/Can';
+import { usePermission }                 from '../../../hooks/usePermission';
 import SeguridadStats from './components/SeguridadStats';
 import SeguridadFiltros from './components/SeguridadFiltros';
 import SeguridadTabla from './components/SeguridadTabla';
@@ -11,14 +12,6 @@ import PoliticasTabla from './components/PoliticasTabla';
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
-
-const TABS = [
-  { id: 'sesiones',     label: 'Sesiones activas',    icon: 'wifi',           permission: 'ms-usuarios:authentication:view_loginsession'  },
-  { id: 'historial',    label: 'Historial Sesiones',  icon: 'manage_history', permission: 'ms-usuarios:authentication:view_loginsession'  },
-  { id: 'intentos',     label: 'Registro de Intentos', icon: 'login',         permission: 'ms-usuarios:authentication:view_loginattempt'  },
-  { id: 'credenciales', label: 'Credenciales',         icon: 'key',           permission: 'ms-usuarios:authentication:view_credential'    },
-  { id: 'politicas',    label: 'Políticas',            icon: 'policy',        permission: 'ms-usuarios:authentication:view_passwordpolicy' },
-];
 
 const FILTROS_INICIALES = {
   dni: '', status: '', exitoso: '', tipo: '',
@@ -93,6 +86,8 @@ export default function SeguridadPage() {
     obtenerCredenciales, desbloquearCredencial, resetearPasswordPorDni, listarPoliticas,
   } = useAuth();
 
+  const {  can } = usePermission();
+
   const [activeTab, setActiveTab] = useState('sesiones');
   const [filtros,   setFiltros]   = useState(FILTROS_INICIALES);
 
@@ -119,6 +114,18 @@ export default function SeguridadPage() {
     () => aplicarFiltros(rawItems, filtros, activeTab),
     [rawItems, filtros, activeTab]
   );
+  const TABS = [
+  { id: 'sesiones',     label: 'Sesiones activas',    icon: 'wifi',          
+     permission: can('ms-usuarios:authentication:view_loginsession'  ),},
+  { id: 'historial',    label: 'Historial Sesiones',  icon: 'manage_history', 
+    permission: can('ms-usuarios:authentication:view_loginsession'  ),},
+  { id: 'intentos',     label: 'Registro de Intentos', icon: 'login',         
+    permission: can('ms-usuarios:authentication:view_loginattempt'  ),},
+  { id: 'credenciales', label: 'Credenciales',         icon: 'key',           
+    permission: can('ms-usuarios:authentication:view_credential'    ),},
+  { id: 'politicas',    label: 'Políticas',            icon: 'policy',        
+    permission: can('ms-usuarios:authentication:view_passwordpolicy' ),},
+];
 
   const onFiltroChange = (key, val) => setFiltros(f => ({ ...f, [key]: val }));
 
@@ -162,7 +169,7 @@ export default function SeguridadPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  useEffect(() => { cargarStats(); }, []);
+  useEffect(() => { cargarStats(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Acciones ──────────────────────────────────────────────────────────────
   const handleUnlock = item => { setItemUnlock(item); setConfirmUnlock(true); };
