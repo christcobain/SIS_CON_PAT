@@ -230,6 +230,11 @@ class MantenimientoService:
                 sede_id=sede_id,
                 aprobado_por_adminsede_id__isnull=True,
             )
+            filtros |= Q(
+                estado_mantenimiento='APROBADO',
+                sede_id=sede_id,
+                tiene_pdf_firmado=False  
+            )
             qs = qs.filter(filtros)
         qs = qs.order_by('-fecha_registro').distinct()
         lista = list(qs)
