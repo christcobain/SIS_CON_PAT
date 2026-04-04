@@ -8,40 +8,47 @@ import TransferenciasStats   from './components/TransferenciasStats';
 import TransferenciasFiltros from './components/TransferenciasFiltros';
 import TransferenciasTabla   from './components/TransferenciasTabla';
 
-const ModalTransferencia       = lazy(() => import('./modals/ModalTransferencia'));
+const ModalTransferencia        = lazy(() => import('./modals/ModalTransferencia'));
 const ModalDetalleTransferencia = lazy(() => import('./modals/ModalDetalleTransferencia'));
 
-// ── Icono utilitario ─────────────────────────────────────────────────────────
+// ── Icono utilitario ──────────────────────────────────────────────────────────
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
-// ── Filtros iniciales ────────────────────────────────────────────────────────
+// ── Filtros iniciales ─────────────────────────────────────────────────────────
 const FILTROS_INICIALES = {
   search: '', estado: '', misTransferencias: false,
 };
 
 // ── Filtrado LOCAL reactivo ───────────────────────────────────────────────────
+// Recibe los items ya cargados por el hook y aplica filtros en memoria,
+// sin generar ninguna llamada adicional al backend.
 function aplicarFiltros(items, filtros, activeTab) {
   let res = [...items];
   const q = filtros.search?.trim().toLowerCase();
+
   switch (activeTab) {
+
     case 'TRASLADO_SEDE':
       if (q) res = res.filter(t =>
-        t.numero_orden?.toLowerCase().includes(q)     ||
-        t.sede_origen?.toLowerCase().includes(q)      ||
-        t.sede_destino?.toLowerCase().includes(q)     ||
-        t.solicitante?.toLowerCase().includes(q)
+        t.numero_orden?.toLowerCase().includes(q)          ||
+        t.sede_origen_nombre?.toLowerCase().includes(q)    ||
+        t.sede_destino_nombre?.toLowerCase().includes(q)   ||
+        t.usuario_origen_nombre?.toLowerCase().includes(q) ||
+        t.usuario_destino_nombre?.toLowerCase().includes(q)
       );
-      if (filtros.estado) res = res.filter(t => t.estado === filtros.estado);
+      if (filtros.estado) res = res.filter(t => t.estado_transferencia === filtros.estado);
       break;
+
     case 'ASIGNACION_INTERNA':
       if (q) res = res.filter(t =>
-        t.numero_orden?.toLowerCase().includes(q)     ||
-        t.responsable?.toLowerCase().includes(q)      ||
-        t.descripcion?.toLowerCase().includes(q)
+        t.numero_orden?.toLowerCase().includes(q)           ||
+        t.usuario_destino_nombre?.toLowerCase().includes(q) ||
+        t.modulo_destino_nombre?.toLowerCase().includes(q)  ||
+        t.usuario_origen_nombre?.toLowerCase().includes(q)
       );
-      if (filtros.estado) res = res.filter(t => t.estado === filtros.estado);
+      if (filtros.estado) res = res.filter(t => t.estado_transferencia === filtros.estado);
       break;
 
     default:
@@ -51,38 +58,46 @@ function aplicarFiltros(items, filtros, activeTab) {
   return res;
 }
 
-// ── Componente principal ─────────────────────────────────────────────────────
+// ── Componente principal ──────────────────────────────────────────────────────
 export default function TransferenciasPage() {
-  const toast      = useToast();
-  const { user }   = useAuth();
-  const { can }    = usePermission();
+  const toast    = useToast();
+  const { user } = useAuth();
+  const { can }  = usePermission();
 
-  // ── Destructuring condicional de métodos según permisos ───────────────────
-  const {
-    transferencias, loading, error, actualizando,
-    refetchTransf, obtenerTransf,
-    descargarPDFTransf,
-    crearTraslado, crearAsignacion,
-    aprobarAdminsede,
-    devolver,
-    aprobarSalidaSeguridad, aprobarEntradaSeguridad,
-    retornoSalida, retornoEntrada,
-    reenviarTransferencia,
-    cancelar,
-    subirFirmado,
-    rechazarSalidaSeguridad, rechazarEntradaSeguridad,
-  } = useTransferencias(
-    can('ms-bienes:transferencias:view_transferencia') ||
-    can('ms-bienes:transferencias:view_transferenciadetalle')
-      ? { misTransferencias: false, usuarioId: user?.id }
-      : null
-  );
+  // ── Permisos por tab ──────────────────────────────────────────────────────
+  const canTraslado        = can('ms-bienes:transferencias:view_transferencia');
+  const canAsignacion      = can('ms-bienes:transferencias:view_transferenciadetalle');
+  const canCrearTraslado   = can('ms-bienes:transferencias:add_transferencia');
+  const canCrearAsignacion = can('ms-bienes:transferencias:add_transferenciadetalle');
+  const canEditarTraslado   = can('ms-bienes:transferencias:change_transferencia');
+  const canEditarAsignacion = can('ms-bienes:transferencias:change_transferenciadetalle');
+
+  // ── Tabs filtrados por permiso ────────────────────────────────────────────
+  const TABS = useMemo(() => {
+    const allTabs = [
+      {
+        id:         'TRASLADO_SEDE',
+        label:      'Traslados Sedes',
+        icon:       'local_shipping',
+        permission: 'ms-bienes:transferencias:view_transferencia',
+      },
+      {
+        id:         'ASIGNACION_INTERNA',
+        label:      'Asignaciones',
+        icon:       'person_add',
+        permission: 'ms-bienes:transferencias:view_transferenciadetalle',
+      },
+    ];
+    return allTabs.filter(tab => can(tab.permission));
+  }, [can]);
 
   // ── Estado de navegación ──────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('TRASLADO_SEDE');
-  const [filtros,   setFiltros]   = useState(FILTROS_INICIALES);
-  const [rawItems,  setRawItems]  = useState([]);
-  const [loading2,  setLoading2]  = useState(false);
+  const [activeTab, setActiveTab] = useState(() => {
+    if (canTraslado)   return 'TRASLADO_SEDE';
+    if (canAsignacion) return 'ASIGNACION_INTERNA';
+    return '';
+  });
+  const [filtros, setFiltros] = useState(FILTROS_INICIALES);
 
   // ── Estado de modales ─────────────────────────────────────────────────────
   const [modalForm,    setModalForm]    = useState(false);
@@ -93,73 +108,56 @@ export default function TransferenciasPage() {
   const [itemCancel,    setItemCancel]    = useState(null);
   const [cancelling,    setCancelling]    = useState(false);
 
-  // ── Estado de ítems en edición / detalle ──────────────────────────────────
+  // ── Estado de ítems en edición / detalle ─────────────────────────────────
   const [itemEditar,  setItemEditar]  = useState(null);
   const [itemDetalle, setItemDetalle] = useState(null);
 
-  // ── Permisos por tab ──────────────────────────────────────────────────────
-  const canTraslado   = can('ms-bienes:transferencias:view_transferencia');
-  const canAsignacion = can('ms-bienes:transferencias:view_transferenciadetalle');
-  const canCrearTraslado   = can('ms-bienes:transferencias:add_transferencia');
-  const canCrearAsignacion = can('ms-bienes:transferencias:add_transferenciadetalle');
-  const canEditarTraslado   = can('ms-bienes:transferencias:change_transferencia');
-  const canEditarAsignacion = can('ms-bienes:transferencias:change_transferenciadetalle');
+  // ── Hook de transferencias ────────────────────────────────────────────────
 
-  // ── Tabs filtrados por permiso ────────────────────────────────────────────
-  const TABS = useMemo(() => {
-    const allTabs = [
-      {
-        id: 'TRASLADO_SEDE',
-        label: 'Traslados Sedes',
-        icon: 'local_shipping',
-        permission: 'ms-bienes:transferencias:view_transferencia',
-      },
-      {
-        id: 'ASIGNACION_INTERNA',
-        label: 'Asignaciones',
-        icon: 'person_add',
-        permission: 'ms-bienes:transferencias:view_transferenciadetalle',
-      },
-    ];
-    return allTabs.filter(tab => can(tab.permission));
-  }, [can]);
+  const {
+    transferencias, loading, error, actualizando,
+    refetchTransf,
+    obtenerTransf,            
+    descargarPDFTransf,
+    crearTraslado,
+    crearAsignacion,
+    aprobarAdminsede,
+    devolver,
+    aprobarSalidaSeguridad,
+    aprobarEntradaSeguridad,
+    retornoSalida,
+    retornoEntrada,
+    reenviarTransferencia,
+    cancelar,
+    subirFirmado,
+    rechazarSalidaSeguridad,
+    rechazarEntradaSeguridad,
+  } = useTransferencias(
+    activeTab,
+    { misTransferencias: filtros.misTransferencias, usuarioId: user?.id },
+  );
 
-
-  // ── Items con filtrado LOCAL reactivo ─────────────────────────────────────
+  // ── Filtrado LOCAL sobre los datos ya cargados por el hook ───────────────
   const itemsFiltrados = useMemo(
-    () => aplicarFiltros(rawItems.length ? rawItems : (transferencias ?? []), filtros, activeTab),
-    [rawItems, transferencias, filtros, activeTab]
+    () => aplicarFiltros(transferencias ?? [], filtros, activeTab),
+    [transferencias, filtros, activeTab]
   );
 
   const onFiltroChange = (key, val) =>
     setFiltros(f => ({ ...f, [key]: val }));
 
-  // ── Carga del tab activo (se dispara al cambiar de tab) ───────────────────
-  const cargar = () => {
-    setLoading2(true);
-    let promesa;
-    if (activeTab === 'TRASLADO_SEDE'    && canTraslado)   promesa = obtenerTransf?.({ tipo: 'TRASLADO_SEDE' });
-    if (activeTab === 'ASIGNACION_INTERNA' && canAsignacion) promesa = obtenerTransf?.({ tipo: 'ASIGNACION_INTERNA' });
-    if (!promesa) { setLoading2(false); return; }
-    promesa
-      .then(d => setRawItems(Array.isArray(d) ? d : (d?.results ?? [])))
-      .catch(() => setRawItems([]))
-      .finally(() => setLoading2(false));
-  };
-
-  useEffect(() => {
-    setFiltros(FILTROS_INICIALES);
-    setRawItems([]);
-    cargar();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
-
+  // ── Si el activeTab queda fuera de los tabs disponibles ───────────────────
   useEffect(() => {
     if (TABS.length && !TABS.find(t => t.id === activeTab)) {
       setActiveTab(TABS[0].id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [TABS]);
+
+  // ── Limpiar filtros al cambiar de tab ─────────────────────────────────────
+  useEffect(() => {
+    setFiltros(FILTROS_INICIALES);
+  }, [activeTab]);
 
   // ── Acciones de modales ───────────────────────────────────────────────────
   const handleNuevo      = ()     => { setItemEditar(null); setModalForm(true); };
@@ -174,10 +172,9 @@ export default function TransferenciasPage() {
     try {
       const result = await cancelar(itemCancel.id, {
         motivo_cancelacion_id: 1,
-        detalle_cancelacion: 'Cancelado desde panel',
+        detalle_cancelacion:   'Cancelado desde panel',
       });
       toast.success(result?.message || 'Transferencia cancelada.');
-      refetchTransf();
     } catch (e) {
       toast.error(e?.response?.data?.error || 'No se pudo cancelar.');
     } finally { setCancelling(false); setItemCancel(null); }
@@ -218,6 +215,8 @@ export default function TransferenciasPage() {
 
           {/* Acciones de cabecera */}
           <div className="flex items-center gap-2">
+
+            {/* Sincronizar */}
             <button
               onClick={refetchTransf}
               disabled={loading}
@@ -230,8 +229,8 @@ export default function TransferenciasPage() {
               />
             </button>
 
-            {/* Botón Nuevo — visible sólo si el usuario puede crear en el tab activo */}
-            {((activeTab === 'TRASLADO_SEDE'    && canCrearTraslado)  ||
+            {/* Nuevo — visible sólo si el usuario puede crear en el tab activo */}
+            {((activeTab === 'TRASLADO_SEDE'     && canCrearTraslado)   ||
               (activeTab === 'ASIGNACION_INTERNA' && canCrearAsignacion)) && (
               <button
                 className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
@@ -248,7 +247,10 @@ export default function TransferenciasPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-6 border-t overflow-x-auto pt-3" style={{ borderColor: 'var(--color-border)' }}>
+        <div
+          className="flex gap-6 border-t overflow-x-auto pt-3"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
           {TABS.map(({ id, label, icon }) => (
             <button
               key={id}
@@ -268,7 +270,7 @@ export default function TransferenciasPage() {
       {/* ── Stats ── */}
       <TransferenciasStats data={transferencias} loading={loading} />
 
-      {/* ── Filtros reactivos ── */}
+      {/* ── Filtros reactivos — sin botón Buscar ── */}
       <TransferenciasFiltros
         activeTab={activeTab}
         filtros={filtros}
@@ -281,7 +283,7 @@ export default function TransferenciasPage() {
         <TransferenciasTabla
           activeTab={activeTab}
           items={itemsFiltrados}
-          loading={loading || loading2}
+          loading={loading}
           error={error}
           refetch={refetchTransf}
           onVerDetalle={handleVerDetalle}
