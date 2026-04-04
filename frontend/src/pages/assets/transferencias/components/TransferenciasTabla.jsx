@@ -1,74 +1,117 @@
 import { useMemo } from 'react';
-import { useAuthStore } from '../../../../store/authStore';
+import { useAuthStore }  from '../../../../store/authStore';
 import { usePermission } from '../../../../hooks/usePermission';
 
+// ── Icono utilitario ─────────────────────────────────────────────────────────
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
 
-const fmtT = iso => !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmtT = iso =>
+  !iso
+    ? '—'
+    : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
+// ── Definición de badges de estado ───────────────────────────────────────────
 const BADGE = {
-  PENDIENTE_APROBACION:  { label: 'PENDIENTE_APROBACION',         cls: 'badge-pendiente'  },
-  EN_ESPERA_CONFORMIDAD: { label: 'EN_ESPERA_CONFORMIDAD',   cls: 'badge-en-proceso' },
-  EN_RETORNO:            { label: 'EN_RETORNO',         cls: 'badge-en-proceso' },
-  ATENDIDO:              { label: 'ATENDIDO',           cls: 'badge-atendido'   },
-  DEVUELTO:              { label: 'DEVUELTO',           cls: 'badge-devuelto'   },
-  CANCELADO:             { label: 'CANCELADO',          cls: 'badge-cancelado'  },
+  PENDIENTE_APROBACION:  { label: 'PENDIENTE APROBACIÓN', cls: 'badge-pendiente'  },
+  EN_ESPERA_CONFORMIDAD: { label: 'EN ESPERA CONFORMIDAD', cls: 'badge-en-proceso' },
+  EN_RETORNO:            { label: 'EN RETORNO',            cls: 'badge-en-proceso' },
+  ATENDIDO:              { label: 'ATENDIDO',              cls: 'badge-atendido'   },
+  DEVUELTO:              { label: 'DEVUELTO',              cls: 'badge-devuelto'   },
+  CANCELADO:             { label: 'CANCELADO',             cls: 'badge-cancelado'  },
 };
 
-function filtrarItems(items, filtros) {
-  if (!filtros?.search) return items;
-  const q = filtros.search.toLowerCase();
-  return items.filter(t =>
-    t.numero_orden?.toLowerCase().includes(q) ||
-    t.sede_origen_nombre?.toLowerCase().includes(q) ||
-    t.sede_destino_nombre?.toLowerCase().includes(q) ||
-    t.usuario_origen_nombre?.toLowerCase().includes(q) ||
-    t.usuario_destino_nombre?.toLowerCase().includes(q)
-  );
-}
+// ── Columnas por tipo de tab ──────────────────────────────────────────────────
+const COLS_TRASLADO = [
+  'N° Orden', 'Origen → Destino', 'Responsable destino',
+  'Motivo', 'Bienes', 'Estado', 'Fecha', 'Acciones',
+];
+const COLS_ASIGNACION = [
+  'N° Orden', 'Destinatario', 'Módulo / Ubic. destino',
+  'Bienes', 'Aprobado por', 'Estado', 'Fecha', 'Acciones',
+];
 
-function AccionesFila({ item,  onVerDetalle, onEditar, onCancelar, onDownload }) {
-  const { canAny } = usePermission();
-  const estado = item.estado_transferencia;
-  const user = useAuthStore((s) => s.user); 
-  const esRegistrador = item.usuario_origen_id === user?.id;
-  const puedeEditar = (estado === 'DEVUELTO') && esRegistrador && canAny('ms-bienes:transferencias:add_transferencia', 'ms-bienes:transferencias:add_transferenciadetalle');
-  const puedeCancelar = esRegistrador&&['DEVUELTO'].includes(estado) && canAny('ms-bienes:transferencias:delete_transferencia', 'ms-bienes:transferencias:delete_transferenciadetalle');
-  const puedeDownload = estado === 'ATENDIDO' && (item.pdf_path || item.tiene_pdf_firmado)&& canAny('ms-bienes:transferencias:view_transferencia', 'ms-bienes:transferencias:view_transferenciadetalle');
-  
+// ── Subcomponente: acciones por fila ─────────────────────────────────────────
+function AccionesFila({ item, onVerDetalle, onEditar, onCancelar, onDownload }) {
+  const { canAny }       = usePermission();
+  const user             = useAuthStore(s => s.user);
+  const estado           = item.estado_transferencia;
+  const esRegistrador    = item.usuario_origen_id === user?.id;
+
+  // Permisos granulares calculados localmente, sin depender de props externas
+  const puedeEditar = estado === 'DEVUELTO'
+    && esRegistrador
+    && canAny(
+      'ms-bienes:transferencias:add_transferencia',
+      'ms-bienes:transferencias:add_transferenciadetalle',
+    );
+
+  const puedeCancelar = esRegistrador
+    && ['DEVUELTO'].includes(estado)
+    && canAny(
+      'ms-bienes:transferencias:delete_transferencia',
+      'ms-bienes:transferencias:delete_transferenciadetalle',
+    );
+
+  const puedeDownload = estado === 'ATENDIDO'
+    && (item.pdf_path || item.tiene_pdf_firmado)
+    && canAny(
+      'ms-bienes:transferencias:view_transferencia',
+      'ms-bienes:transferencias:view_transferenciadetalle',
+    );
 
   return (
     <div className="flex justify-end gap-1">
-      <button onClick={() => onVerDetalle(item)} title="Ver detalle"
-        className="size-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors cursor-pointer">
+
+      {/* Ver detalle — siempre visible */}
+      <button
+        onClick={() => onVerDetalle(item)}
+        title="Ver detalle"
+        className="size-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors cursor-pointer"
+      >
         <Icon name="visibility" className="text-[19px]" />
       </button>
+
+      {/* Reenviar — sólo si puede editar */}
       {puedeEditar && (
-        <button onClick={() => onEditar(item)} title="Reenviar"
+        <button
+          onClick={() => onEditar(item)}
+          title="Reenviar"
           className="size-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors"
           style={{ color: '#b45309' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgb(180 83 9 / 0.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+        >
           <Icon name="send" className="text-[19px]" />
         </button>
       )}
+
+      {/* Descargar PDF — sólo si puede y existe PDF */}
       {puedeDownload && (
-        <button onClick={() => onDownload(item.id)} title="Descargar PDF"
+        <button
+          onClick={() => onDownload(item.id)}
+          title="Descargar PDF"
           className="size-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors"
           style={{ color: '#1d4ed8' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgb(37 99 235 / 0.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+        >
           <Icon name="picture_as_pdf" className="text-[19px]" />
         </button>
       )}
+
+      {/* Cancelar — sólo si puede */}
       {puedeCancelar && (
-        <button onClick={() => onCancelar(item)} title="Cancelar"
+        <button
+          onClick={() => onCancelar(item)}
+          title="Cancelar"
           className="size-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors"
           style={{ color: '#dc2626' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgb(220 38 38 / 0.1)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}> 
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+        >
           <Icon name="cancel" className="text-[19px]" />
         </button>
       )}
@@ -76,60 +119,95 @@ function AccionesFila({ item,  onVerDetalle, onEditar, onCancelar, onDownload })
   );
 }
 
-export default function TransferenciasTabla({
-  items = [], filtros = {}, loading, 
-  activeTab, onVerDetalle, onEditar, onCancelar, onDownload,
-}) {
-  const filtrados = useMemo(() => filtrarItems(items, filtros), [items, filtros]);
-  const role = useAuthStore(s => s.role);
-  const esTraslado = activeTab === 'TRASLADO_SEDE';
-
-  const COLS_TRASLADO = ['N° Orden', 'Origen → Destino', 'Responsable destino', 'Motivo', 'Bienes', 'Estado', 'Fecha', 'Acciones'];
-  const COLS_ASIG     = ['N° Orden', 'Destinatario', 'Módulo / Ubic. destino', 'Bienes', 'Aprobado por', 'Estado', 'Fecha', 'Acciones'];
-  const COLS = esTraslado ? COLS_TRASLADO : COLS_ASIG;
-
-  if (loading) return (
+// ── Subcomponente: skeleton de carga ──────────────────────────────────────────
+function TablaSkeletion({ cols }) {
+  return (
     <div className="table-wrapper rounded-2xl overflow-hidden">
       <table className="table w-full">
-        <thead><tr>{COLS.map(c => <th key={c}>{c}</th>)}</tr></thead>
+        <thead>
+          <tr>{cols.map(c => <th key={c}>{c}</th>)}</tr>
+        </thead>
         <tbody>
           {Array.from({ length: 5 }, (_, i) => (
             <tr key={i} className="border-b border-border">
-              {COLS.map((_, j) => <td key={j}><div className="skeleton h-4 rounded" /></td>)}
+              {cols.map((_, j) => (
+                <td key={j}><div className="skeleton h-4 rounded" /></td>
+              ))}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
+}
 
-  if (!filtrados.length) return (
+// ── Subcomponente: estado vacío ───────────────────────────────────────────────
+function TablaVacia() {
+  return (
     <div className="text-center py-16 card rounded-xl">
       <Icon name="swap_horiz" className="text-[48px] text-faint" />
-      <p className="text-sm font-semibold mt-3 text-muted">No se encontraron transferencias</p>
+      <p className="text-sm font-semibold mt-3 text-muted">
+        No se encontraron transferencias
+      </p>
     </div>
   );
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
+export default function TransferenciasTabla({
+  items = [],
+  loading,
+  activeTab,
+  onVerDetalle,
+  onEditar,
+  onCancelar,
+  onDownload,
+}) {
+  const esTraslado = activeTab === 'TRASLADO_SEDE';
+  const COLS       = esTraslado ? COLS_TRASLADO : COLS_ASIGNACION;
+  const filas = useMemo(() => items, [items]);
+
+  if (loading)       return <TablaSkeletion cols={COLS} />;
+  if (!filas.length) return <TablaVacia />;
 
   return (
     <div className="table-wrapper shadow-sm border rounded-2xl overflow-hidden">
       <div className="overflow-x-auto">
         <table className="table w-full">
+
+          {/* ── Cabecera ── */}
           <thead>
-            <tr>{COLS.map(c => <th key={c} className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-faint">{c}</th>)}</tr>
+            <tr>
+              {COLS.map(c => (
+                <th key={c} className="px-4 py-3.5 text-[10px] font-black uppercase tracking-widest text-faint">
+                  {c}
+                </th>
+              ))}
+            </tr>
           </thead>
+
+          {/* ── Cuerpo ── */}
           <tbody>
-            {filtrados.map(t => {
+            {filas.map(t => {
               const badge  = BADGE[t.estado_transferencia] ?? { label: t.estado_transferencia, cls: '' };
               const bienes = t.bienes ?? [];
+
               return (
-                <tr key={t.id} className="hover:bg-surface-alt/70 transition-colors border-b border-border group">
+                <tr
+                  key={t.id}
+                  className="hover:bg-surface-alt/70 transition-colors border-b border-border group"
+                >
+                  {/* N° Orden */}
                   <td className="px-4 py-3">
-                    <p className="font-black text-xs font-mono" style={{ color: 'var(--color-primary)' }}>{t.numero_orden}</p>
+                    <p className="font-black text-xs font-mono" style={{ color: 'var(--color-primary)' }}>
+                      {t.numero_orden}
+                    </p>
                     <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-faint)' }}>
-                      {t.tipo === 'TRASLADO_SEDE' ? 'Traslado' : 'Asignación'}
+                      {esTraslado ? 'Traslado' : 'Asignación'}
                     </p>
                   </td>
 
+                  {/* Origen → Destino  /  Destinatario */}
                   {esTraslado ? (
                     <td className="px-4 py-3">
                       <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>
@@ -142,60 +220,91 @@ export default function TransferenciasTabla({
                     </td>
                   ) : (
                     <td className="px-4 py-3">
-                      <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{t.usuario_destino_nombre ?? '—'}</p>
+                      <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                        {t.usuario_destino_nombre ?? '—'}
+                      </p>
                     </td>
                   )}
 
+                  {/* Responsable destino  /  Módulo+Ubicación */}
                   {esTraslado ? (
                     <td className="px-4 py-3">
-                      <p className="text-xs" style={{ color: 'var(--color-text-body)' }}>{t.usuario_destino_nombre ?? '—'}</p>
+                      <p className="text-xs" style={{ color: 'var(--color-text-body)' }}>
+                        {t.usuario_destino_nombre ?? '—'}
+                      </p>
                     </td>
                   ) : (
                     <td className="px-4 py-3">
-                      <p className="text-xs" style={{ color: 'var(--color-text-body)' }}>{t.modulo_destino_nombre ?? '—'}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{t.ubicacion_destino_nombre ?? '—'}</p>
+                      <p className="text-xs" style={{ color: 'var(--color-text-body)' }}>
+                        {t.modulo_destino_nombre ?? '—'}
+                      </p>
+                      <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                        {t.ubicacion_destino_nombre ?? '—'}
+                      </p>
                     </td>
                   )}
 
+                  {/* Motivo — sólo traslado */}
                   {esTraslado && (
                     <td className="px-4 py-3">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md"
-                        style={{ background: 'var(--color-border-light)', color: 'var(--color-text-body)' }}>
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-md"
+                        style={{ background: 'var(--color-border-light)', color: 'var(--color-text-body)' }}
+                      >
                         {t.motivo_transferencia_nombre ?? '—'}
                       </span>
                     </td>
                   )}
 
+                  {/* Cantidad de bienes */}
                   <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center justify-center size-6 rounded-lg text-[11px] font-black"
-                      style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)' }}>
+                    <span
+                      className="inline-flex items-center justify-center size-6 rounded-lg text-[11px] font-black"
+                      style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)' }}
+                    >
                       {bienes.length}
                     </span>
                   </td>
 
+                  {/* Aprobado por — sólo asignación */}
                   {!esTraslado && (
                     <td className="px-4 py-3">
-                      <p className="text-xs" style={{ color: 'var(--color-text-body)' }}>{t.aprobado_por_adminsede_nombre ?? '—'}</p>
+                      <p className="text-xs" style={{ color: 'var(--color-text-body)' }}>
+                        {t.aprobado_por_adminsede_nombre ?? '—'}
+                      </p>
                     </td>
                   )}
 
+                  {/* Estado */}
                   <td className="px-4 py-3">
-                    <span className={badge.cls}
-                      style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '3px 8px', borderRadius: '9999px' }}>
+                    <span
+                      className={badge.cls}
+                      style={{
+                        fontSize: '10px', fontWeight: 900,
+                        textTransform: 'uppercase', letterSpacing: '0.05em',
+                        padding: '3px 8px', borderRadius: '9999px',
+                      }}
+                    >
                       {badge.label}
                     </span>
                   </td>
 
+                  {/* Fecha */}
                   <td className="px-4 py-3">
-                    <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{fmtT(t.fecha_registro)}</p>
+                    <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      {fmtT(t.fecha_registro)}
+                    </p>
                   </td>
 
+                  {/* Acciones */}
                   <td className="px-4 py-3">
-                    <AccionesFila item={t} role={role}
-                      onVerDetalle={onVerDetalle} 
+                    <AccionesFila
+                      item={t}
+                      onVerDetalle={onVerDetalle}
                       onEditar={onEditar}
-                      onCancelar={onCancelar} 
-                      onDownload={onDownload} />
+                      onCancelar={onCancelar}
+                      onDownload={onDownload}
+                    />
                   </td>
                 </tr>
               );

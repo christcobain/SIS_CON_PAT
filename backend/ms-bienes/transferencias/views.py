@@ -90,8 +90,8 @@ class TransferenciaViewSet(ViewSet):
             'documento':               [OR(view_t, view_td)],
             'crear_traslado':          [add_t],
             'crear_asignacion':        [add_td],#asistente
-            'aprobar_adminsede':       [chg_t],
-            'devolver_adminsede':      [chg_t],
+            'aprobar_adminsede':       [OR(chg_t,chg_td)],##COORDSIS ADMINSEDE
+            'devolver_adminsede':      [OR(chg_t,chg_td)],
             'pendientes_segur':        [add_ta],
             'pendientes_aprobacion':   [OR(chg_t,add_td)],
             'reenviar':                [OR(add_t, add_td)],
