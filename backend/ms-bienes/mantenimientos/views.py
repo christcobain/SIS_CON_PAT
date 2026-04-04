@@ -110,7 +110,7 @@ class MantenimientoViewSet(ViewSet):
             'mis_mantenimientos':     [OR(view_m, view_md)],
             'create':                 [add_m],
             'enviar_aprobacion':      [add_m],
-            'pendientes_aprobacion':  [view_ma],
+            'pendientes_aprobacion':  [OR(view_ma,add_m)],
             'aprobar':                [add_ma],
             'devolver':               [add_ma],
             'cancelar':               [del_m],
