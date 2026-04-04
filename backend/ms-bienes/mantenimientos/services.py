@@ -36,7 +36,6 @@ _EXT_IMAGEN_PERMITIDAS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 
 
 class MantenimientoService:
-
     @staticmethod
     def _get_or_404(pk: int) -> Mantenimiento:
         m = MantenimientoRepository.get_by_id(pk)
