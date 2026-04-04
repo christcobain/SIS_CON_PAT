@@ -264,10 +264,8 @@ export default function TransferenciasPage() {
         </div>
       </div>
 
-      {/* ── Stats ── */}
       <TransferenciasStats data={transferencias} loading={loading} />
 
-      {/* ── Filtros reactivos — sin botón Buscar ── */}
       <TransferenciasFiltros
         activeTab={activeTab}
         filtros={filtros}

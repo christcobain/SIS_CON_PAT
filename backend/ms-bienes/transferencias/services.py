@@ -229,8 +229,7 @@ class TransferenciaService:
     @staticmethod
     def mis_transferencias(usuario_id: int, role: str, sede_id: int, filters: Dict[str, Any], token):
         qs = TransferenciaRepository.get_mis_transferencias(usuario_id, role, sede_id)
-        if hasattr(filters, 'dict'):
-            
+        if hasattr(filters, 'dict'):            
             filters = filters.dict()
         if filters.get('tipo'):
             qs = qs.filter(tipo=filters['tipo'])
