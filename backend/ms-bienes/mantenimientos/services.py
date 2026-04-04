@@ -233,7 +233,7 @@ class MantenimientoService:
             filtros |= Q(
                 estado_mantenimiento='APROBADO',
                 sede_id=sede_id,
-                tiene_pdf_firmado=False  
+                fecha_pdf_firmado=False  
             )
             qs = qs.filter(filtros)
         qs = qs.order_by('-fecha_registro').distinct()
@@ -462,6 +462,7 @@ class MantenimientoService:
         TransferenciaService._cambiar_estado_bienes(lista_bienes, 'ACTIVO')
         MantenimientoRepository.update_fields(m, {
             'pdf_firmado_path':     ruta_storage,
+            'tiene_pdf_firmado':    True,
             'fecha_pdf_firmado':    now,
             'subido_por_id':        usuario_id,
             'estado_mantenimiento': 'ATENDIDO',

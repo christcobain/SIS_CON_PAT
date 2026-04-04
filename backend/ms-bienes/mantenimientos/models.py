@@ -30,6 +30,7 @@ class Mantenimiento(models.Model):
     fecha_pdf             = models.DateTimeField(null=True, blank=True)
 
     pdf_firmado_path      = models.CharField(max_length=500, null=True, blank=True)
+    tiene_pdf_firmado   =models.BooleanField(default=False)
     fecha_pdf_firmado     = models.DateTimeField(null=True, blank=True)
     subido_por_id         = models.IntegerField(null=True, blank=True)
 
