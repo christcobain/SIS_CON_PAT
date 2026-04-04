@@ -208,6 +208,7 @@ function TabImagenes({ imagenes = [] }) {
 }
 
 function TabHistorial({ aprobaciones = [] }) {
+  console.log(aprobaciones)
   if (!aprobaciones.length) return (
     <div className="text-center py-10">
       <Icon name="manage_history" className="text-[40px]" style={{ color: 'var(--color-text-faint)' }} />
