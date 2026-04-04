@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 import transferenciasService from '../services/transferencias.service';
 import mantenimientosService from '../services/mantenimientos.service';
-import { usePermission }                 from '../../hooks/usePermission';
+import { usePermission }                 from '../hooks/usePermission';
 
 const EVENTO_REFETCH = 'notificaciones:refetch';
 
