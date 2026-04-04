@@ -85,23 +85,17 @@ export default function SeguridadPage() {
     obtenerSesiones, obtenerHistorialSesiones, obtenerIntentos,
     obtenerCredenciales, desbloquearCredencial, resetearPasswordPorDni, listarPoliticas,
   } = useAuth();
-
   const {  can } = usePermission();
-
   const [activeTab, setActiveTab] = useState('sesiones');
   const [filtros,   setFiltros]   = useState(FILTROS_INICIALES);
-
-  // Datos crudos del API (sin filtrar)
+ 
   const [rawItems,  setRawItems]  = useState([]);
   const [loading,   setLoading]   = useState(false);
-
   // Stats
   const [sesionesStats,     setSesionesStats]     = useState([]);
   const [intentosStats,     setIntentosStats]     = useState([]);
   const [credencialesStats, setCredencialesStats] = useState([]);
   const [loadingStats,      setLoadingStats]      = useState(false);
-
-  // Confirmaciones
   const [confirmUnlock, setConfirmUnlock] = useState(false);
   const [itemUnlock,    setItemUnlock]    = useState(null);
   const [unlocking,     setUnlocking]     = useState(false);
@@ -109,7 +103,6 @@ export default function SeguridadPage() {
   const [itemReset,     setItemReset]     = useState(null);
   const [resetting,     setResetting]     = useState(false);
 
-  // ── Filtrado reactivo: se recalcula cada vez que cambian filtros o rawItems ──
   const itemsFiltrados = useMemo(
     () => aplicarFiltros(rawItems, filtros, activeTab),
     [rawItems, filtros, activeTab]
@@ -120,71 +113,74 @@ export default function SeguridadPage() {
       id: 'sesiones',     
       label: 'Sesiones activas',    
       icon: 'wifi',          
-      permission: can('ms-usuarios:authentication:view_loginsession'),
+      permission: 'ms-usuarios:authentication:view_loginsession',
     },
     { 
       id: 'historial',    
       label: 'Historial Sesiones',  
       icon: 'manage_history', 
-      permission: can('ms-usuarios:authentication:view_loginsession'),
+      permission: 'ms-usuarios:authentication:view_loginsession',
     },
     { 
       id: 'intentos',     
       label: 'Registro de Intentos', 
       icon: 'login',         
-      permission: can('ms-usuarios:authentication:view_loginattempt'),
+      permission: 'ms-usuarios:authentication:view_loginattempt',
     },
     { 
       id: 'credenciales', 
       label: 'Credenciales',         
       icon: 'key',           
-      permission: can('ms-usuarios:authentication:view_credential'),
+      permission: 'ms-usuarios:authentication:view_credential',
     },
     { 
       id: 'politicas',    
       label: 'Políticas',            
       icon: 'policy',        
-      permission: can('ms-usuarios:authentication:view_passwordpolicy'),
+      permission: 'ms-usuarios:authentication:view_passwordpolicy',
     },
   ];
- return allTabs.filter((tab) => tab.permission);
+ return allTabs.filter((tab) => can(tab.permission));
   }, [ can]);
 
   const onFiltroChange = (key, val) => setFiltros(f => ({ ...f, [key]: val }));
+  const canSesiones     = can('ms-usuarios:authentication:view_loginsession');
+  const canIntentos     = can('ms-usuarios:authentication:view_loginattempt');
+  const canCredenciales = can('ms-usuarios:authentication:view_credential');
+  const canPoliticas    = can('ms-usuarios:authentication:view_passwordpolicy')
 
   // ── Carga inicial de stats ────────────────────────────────────────────────
   const cargarStats = () => {
-    setLoadingStats(true);
-    Promise.allSettled([
-      obtenerSesiones(),
-      obtenerIntentos({ limit: 500 }),
-      obtenerCredenciales(),
-    ]).then(([rs, ri, rc]) => {
-      setSesionesStats(rs.status === 'fulfilled' && Array.isArray(rs.value) ? rs.value : []);
-      setIntentosStats(ri.status === 'fulfilled' && Array.isArray(ri.value) ? ri.value : []);
-      setCredencialesStats(rc.status === 'fulfilled' && Array.isArray(rc.value) ? rc.value : []);
-    }).finally(() => setLoadingStats(false));
-  };
+  setLoadingStats(true);
+  Promise.allSettled([
+    canSesiones     ? obtenerSesiones()              : Promise.resolve([]),
+    canIntentos     ? obtenerIntentos({ limit: 500 }) : Promise.resolve([]),
+    canCredenciales ? obtenerCredenciales()           : Promise.resolve([]),
+  ]).then(([rs, ri, rc]) => {
+    setSesionesStats(rs.status === 'fulfilled' && Array.isArray(rs.value) ? rs.value : []);
+    setIntentosStats(ri.status === 'fulfilled' && Array.isArray(ri.value) ? ri.value : []);
+    setCredencialesStats(rc.status === 'fulfilled' && Array.isArray(rc.value) ? rc.value : []);
+  }).finally(() => setLoadingStats(false));
+};
 
   // ── Carga del tab activo (una sola vez al cambiar de tab) ─────────────────
   const cargar = () => {
-    setLoading(true);
-    let promesa;
-    if      (activeTab === 'sesiones')     promesa = obtenerSesiones(null);
-    else if (activeTab === 'historial')    promesa = obtenerHistorialSesiones({});
-    else if (activeTab === 'intentos')     promesa = obtenerIntentos({ limit: 500 });
-    else if (activeTab === 'credenciales') promesa = obtenerCredenciales({});
-    else if (activeTab === 'politicas')    promesa = listarPoliticas();
+  setLoading(true);
+  let promesa;
+  if      (activeTab === 'sesiones'     && canSesiones)     promesa = obtenerSesiones(null);
+  else if (activeTab === 'historial'    && canSesiones)     promesa = obtenerHistorialSesiones({});
+  else if (activeTab === 'intentos'     && canIntentos)     promesa = obtenerIntentos({ limit: 500 });
+  else if (activeTab === 'credenciales' && canCredenciales) promesa = obtenerCredenciales({});
+  else if (activeTab === 'politicas'    && canPoliticas)    promesa = listarPoliticas();
 
-    if (!promesa) { setLoading(false); return; }
+  if (!promesa) { setLoading(false); return; }
+  promesa
+    .then(d => setRawItems(Array.isArray(d) ? d : (d?.results ?? [])))
+    .catch(() => setRawItems([]))
+    .finally(() => setLoading(false));
+};
 
-    promesa
-      .then(d => setRawItems(Array.isArray(d) ? d : (d?.results ?? [])))
-      .catch(() => setRawItems([]))
-      .finally(() => setLoading(false));
-  };
 
-  // Al cambiar de tab: limpiar filtros y recargar
   useEffect(() => {
     setFiltros(FILTROS_INICIALES);
     setRawItems([]);
@@ -247,18 +243,17 @@ export default function SeguridadPage() {
 
         <div className="flex gap-6 border-t overflow-x-auto pt-3" style={{ borderColor: 'var(--color-border)' }}>
           {TABS.map(({ id, label, icon }) => (
-          
-              <button
-                onClick={() => setActiveTab(id)}
-                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all whitespace-nowrap shrink-0"
-                style={{
-                  color: activeTab === id ? 'var(--color-primary)' : 'var(--color-text-faint)',
-                  borderBottom: activeTab === id ? '2px solid var(--color-primary)' : '2px solid transparent',
-                }}
-              >
-                <Icon name={icon} className="text-[16px]" />{label}
-              </button>
-          
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-2 transition-all whitespace-nowrap shrink-0"
+              style={{
+                color: activeTab === id ? 'var(--color-primary)' : 'var(--color-text-faint)',
+                borderBottom: activeTab === id ? '2px solid var(--color-primary)' : '2px solid transparent',
+              }}
+            >
+              <Icon name={icon} className="text-[16px]" />{label}
+            </button>
           ))}
         </div>
       </div>
@@ -298,7 +293,7 @@ export default function SeguridadPage() {
             />
           </Can>
         ) : (
-          <Can perform={TABS.find(t => t.id === activeTab)?.permission}>
+          <Can perform={TABS.find(t => t.id === activeTab)?.permission ?? ''}>
             <SeguridadTabla
               activeTab={activeTab}
               items={itemsFiltrados}
