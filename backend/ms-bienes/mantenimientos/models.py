@@ -108,12 +108,17 @@ class MantenimientoAprobacion(models.Model):
         return f'{self.mantenimiento.numero_orden} | {self.rol_aprobador} | {self.accion}'
 
 class MantenimientoImagen(models.Model):
-    mantenimiento = models.ForeignKey(Mantenimiento, on_delete=models.CASCADE, related_name='imagenes')
-    imagen        = models.ImageField(upload_to='mantenimientos/imagenes/')
+    mantenimiento = models.ForeignKey(
+        Mantenimiento, on_delete=models.CASCADE, related_name='imagenes',
+    )
+    imagen_path   = models.CharField(max_length=500)
     descripcion   = models.CharField(max_length=200, null=True, blank=True)
+    subido_por_id = models.IntegerField(null=True, blank=True)
     fecha_subida  = models.DateTimeField(auto_now_add=True)
+ 
     class Meta:
         db_table = 'bienes_mantenimiento_imagen'
+        ordering = ['fecha_subida']
+ 
     def __str__(self):
         return f'{self.mantenimiento.numero_orden} | img-{self.pk}'
-    

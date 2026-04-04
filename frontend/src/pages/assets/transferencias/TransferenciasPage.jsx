@@ -212,10 +212,8 @@ export default function TransferenciasPage() {
               </p>
             </div>
           </div>
-
           {/* Acciones de cabecera */}
           <div className="flex items-center gap-2">
-
             {/* Sincronizar */}
             <button
               onClick={refetchTransf}
@@ -228,7 +226,6 @@ export default function TransferenciasPage() {
                 className={`text-[18px] ${loading ? 'animate-spin text-primary' : 'text-faint'}`}
               />
             </button>
-
             {/* Nuevo — visible sólo si el usuario puede crear en el tab activo */}
             {((activeTab === 'TRASLADO_SEDE'     && canCrearTraslado)   ||
               (activeTab === 'ASIGNACION_INTERNA' && canCrearAsignacion)) && (

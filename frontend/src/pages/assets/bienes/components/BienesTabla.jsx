@@ -171,7 +171,7 @@ function exportExcel(items) {
 
   const headers = [
     'ID','Cód.Patrimonial','Tipo','Categoría','Marca','Modelo','N° Serie',
-    'Estado Bien','Funcionamiento','Sede','Módulo','Ubicación','Piso','Custodio',
+    'Estado Bien','Funcionamiento','Sede','Módulo','Ubicación','Piso','Asignado a:',
     'Año Adq.','Fecha Compra','Activo',
     'Tipo Técnico','Hostname/IP/MAC','Procesador','RAM','Disco','S.O.',
     'Tipo Monitor','Pulgadas',

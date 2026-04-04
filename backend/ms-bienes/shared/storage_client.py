@@ -1,9 +1,10 @@
 import logging
 from django.conf import settings
 from supabase import create_client
+
 logger = logging.getLogger(__name__)
 
-
+# ── Cliente y bucket ──────────────────────────────────────────────────────────
 def _client():
     return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
 def _bucket():
@@ -18,7 +19,6 @@ def subir_pdf(pdf_bytes: bytes, nombre_archivo: str) -> str:
     )
     return ruta
 def subir_pdf_firmado(archivo_bytes: bytes, nombre_archivo: str) -> str:
-    """Sube el PDF firmado de transferencia. Ruta: transferencias/firmados/"""
     ext = nombre_archivo.rsplit('.', 1)[-1].lower()
     tipos = {
         'pdf':  'application/pdf',
@@ -38,7 +38,6 @@ def subir_pdf_firmado(archivo_bytes: bytes, nombre_archivo: str) -> str:
     return ruta
 # ── MANTENIMIENTOS ────────────────────────────────────────────────────────────
 def subir_pdf_mantenimiento(pdf_bytes: bytes, nombre_archivo: str) -> str:
-    """Sube el PDF generado del acta de mantenimiento. Ruta: mantenimientos/pdfs/"""
     ruta = f'mantenimientos/pdfs/{nombre_archivo}'
     _client().storage.from_(_bucket()).upload(
         path=ruta,
@@ -47,7 +46,6 @@ def subir_pdf_mantenimiento(pdf_bytes: bytes, nombre_archivo: str) -> str:
     )
     return ruta
 def subir_pdf_firmado_mantenimiento(archivo_bytes: bytes, nombre_archivo: str) -> str:
-    """Sube el PDF firmado del acta de mantenimiento. Ruta: mantenimientos/firmados/"""
     ext = nombre_archivo.rsplit('.', 1)[-1].lower()
     tipos = {
         'pdf':  'application/pdf',
@@ -65,14 +63,53 @@ def subir_pdf_firmado_mantenimiento(archivo_bytes: bytes, nombre_archivo: str) -
         },
     )
     return ruta
+_TIPOS_IMAGEN = {
+    'jpg':  'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png':  'image/png',
+    'webp': 'image/webp',
+    'gif':  'image/gif',
+}
+_EXT_IMAGEN_PERMITIDAS = set(_TIPOS_IMAGEN.keys())
 
+def subir_imagen_mantenimiento(
+    imagen_bytes: bytes,
+    nombre_archivo: str,
+) -> str:
+    ext = nombre_archivo.rsplit('.', 1)[-1].lower()
+    if ext not in _EXT_IMAGEN_PERMITIDAS:
+        raise ValueError(
+            f'Extensión ".{ext}" no permitida. '
+            f'Use: {", ".join(sorted(_EXT_IMAGEN_PERMITIDAS))}.'
+        )
+    content_type = _TIPOS_IMAGEN[ext]
+    ruta = f'mantenimientos/imagenes/{nombre_archivo}'
+    _client().storage.from_(_bucket()).upload(
+        path=ruta,
+        file=imagen_bytes,
+        file_options={
+            'content-type': content_type,
+            'upsert': 'true',       
+        },
+    )
+    logger.info('Imagen de mantenimiento subida a Supabase: %s', ruta)
+    return ruta
+def eliminar_imagen_mantenimiento(ruta: str) -> None:
+    try:
+        _client().storage.from_(_bucket()).remove([ruta])
+        logger.info('Imagen eliminada de Supabase: %s', ruta)
+    except Exception as e:
+        logger.warning('No se pudo eliminar imagen de Supabase (%s): %s', ruta, e)
 # ── COMPARTIDO ────────────────────────────────────────────────────────────────
 def descargar_pdf(ruta: str) -> bytes:
-    """Descarga cualquier archivo del bucket por su ruta relativa."""
     return _client().storage.from_(_bucket()).download(ruta)
-
 def obtener_url_pdf(ruta: str, expiracion_segundos: int = 3600) -> str:
-    """Retorna una URL firmada temporal para visualización directa en el navegador."""
+    resp = _client().storage.from_(_bucket()).create_signed_url(
+        path=ruta,
+        expires_in=expiracion_segundos,
+    )
+    return resp.get('signedURL') or resp.get('signedUrl', '')
+def obtener_url_imagen(ruta: str, expiracion_segundos: int = 3600) -> str:
     resp = _client().storage.from_(_bucket()).create_signed_url(
         path=ruta,
         expires_in=expiracion_segundos,
