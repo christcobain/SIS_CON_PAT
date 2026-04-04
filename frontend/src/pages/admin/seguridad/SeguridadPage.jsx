@@ -116,16 +116,36 @@ export default function SeguridadPage() {
   );
   const TABS = useMemo(() => {
     const allTabs = [
-    { id: 'sesiones',     label: 'Sesiones activas',    icon: 'wifi',          
-      permission: can('ms-usuarios:authentication:view_loginsession'  ),},
-    { id: 'historial',    label: 'Historial Sesiones',  icon: 'manage_history', 
-      permission: can('ms-usuarios:authentication:view_loginsession'  ),},
-    { id: 'intentos',     label: 'Registro de Intentos', icon: 'login',         
-      permission: can('ms-usuarios:authentication:view_loginattempt'  ),},
-    { id: 'credenciales', label: 'Credenciales',         icon: 'key',           
-      permission: can('ms-usuarios:authentication:view_credential'    ),},
-    { id: 'politicas',    label: 'Políticas',            icon: 'policy',        
-      permission: can('ms-usuarios:authentication:view_passwordpolicy' ),},
+    { 
+      id: 'sesiones',     
+      label: 'Sesiones activas',    
+      icon: 'wifi',          
+      permission: can('ms-usuarios:authentication:view_loginsession'),
+    },
+    { 
+      id: 'historial',    
+      label: 'Historial Sesiones',  
+      icon: 'manage_history', 
+      permission: can('ms-usuarios:authentication:view_loginsession'),
+    },
+    { 
+      id: 'intentos',     
+      label: 'Registro de Intentos', 
+      icon: 'login',         
+      permission: can('ms-usuarios:authentication:view_loginattempt'),
+    },
+    { 
+      id: 'credenciales', 
+      label: 'Credenciales',         
+      icon: 'key',           
+      permission: can('ms-usuarios:authentication:view_credential'),
+    },
+    { 
+      id: 'politicas',    
+      label: 'Políticas',            
+      icon: 'policy',        
+      permission: can('ms-usuarios:authentication:view_passwordpolicy'),
+    },
   ];
  return allTabs.filter((tab) => tab.permission);
   }, [ can]);
