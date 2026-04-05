@@ -42,7 +42,7 @@ const mantenimientosService = {
     return response.data;
   },
   obtenerImagen: async (id, imagen_id) => {
-    const response = await axiosBienes.delete(`/mantenimientos/${id}/imagenes/${imagen_id}/url/`);
+    const response = await axiosBienes.get(`/mantenimientos/${id}/imagenes/${imagen_id}/url/`);
     return response.data;
   },
 
