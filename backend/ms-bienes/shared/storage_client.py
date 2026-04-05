@@ -100,15 +100,55 @@ def eliminar_imagen_mantenimiento(ruta: str) -> None:
         logger.info('Imagen eliminada de Supabase: %s', ruta)
     except Exception as e:
         logger.warning('No se pudo eliminar imagen de Supabase (%s): %s', ruta, e)
+# ── BAJAS ─────────────────────────────────────────────────────────────────────
+def subir_pdf_baja(pdf_bytes: bytes, nombre_archivo: str) -> str:
+    """Sube el PDF generado del informe de baja a bajas/pdfs/."""
+    ruta = f'bajas/pdfs/{nombre_archivo}'
+    _client().storage.from_(_bucket()).upload(
+        path=ruta,
+        file=pdf_bytes,
+        file_options={'content-type': 'application/pdf', 'upsert': 'true'},
+    )
+    logger.info('PDF de baja subido a Supabase: %s', ruta)
+    return ruta
+ 
+def subir_docx_baja(docx_bytes: bytes, nombre_archivo: str) -> str:
+    """Sube el DOCX generado del informe de baja a bajas/docx/."""
+    ruta = f'bajas/docx/{nombre_archivo}'
+    _client().storage.from_(_bucket()).upload(
+        path=ruta,
+        file=docx_bytes,
+        file_options={
+            'content-type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'upsert': 'true',
+        },
+    )
+    logger.info('DOCX de baja subido a Supabase: %s', ruta)
+    return ruta
+ 
+def subir_pdf_firmado_baja(archivo_bytes: bytes, nombre_archivo: str) -> str:
+    """Sube el documento firmado físicamente a bajas/firmados/."""
+    ext = nombre_archivo.rsplit('.', 1)[-1].lower()
+    tipos = {'pdf': 'application/pdf', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png'}
+    ruta = f'bajas/firmados/{nombre_archivo}'
+    _client().storage.from_(_bucket()).upload(
+        path=ruta,
+        file=archivo_bytes,
+        file_options={'content-type': tipos.get(ext, 'application/octet-stream'), 'upsert': 'true'},
+    )
+    logger.info('PDF firmado de baja subido a Supabase: %s', ruta)
+    return ruta
 # ── COMPARTIDO ────────────────────────────────────────────────────────────────
 def descargar_pdf(ruta: str) -> bytes:
     return _client().storage.from_(_bucket()).download(ruta)
+
 def obtener_url_pdf(ruta: str, expiracion_segundos: int = 3600) -> str:
     resp = _client().storage.from_(_bucket()).create_signed_url(
         path=ruta,
         expires_in=expiracion_segundos,
     )
     return resp.get('signedURL') or resp.get('signedUrl', '')
+
 def obtener_url_imagen(ruta: str, expiracion_segundos: int = 3600) -> str:
     resp = _client().storage.from_(_bucket()).create_signed_url(
         path=ruta,

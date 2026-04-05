@@ -4,7 +4,6 @@ import ModalHeader from '../../../../components/modal/ModalHeader';
 import ModalBody   from '../../../../components/modal/ModalBody';
 import ModalFooter from '../../../../components/modal/ModalFooter';
 import Can         from '../../../../components/auth/Can';
-import { useBajas } from '../../../../hooks/useBajas';
 import { useToast } from '../../../../hooks/useToast';
 
 const Icon = ({ name, className = '', style = {} }) => (
@@ -12,13 +11,13 @@ const Icon = ({ name, className = '', style = {} }) => (
 );
 
 const fmtT = (iso) =>
-  !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
+  !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
 
 const BADGE_BAJA = {
-  PENDIENTE_APROBACION: { label: 'Pendiente aprobación',  color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'    },
-  ATENDIDO:             { label: 'Baja Definitiva',        color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'   },
-  DEVUELTO:             { label: 'Devuelto p/ Corrección', color: '#e11d48', bg: 'rgb(225 29 72 / 0.1)'   },
-  CANCELADO:            { label: 'Cancelado',              color: '#64748b', bg: 'rgb(100 116 139 / 0.1)'  },
+  PENDIENTE_APROBACION: { label: 'Pendiente aprobación',  color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
+  ATENDIDO:             { label: 'Baja Definitiva',        color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
+  DEVUELTO:             { label: 'Devuelto p/ Corrección', color: '#e11d48', bg: 'rgb(225 29 72 / 0.1)'  },
+  CANCELADO:            { label: 'Cancelado',              color: '#64748b', bg: 'rgb(100 116 139 / 0.1)' },
 };
 
 const ICONO_ACCION = {
@@ -31,97 +30,86 @@ const ICONO_ACCION = {
 };
 
 const TABS = [
-  { id: 'detalle',   label: 'Informe y Bienes',     icon: 'description'  },
-  { id: 'tecnico',   label: 'Diagnósticos Técnicos', icon: 'build_circle' },
-  { id: 'historial', label: 'Historial',              icon: 'history'      },
+  { id: 'detalle',   label: 'Informe y Bienes',      icon: 'description'  },
+  { id: 'tecnico',   label: 'Diagnósticos Técnicos',  icon: 'build_circle' },
+  { id: 'historial', label: 'Historial',               icon: 'manage_history' },
 ];
+
+function InfoRow({ label, value, icon }) {
+  if (!value && value !== 0) return null;
+  return (
+    <div className="flex items-start gap-3 py-2.5" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+      <Icon name={icon ?? 'info'} className="text-[15px] mt-0.5 shrink-0" style={{ color: 'var(--color-text-faint)' }} />
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>{label}</p>
+        <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--color-text-primary)' }}>{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function FlujoPaso({ label, nombre, fecha, hecho }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="size-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+        style={{ background: hecho ? 'rgb(22 163 74 / 0.12)' : 'var(--color-border-light)' }}>
+        <Icon name={hecho ? 'check_circle' : 'radio_button_unchecked'} className="text-[15px]"
+          style={{ color: hecho ? '#16a34a' : 'var(--color-text-faint)' }} />
+      </div>
+      <div className="min-w-0 flex-1 pb-4">
+        <p className="text-[10px] font-black uppercase tracking-widest"
+          style={{ color: hecho ? 'var(--color-text-primary)' : 'var(--color-text-faint)' }}>{label}</p>
+        {hecho && nombre && <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--color-text-body)' }}>{nombre}</p>}
+        {hecho && fecha  && <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{fmtT(fecha)}</p>}
+        {!hecho && <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-faint)' }}>Pendiente</p>}
+      </div>
+    </div>
+  );
+}
 
 function SeccionNarrativa({ label, valor }) {
   if (!valor) return null;
   return (
     <div>
-      <p className="text-[10px] font-black text-faint uppercase tracking-widest mb-1">{label}</p>
-      <p className="text-xs text-body leading-relaxed whitespace-pre-wrap">{valor}</p>
-    </div>
-  );
-}
-
-function SkeletonBaja() {
-  return (
-    <div className="space-y-4 p-2">
-      <div className="skeleton h-24 rounded-2xl" />
-      <div className="skeleton h-10 rounded-xl" />
-      <div className="grid grid-cols-2 gap-3">
-        <div className="skeleton h-32 rounded-xl" />
-        <div className="skeleton h-32 rounded-xl" />
-      </div>
-    </div>
-  );
-}
-
-function PanelDocumento({ b }) {
-  const esAtendido      = b.estado_baja === 'ATENDIDO';
-  const yaAprobado      = !!b.aprobado_por_coordsistema_id;
-  const tienePdfFirmado = !!b.pdf_firmado_path;
-
-  if (!esAtendido || !yaAprobado) return null;
-
-  return (
-    <div className="p-3 rounded-xl border border-border/60 bg-surface-alt/30 text-[11px] space-y-1.5">
-      <p className="font-black text-faint uppercase tracking-widest text-[10px] mb-2">Estado del documento</p>
-      <div className="flex items-center gap-2 text-body">
-        <Icon name="description" className="text-[15px] text-blue-500" />
-        <span>Doc. generado: <span className="font-bold">{fmtT(b.fecha_doc)}</span></span>
-        <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 font-bold uppercase">Sin firma</span>
-      </div>
-      {tienePdfFirmado ? (
-        <div className="flex items-center gap-2 text-body">
-          <Icon name="verified" className="text-[15px] text-emerald-600" />
-          <span>Doc. firmado: <span className="font-bold">{fmtT(b.fecha_pdf_firmado)}</span></span>
-          <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold uppercase">Firmado</span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 text-muted italic">
-          <Icon name="pending" className="text-[15px] text-amber-500" />
-          <span>Pendiente de firma física por el asistente de informática</span>
-        </div>
-      )}
+      <p className="text-[9px] font-black uppercase tracking-widest mb-1.5" style={{ color: 'var(--color-text-muted)' }}>{label}</p>
+      <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--color-text-body)' }}>{valor}</p>
     </div>
   );
 }
 
 export default function ModalDetalleBaja({
-  open, onClose, item, onGestionar, onCancelar,
-  puedeAccionesRegistrador, puedeAccionesAprobador, onUser, onDescargarPDF, pdfFirmado,
+  open, onClose, item, acciones, onGestionar, onCancelar,
+  puedeAccionesRegistrador, puedeAccionesAprobador, onUser,
 }) {
-  const { obtener } = useBajas();
   const toast       = useToast();
-  const [tabActiva, setTabActiva] = useState('detalle');
+  const [tab,     setTab]     = useState('detalle');
   const [baja,    setBaja]    = useState(null);
   const [loading, setLoading] = useState(false);
   const fileFirmRef = useRef();
 
   useEffect(() => {
     if (!open || !item?.id) return;
-    setTabActiva('detalle');
+    setTab('detalle');
     setBaja(null);
     setLoading(true);
-    obtener(item.id)
+    acciones.obtener(item.id)
       .then((data) => setBaja(data))
       .catch(() => { toast.error('No se pudo cargar el detalle de la baja.'); setBaja(item); })
       .finally(() => setLoading(false));
-  }, [open, item?.id]);
+  }, [open, item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!item) return null;
 
-  const b = baja ?? item;
+  const b     = baja ?? item;
   const badge = BADGE_BAJA[b.estado_baja] || BADGE_BAJA.PENDIENTE_APROBACION;
+
   const esAtendido      = b.estado_baja === 'ATENDIDO';
   const yaAprobado      = !!b.aprobado_por_coordsistema_id;
   const tienePdfBase    = !!b.pdf_path;
   const tienePdfFirmado = !!(b.pdf_firmado_path && b.fecha_pdf_firmado);
   const esElaborador    = onUser === b.usuario_elabora_id;
   const esDestinatario  = onUser === b.usuario_destino_id;
+
   const puedeDescargarSinFirma = esAtendido && yaAprobado && tienePdfBase && !tienePdfFirmado && esElaborador;
   const puedeSubirFirmado      = esAtendido && yaAprobado && tienePdfBase && !tienePdfFirmado && esElaborador;
   const puedeDescargarFirmado  = esAtendido && tienePdfFirmado;
@@ -131,18 +119,18 @@ export default function ModalDetalleBaja({
   );
 
   const handleDescargarSinFirma = async () => {
-    try { 
-      await onDescargarPDF(item.id, false);
-    } catch(e) {       
-      toast.error(e?.response?.data?.error || e?.error || 'No se pudo descargar el PDF.'); 
+    try {
+      await acciones.descargarPDF(item.id, false);
+    } catch (e) {
+      toast.error(e?.response?.data?.error || e?.error || 'No se pudo descargar el PDF.');
     }
   };
 
   const handleDescargarFirmado = async () => {
-    try { 
-      await onDescargarPDF(b.id, true, `FIRMADO_${b.numero_informe}.pdf`); 
-    } catch(e) { 
-      toast.error(e?.response?.data?.error || e?.error || 'No se pudo descargar el PDF firmado.'); 
+    try {
+      await acciones.descargarPDF(b.id, true, `FIRMADO_${b.numero_informe}.pdf`);
+    } catch (e) {
+      toast.error(e?.response?.data?.error || e?.error || 'No se pudo descargar el PDF firmado.');
     }
   };
 
@@ -152,7 +140,7 @@ export default function ModalDetalleBaja({
     const formData = new FormData();
     formData.append('archivo', archivo);
     try {
-      const result = await pdfFirmado(item.id, formData);
+      const result = await acciones.pdfFirmado(item.id, formData);
       toast.success(result?.message || 'Acta firmada subida exitosamente.');
       onClose();
     } catch (err) {
@@ -162,301 +150,370 @@ export default function ModalDetalleBaja({
 
   return (
     <Modal open={open} onClose={onClose} size="xl">
-      <ModalHeader title="Detalle de Informe de Baja Técnica" icon="visibility" onClose={onClose} />
+      <ModalHeader
+        title={`Informe de Baja — ${b.numero_informe}`}
+        subtitle={`${b.sede_elabora_nombre ?? ''} · ${b.total_bienes ?? b.detalles?.length ?? 0} bien(es)`}
+        icon="delete_sweep"
+        onClose={onClose}
+      />
 
-      <ModalBody>
+      <ModalBody padding={false}>
         {loading ? (
-          <SkeletonBaja />
+          <div className="p-6 space-y-4">
+            <div className="skeleton h-24 rounded-2xl" />
+            <div className="skeleton h-10 rounded-xl" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="skeleton h-32 rounded-xl" />
+              <div className="skeleton h-32 rounded-xl" />
+            </div>
+          </div>
         ) : (
-          <div className="space-y-5">
+          <div className="flex" style={{ minHeight: '55vh' }}>
+            <div className="flex-1 min-w-0 flex flex-col">
 
-            {/* ── Cabecera ── */}
-            <div className="flex items-start justify-between gap-4 p-4 rounded-2xl bg-surface-alt/50 border border-border">
-              <div className="min-w-0">
-                <p className="text-xl font-black text-primary">{b.numero_informe}</p>
-                <div className="mt-1.5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-0.5 text-[11px]">
-                  <p className="text-muted">
-                    <span className="font-black text-body">A: </span>
-                    {b.nombre_destino || '—'}{b.cargo_destino ? ` · ${b.cargo_destino}` : ''}
-                  </p>
-                  <p className="text-muted">
-                    <span className="font-black text-body">De: </span>
-                    {b.nombre_elabora || '—'}{b.cargo_elabora ? ` · ${b.cargo_elabora}` : ''}
-                  </p>
-                  <p className="text-muted">
-                    <span className="font-black text-body">Sede: </span>
-                    {b.sede_elabora_nombre || '—'}
-                    {b.modulo_elabora_nombre ? ` / ${b.modulo_elabora_nombre}` : ''}
-                  </p>
-                  <p className="text-muted">
-                    <span className="font-black text-body">Bienes: </span>
-                    {b.total_bienes ?? b.detalles?.length ?? 0} bien(es)
-                  </p>
-                  {b.estado_baja === 'DEVUELTO' && b.motivo_devolucion && (
-                    <p className="text-amber-700 col-span-2">
-                      <span className="font-black">Motivo devolución: </span>{b.motivo_devolucion}
-                    </p>
-                  )}
-                  {b.estado_baja === 'ATENDIDO' && b.nombre_coordsistema && (
-                    <p className="text-emerald-700 col-span-2">
-                      <span className="font-black">Aprobado por: </span>
-                      {b.nombre_coordsistema}{b.cargo_coordsistema ? ` · ${b.cargo_coordsistema}` : ''}
-                    </p>
-                  )}
-                </div>
+              {/* ── Tabs ── */}
+              <div className="flex gap-6 px-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                {TABS.map((t) => (
+                  <button key={t.id} onClick={() => setTab(t.id)}
+                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-3 pt-4 transition-all border-b-2"
+                    style={{
+                      borderBottomColor: tab === t.id ? 'var(--color-primary)' : 'transparent',
+                      color: tab === t.id ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                    }}>
+                    <Icon name={t.icon} className="text-[16px]" />
+                    {t.label}
+                    {t.id === 'detalle' && (b.detalles?.length > 0) && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
+                        style={{ background: 'rgb(127 29 29 / 0.1)', color: 'var(--color-primary)' }}>
+                        {b.detalles.length}
+                      </span>
+                    )}
+                    {t.id === 'historial' && (b.aprobaciones?.length > 0) && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
+                        style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
+                        {b.aprobaciones.length}
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
-              <div className="flex flex-col items-end gap-2 shrink-0">
-                <span
-                  className="inline-flex items-center text-[11px] font-black uppercase px-3 py-1.5 rounded-full"
-                  style={{ background: badge.bg, color: badge.color }}
-                >
-                  {badge.label}
-                </span>
-                <p className="text-[10px] text-faint font-mono">Registrado: {fmtT(b.fecha_registro)}</p>
-              </div>
-            </div>
 
-            {/* ── Panel estado documento ── */}
-            <PanelDocumento b={b} />
+              {/* ── Contenido tab ── */}
+              <div className="flex-1 overflow-y-auto p-6 min-w-0">
 
-            {/* ── Tabs ── */}
-            <div className="flex gap-1 p-1 rounded-xl bg-surface-alt/50 border border-border">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setTabActiva(t.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${
-                    tabActiva === t.id
-                      ? 'bg-surface shadow-sm text-primary border border-border/60'
-                      : 'text-muted hover:text-body'
-                  }`}
-                >
-                  <Icon name={t.icon} className="text-[14px]" />
-                  {t.label}
-                </button>
-              ))}
-            </div>
+                {tab === 'detalle' && (
+                  <div className="space-y-6 animate-in fade-in duration-300">
 
-            {/* ── Tab: Informe y Bienes ── */}
-            {tabActiva === 'detalle' && (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <SeccionNarrativa label="Antecedentes"    valor={b.antecedentes}    />
-                  <SeccionNarrativa label="Análisis"        valor={b.analisis}        />
-                  <SeccionNarrativa label="Conclusiones"    valor={b.conclusiones}    />
-                  <SeccionNarrativa label="Recomendaciones" valor={b.recomendaciones} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-faint uppercase tracking-widest mb-2">
-                    Bienes incluidos en la baja
-                  </p>
-                  {b.detalles?.length > 0 ? (
-                    <div className="overflow-x-auto rounded-xl border border-border/60">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="bg-surface-alt/50 border-b border-border">
-                            {['#', 'Tipo / Marca', 'Código Patrimonial', 'N° Serie', 'Estado Func.', 'Mant.', 'Motivo Baja'].map((h) => (
-                              <th key={h} className="px-3 py-2.5 text-[9px] font-black uppercase tracking-widest text-faint text-left">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border/40">
+                    {/* Cabecera del informe */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <InfoRow label="A (Destinatario)" value={`${b.nombre_destino || '—'}${b.cargo_destino ? ` · ${b.cargo_destino}` : ''}`} icon="person_check" />
+                      <InfoRow label="De (Elaborador)"  value={`${b.nombre_elabora || '—'}${b.cargo_elabora ? ` · ${b.cargo_elabora}` : ''}`} icon="person" />
+                      <InfoRow label="Sede / Módulo"    value={`${b.sede_elabora_nombre || '—'}${b.modulo_elabora_nombre ? ` / ${b.modulo_elabora_nombre}` : ''}`} icon="domain" />
+                      <InfoRow label="Fecha registro"   value={fmtT(b.fecha_registro)} icon="calendar_today" />
+                    </div>
+
+                    {b.estado_baja === 'DEVUELTO' && b.motivo_devolucion && (
+                      <div className="p-3 rounded-xl"
+                        style={{ background: 'rgb(180 83 9 / 0.06)', border: '1px solid rgb(180 83 9 / 0.2)' }}>
+                        <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#b45309' }}>
+                          Motivo de devolución
+                        </p>
+                        <p className="text-xs font-semibold" style={{ color: 'var(--color-text-body)' }}>{b.motivo_devolucion}</p>
+                      </div>
+                    )}
+
+                    {b.estado_baja === 'ATENDIDO' && b.nombre_coordsistema && (
+                      <div className="p-3 rounded-xl"
+                        style={{ background: 'rgb(22 163 74 / 0.06)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
+                        <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#16a34a' }}>
+                          Aprobado por
+                        </p>
+                        <p className="text-xs font-semibold" style={{ color: 'var(--color-text-body)' }}>
+                          {b.nombre_coordsistema}{b.cargo_coordsistema ? ` · ${b.cargo_coordsistema}` : ''}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Secciones narrativas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <SeccionNarrativa label="Antecedentes"    valor={b.antecedentes}    />
+                      <SeccionNarrativa label="Análisis"        valor={b.analisis}        />
+                      <SeccionNarrativa label="Conclusiones"    valor={b.conclusiones}    />
+                      <SeccionNarrativa label="Recomendaciones" valor={b.recomendaciones} />
+                    </div>
+
+                    {/* Bienes */}
+                    {b.detalles?.length > 0 && (
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest mb-3"
+                          style={{ color: 'var(--color-text-muted)' }}>Bienes incluidos en la baja</p>
+                        <div className="space-y-3">
                           {b.detalles.map((det, idx) => (
-                            <tr key={det.id} className="hover:bg-surface-alt/20 transition-colors">
-                              <td className="px-3 py-2.5 text-faint font-mono">{idx + 1}</td>
-                              <td className="px-3 py-2.5">
-                                <p className="font-bold text-body">{det.tipo_bien_nombre}</p>
-                                <p className="text-[10px] text-muted">{det.marca_nombre} {det.modelo}</p>
-                              </td>
-                              <td className="px-3 py-2.5 font-mono text-primary font-bold">{det.codigo_patrimonial}</td>
-                              <td className="px-3 py-2.5 font-mono text-muted">{det.numero_serie}</td>
-                              <td className="px-3 py-2.5">
-                                <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-100">
-                                  {det.estado_funcionamiento}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2.5 text-muted italic text-[11px]">
-                                {det.mantenimiento_numero ? `MNT ${det.mantenimiento_numero}` : '—'}
-                              </td>
-                              <td className="px-3 py-2.5">
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-surface-alt border border-border text-body">
-                                  {det.motivo_baja_nombre}
-                                </span>
-                              </td>
-                            </tr>
+                            <div key={det.id} className="rounded-2xl overflow-hidden"
+                              style={{ border: '1px solid var(--color-border)' }}>
+                              <div className="flex items-center gap-3 px-4 py-3"
+                                style={{ background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}>
+                                <span className="size-6 flex items-center justify-center rounded-full text-white text-[10px] font-black shrink-0"
+                                  style={{ background: 'var(--color-primary)' }}>{idx + 1}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-black uppercase" style={{ color: 'var(--color-text-primary)' }}>
+                                    {det.tipo_bien_nombre}
+                                  </p>
+                                  <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                                    <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                                      Cód: <strong style={{ color: 'var(--color-primary)' }}>{det.codigo_patrimonial || 'S/C'}</strong>
+                                    </span>
+                                    <span className="text-[10px]" style={{ color: 'var(--color-text-faint)' }}>
+                                      {det.marca_nombre} — {det.modelo}
+                                    </span>
+                                    <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                                      S/N: {det.numero_serie}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-[9px] font-black px-2 py-0.5 rounded-md"
+                                    style={{ color: '#dc2626', background: 'rgb(220 38 38 / 0.1)' }}>
+                                    {det.estado_funcionamiento}
+                                  </span>
+                                  {det.motivo_baja_nombre && (
+                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
+                                      style={{ background: 'var(--color-border-light)', color: 'var(--color-text-body)', border: '1px solid var(--color-border)' }}>
+                                      {det.motivo_baja_nombre}
+                                    </span>
+                                  )}
+                                  {det.mantenimiento_numero && (
+                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-md"
+                                      style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
+                                      MNT {det.mantenimiento_numero}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-faint text-xs border border-dashed border-border rounded-xl">
-                      Los detalles de bienes no están disponibles en esta vista.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* ── Tab: Diagnósticos Técnicos ── */}
-            {tabActiva === 'tecnico' && (
-              <div className="space-y-4 animate-in fade-in duration-300">
-                {hayDiagnosticos ? b.detalles?.map((det, idx) => (
-                  <div key={det.id} className="p-4 rounded-xl border border-border/60 bg-surface-alt/20">
-                    <p className="text-xs font-black text-body mb-3">
-                      {idx + 1}. {det.tipo_bien_nombre} {det.marca_nombre} —{' '}
-                      <span className="font-mono text-primary">{det.codigo_patrimonial}</span>
-                      {det.mantenimiento_numero && (
-                        <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
-                          MNT {det.mantenimiento_numero}
-                        </span>
-                      )}
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                      {[
-                        { label: 'Diagnóstico Inicial', valor: det.diagnostico_inicial  },
-                        { label: 'Trabajo Realizado',    valor: det.trabajo_realizado    },
-                        { label: 'Diagnóstico Final',    valor: det.diagnostico_final    },
-                        { label: 'Observación Técnica',  valor: det.observacion_tecnica  },
-                      ].map(({ label, valor }) => valor ? (
-                        <div key={label}>
-                          <p className="text-[9px] font-black text-faint uppercase tracking-widest mb-0.5">{label}</p>
-                          <p className="text-body leading-relaxed">{valor}</p>
-                        </div>
-                      ) : null)}
-                    </div>
-                  </div>
-                )) : (
-                  <div className="text-center py-10 text-faint text-xs border border-dashed border-border rounded-xl">
-                    No hay diagnósticos técnicos registrados.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── Tab: Historial ── */}
-            {tabActiva === 'historial' && (
-              <div className="space-y-4 animate-in fade-in duration-300 p-1">
-                {!b.aprobaciones?.length ? (
-                  <div className="text-center py-10 text-faint text-xs">No hay registros de tramitación.</div>
-                ) : (
-                  b.aprobaciones.map((aprob, idx) => {
-                    const meta     = ICONO_ACCION[aprob.accion] || ICONO_ACCION.REGISTRADO;
-                    const esUltimo = idx === b.aprobaciones.length - 1;
-                    return (
-                      <div key={aprob.id} className="flex gap-3 relative pb-2">
-                        {!esUltimo && (
-                          <div className="absolute left-[13px] top-[26px] bottom-0 w-0.5 bg-border rounded-full" />
-                        )}
-                        <div
-                          className="size-7 rounded-full flex items-center justify-center shrink-0 z-10"
-                          style={{ background: 'var(--color-surface)', border: `2px solid ${meta.color}` }}
-                        >
-                          <Icon name={meta.icon} className="text-[15px]" style={{ color: meta.color }} />
-                        </div>
-                        <div className="flex-1 min-w-0 p-3 rounded-xl border border-border/60 bg-surface">
-                          <div className="flex justify-between items-baseline gap-2 mb-1">
-                            <p className="text-xs font-black uppercase tracking-wider" style={{ color: meta.color }}>
-                              {aprob.accion}
-                            </p>
-                            <p className="text-[10px] font-mono text-faint shrink-0">{fmtT(aprob.fecha)}</p>
-                          </div>
-                          <p className="text-[11px] text-body">
-                            Usuario #{aprob.usuario_id}
-                            <span className="text-muted ml-1">({aprob.rol_aprobador})</span>
-                          </p>
-                          {aprob.observacion && (
-                            <p className="text-[11px] text-muted italic mt-1 p-2 rounded bg-surface-alt/50 border border-dashed border-border/60">
-                              {aprob.observacion}
-                            </p>
-                          )}
                         </div>
                       </div>
-                    );
-                  })
+                    )}
+                  </div>
+                )}
+
+                {tab === 'tecnico' && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    {hayDiagnosticos ? b.detalles?.map((det, idx) => (
+                      <div key={det.id} className="rounded-xl overflow-hidden"
+                        style={{ border: '1px solid var(--color-border)' }}>
+                        <div className="flex items-center gap-3 px-4 py-3"
+                          style={{ background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}>
+                          <span className="size-6 flex items-center justify-center rounded-full text-white text-[10px] font-black shrink-0"
+                            style={{ background: 'var(--color-primary)' }}>{idx + 1}</span>
+                          <p className="text-xs font-black" style={{ color: 'var(--color-text-primary)' }}>
+                            {det.tipo_bien_nombre} {det.marca_nombre} —
+                            <span className="font-mono ml-1" style={{ color: 'var(--color-primary)' }}>{det.codigo_patrimonial}</span>
+                          </p>
+                        </div>
+                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {[
+                            { label: 'Diagnóstico Inicial', valor: det.diagnostico_inicial  },
+                            { label: 'Trabajo Realizado',   valor: det.trabajo_realizado    },
+                            { label: 'Diagnóstico Final',   valor: det.diagnostico_final    },
+                            { label: 'Observación Técnica', valor: det.observacion_tecnica  },
+                          ].map(({ label, valor }) => valor ? (
+                            <div key={label}>
+                              <p className="text-[9px] font-black uppercase tracking-widest mb-0.5"
+                                style={{ color: 'var(--color-text-faint)' }}>{label}</p>
+                              <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-body)' }}>{valor}</p>
+                            </div>
+                          ) : null)}
+                        </div>
+                      </div>
+                    )) : (
+                      <div className="flex flex-col items-center justify-center py-16 gap-3 rounded-2xl border border-dashed"
+                        style={{ borderColor: 'var(--color-border)' }}>
+                        <Icon name="build_circle" className="text-[40px]" style={{ color: 'var(--color-text-faint)' }} />
+                        <p className="text-xs font-bold" style={{ color: 'var(--color-text-muted)' }}>
+                          No hay diagnósticos técnicos registrados.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {tab === 'historial' && (
+                  <div className="space-y-0 animate-in fade-in duration-300">
+                    {!b.aprobaciones?.length ? (
+                      <div className="flex flex-col items-center justify-center py-16 gap-3">
+                        <Icon name="manage_history" className="text-[40px]" style={{ color: 'var(--color-text-faint)' }} />
+                        <p className="text-xs font-bold" style={{ color: 'var(--color-text-muted)' }}>No hay registros de tramitación.</p>
+                      </div>
+                    ) : (
+                      <div className="relative pl-3.5" style={{ borderLeft: '2px solid var(--color-border)' }}>
+                        {b.aprobaciones.map((aprob, idx) => {
+                          const meta    = ICONO_ACCION[aprob.accion] || ICONO_ACCION.REGISTRADO;
+                          const esUlitmo = idx === b.aprobaciones.length - 1;
+                          return (
+                            <div key={aprob.id} className="flex items-start gap-3 pb-4">
+                              <div className="size-7 rounded-full flex items-center justify-center shrink-0 -ml-3.5"
+                                style={{ background: 'var(--color-surface)', border: `2px solid ${meta.color}` }}>
+                                <Icon name={meta.icon} className="text-[14px]" style={{ color: meta.color }} />
+                              </div>
+                              <div className="flex-1 min-w-0 p-3 rounded-xl"
+                                style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+                                <div className="flex justify-between items-baseline gap-2 mb-1">
+                                  <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: meta.color }}>
+                                    {aprob.accion}
+                                  </p>
+                                  <p className="text-[9px] font-mono shrink-0" style={{ color: 'var(--color-text-faint)' }}>
+                                    {fmtT(aprob.fecha)}
+                                  </p>
+                                </div>
+                                <p className="text-[11px]" style={{ color: 'var(--color-text-body)' }}>
+                                  Usuario #{aprob.usuario_id}
+                                  <span className="ml-1" style={{ color: 'var(--color-text-muted)' }}>({aprob.rol_aprobador})</span>
+                                </p>
+                                {aprob.observacion && (
+                                  <p className="text-[11px] italic mt-1.5 p-2 rounded-lg"
+                                    style={{ color: 'var(--color-text-muted)', background: 'var(--color-surface-alt)', border: '1px dashed var(--color-border)' }}>
+                                    {aprob.observacion}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
+            </div>
 
+            {/* ── Panel lateral ── */}
+            <aside className="w-52 shrink-0 p-4 space-y-3 overflow-y-auto border-l"
+              style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface-alt)' }}>
+
+              <div className="card p-3 text-center space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado</p>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-xl"
+                  style={{ background: badge.bg, color: badge.color }}>
+                  {badge.label}
+                </span>
+                <p className="font-black text-xs font-mono" style={{ color: 'var(--color-primary)' }}>{b.numero_informe}</p>
+              </div>
+
+              <div className="card p-3 space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Resumen</p>
+                {[
+                  { label: 'Bienes',    value: b.total_bienes ?? b.detalles?.length ?? 0, icon: 'inventory_2'    },
+                  { label: 'Registro',  value: fmtT(b.fecha_registro),                    icon: 'calendar_today' },
+                  { label: 'Aprobado',  value: b.nombre_coordsistema ?? '—',               icon: 'verified'       },
+                  { label: 'Acciones',  value: b.aprobaciones?.length ?? 0,                icon: 'manage_history' },
+                ].map((s) => (
+                  <div key={s.label} className="flex items-start gap-1.5">
+                    <Icon name={s.icon} className="text-[13px] mt-0.5 shrink-0" style={{ color: 'var(--color-text-faint)' }} />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>{s.label}</p>
+                      <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>{s.value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
+
+                {esAtendido && yaAprobado && b.fecha_doc && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl"
+                    style={{ background: 'rgb(37 99 235 / 0.08)', border: '1px solid rgb(37 99 235 / 0.2)' }}>
+                    <Icon name="description" className="text-[14px]" style={{ color: '#1d4ed8' }} />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-black" style={{ color: '#1d4ed8' }}>Doc. generado</p>
+                      <p className="text-[9px]" style={{ color: 'var(--color-text-faint)' }}>{fmtT(b.fecha_doc)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {puedeDescargarSinFirma && !loading && (
+                  <button onClick={handleDescargarSinFirma}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                    style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
+                    <Icon name="picture_as_pdf" className="text-[15px]" />Descargar PDF
+                  </button>
+                )}
+
+                {puedeSubirFirmado && !loading && (
+                  <>
+                    <input ref={fileFirmRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                      onChange={handleSubirFirmado} />
+                    <button type="button" onClick={() => fileFirmRef.current?.click()}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                      style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
+                      <Icon name="upload_file" className="text-[15px]" />Subir PDF Firmado
+                    </button>
+                  </>
+                )}
+
+                {puedeDescargarFirmado && !loading && (
+                  <button onClick={handleDescargarFirmado}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                    style={{ background: 'rgb(22 163 74 / 0.08)', color: '#16a34a', border: '1px solid rgb(22 163 74 / 0.2)' }}>
+                    <Icon name="verified" className="text-[15px]" />PDF Firmado
+                  </button>
+                )}
+
+                {tienePdfFirmado && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl"
+                    style={{ background: 'rgb(22 163 74 / 0.08)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
+                    <Icon name="task_alt" className="text-[14px]" style={{ color: '#16a34a' }} />
+                    <p className="text-[10px] font-black" style={{ color: '#16a34a' }}>Acta firmada y archivada</p>
+                  </div>
+                )}
+              </div>
+            </aside>
           </div>
         )}
       </ModalBody>
 
-      <ModalFooter align="right">
-        <button onClick={onClose} className="btn-secondary">Cerrar</button>
-
-        {puedeDescargarSinFirma && !loading && (
-          <button
-            onClick={handleDescargarSinFirma}
-            className="btn-secondary flex items-center gap-1.5 text-red-600"
-            title="Descargar PDF para firmar físicamente"
-          >
-            <Icon name="picture_as_pdf" className="text-[16px]" />
-            Descargar PDF
-          </button>
-        )}
-
-     
-        {puedeSubirFirmado && !loading && (
-          <>
-            <input
-              ref={fileFirmRef}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              className="hidden"
-              onChange={handleSubirFirmado}
-            />
-            <button
-              type="button"
-              onClick={() => fileFirmRef.current?.click()}
-              className="btn-primary flex items-center gap-1.5"
-              title="Subir el documento impreso y firmado"
-            >
-              <Icon name="upload_file" className="text-[16px]" />
-              Subir PDF Firmado
-            </button>
-          </>
-        )}
-
-        {puedeDescargarFirmado && !loading && (
-          <button
-            onClick={handleDescargarFirmado}
-            className="btn-secondary flex items-center gap-1.5 text-emerald-600"
-            title="Descargar documento firmado"
-          >
-            <Icon name="verified" className="text-[16px]" />
-            Descargar PDF Firmado
-          </button>
-        )}
-
-        {b.estado_baja === 'DEVUELTO' && puedeAccionesRegistrador && !loading && (
-          <button
-            onClick={() => onGestionar(b, 'reenviar')}
-            className="btn-secondary flex items-center gap-1.5 text-blue-600"
-          >
-            <Icon name="send" className="text-[16px]" /> Corregir y Reenviar
-          </button>
-        )}
-
-       
-        {b.estado_baja === 'PENDIENTE_APROBACION' && puedeAccionesAprobador && esDestinatario && !loading && (
-          <>
-            <button onClick={() => onGestionar(b, 'devolver')} className="btn-danger flex items-center gap-1.5">
-              <Icon name="assignment_return" className="text-[16px]" /> Devolver
-            </button>
-            <button onClick={() => onGestionar(b, 'aprobar')} className="btn-primary flex items-center gap-1.5">
-              <Icon name="check_circle" className="text-[16px]" /> Aprobar Baja
-            </button>
-          </>
-        )}
-
-        
-        <Can perform="ms-bienes:bajas:delete_baja">
-          {!['ATENDIDO', 'CANCELADO'].includes(b.estado_baja) && !loading && (
-            <button onClick={() => onCancelar(b)} className="btn-danger flex items-center gap-1.5">
-              <Icon name="cancel" className="text-[16px]" /> Cancelar Informe
+      <ModalFooter align="space" className="bg-slate-50 dark:bg-slate-900/80">
+        <button onClick={onClose}
+          className="px-6 py-2 text-[11px] font-black uppercase tracking-widest transition-colors"
+          style={{ color: 'var(--color-text-muted)' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-body)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
+          Cerrar Ficha
+        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {b.estado_baja === 'DEVUELTO' && puedeAccionesRegistrador && !loading && (
+            <button onClick={() => onGestionar(b, 'reenviar')}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer transition-all"
+              style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
+              <Icon name="send" className="text-[16px]" /> Corregir y Reenviar
             </button>
           )}
-        </Can>
+
+          {b.estado_baja === 'PENDIENTE_APROBACION' && puedeAccionesAprobador && esDestinatario && !loading && (
+            <>
+              <button onClick={() => onGestionar(b, 'devolver')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
+                style={{ background: 'rgb(180 83 9 / 0.1)', color: '#b45309', border: '1px solid rgb(180 83 9 / 0.25)' }}>
+                <Icon name="assignment_return" className="text-[16px]" /> Devolver
+              </button>
+              <button onClick={() => onGestionar(b, 'aprobar')} className="btn-primary flex items-center gap-2">
+                <Icon name="check_circle" className="text-[16px]" /> Aprobar Baja
+              </button>
+            </>
+          )}
+
+          <Can perform="ms-bienes:bajas:delete_baja">
+            {!['ATENDIDO', 'CANCELADO'].includes(b.estado_baja) && !loading && (
+              <button onClick={() => onCancelar(b)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
+                style={{ background: 'rgb(220 38 38 / 0.08)', color: '#dc2626', border: '1px solid rgb(220 38 38 / 0.2)' }}>
+                <Icon name="cancel" className="text-[16px]" /> Cancelar Informe
+              </button>
+            )}
+          </Can>
+        </div>
       </ModalFooter>
     </Modal>
   );

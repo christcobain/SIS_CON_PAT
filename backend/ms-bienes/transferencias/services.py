@@ -266,7 +266,7 @@ class TransferenciaService:
         })
         TransferenciaService._registrar_aprobacion(
             transferencia, role, 'REGISTRADO', usuario_registra_id,
-            detalle='Transferencia registrada exitosamente, Pendiente aprobación ADMINSEDE/COORDSISTEMA.',
+            detalle='Transferencia registrada exitosamente, Pendiente aprobación por superior.',
         )
         TransferenciaDetalleRepository.bulk_create(transferencia, bienes)
         TransferenciaService._cambiar_estado_bienes(bienes, 'EN_TRASLADO')
@@ -297,8 +297,8 @@ class TransferenciaService:
             **origen,
         })
         TransferenciaService._registrar_aprobacion(
-            transferencia, 'REGISTRADOR', 'APROBADO', usuario_registra_id,
-            detalle='Transferencia registrada exitosamente, Pendiente aprobación ADMINSEDE/COORDSISTEMA.',
+            transferencia, role, 'APROBADO', usuario_registra_id,
+            detalle='Asignacion registrada exitosamente, Pendiente aprobación por superior.',
         )
         TransferenciaDetalleRepository.bulk_create(transferencia, bienes)
         TransferenciaService._cambiar_estado_bienes(bienes, 'EN_ASIGNACION')

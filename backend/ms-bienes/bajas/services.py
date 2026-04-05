@@ -1,9 +1,7 @@
-import os
 import logging
 from typing import Dict, Any, List
 from django.db import transaction
 from django.utils import timezone
-from django.conf import settings
 from rest_framework.exceptions import ValidationError, NotFound
 from .repositories import (
     BajaRepository,
@@ -16,6 +14,7 @@ from bienes.repositories import BienRepository
 from bienes.models import Bien
 from mantenimientos.models import Mantenimiento, MantenimientoImagen
 from transferencias.services import TransferenciaService
+from shared import storage_client
 
 logger = logging.getLogger(__name__)
 
@@ -117,9 +116,19 @@ class BajaService:
     def _regenerar_documentos(baja) -> bool:
         try:
             docs = generar_documentos_baja(baja)
+            pdf_bytes  = docs.get('pdf_bytes')
+            docx_bytes = docs.get('docx_bytes')
+            nombre_pdf  = f'BAJ-{baja.pk}-{timezone.now().strftime("%Y%m%d%H%M%S")}.pdf'
+            nombre_docx = f'BAJ-{baja.pk}-{timezone.now().strftime("%Y%m%d%H%M%S")}.docx'
+            pdf_ruta  = None
+            docx_ruta = None
+            if pdf_bytes:
+                pdf_ruta = storage_client.subir_pdf_baja(pdf_bytes, nombre_pdf)
+            if docx_bytes:
+                docx_ruta = storage_client.subir_docx_baja(docx_bytes, nombre_docx)
             BajaRepository.update_fields(baja, {
-                'docx_path': docs['docx_path'],
-                'pdf_path':  docs['pdf_path'],
+                'docx_path': docx_ruta or docs.get('docx_path'),
+                'pdf_path':  pdf_ruta  or docs.get('pdf_path'),
                 'fecha_doc': timezone.now(),
             })
             return True
@@ -148,9 +157,9 @@ class BajaService:
         data: Dict[str, Any],
         usuario_elabora_id: int,
         nombre_elabora: str,
-        cargo_elabora_token: str,  
+        cargo_elabora_token: str,
         sede_elabora_id: int,
-        sede_nombre: str = '',              
+        sede_nombre: str = '',
         modulo_elabora_id: int = None,
         modulo_elabora_nombre: str = '',
         rol: str = '',
@@ -166,15 +175,15 @@ class BajaService:
             'nombre_elabora':        nombre_elabora,
             'cargo_elabora':         data.get('cargo_elabora') or cargo_elabora_token,
             'sede_elabora_id':       sede_elabora_id,
-            'sede_elabora_nombre':   sede_nombre, 
+            'sede_elabora_nombre':   sede_nombre,
             'modulo_elabora_id':     modulo_elabora_id,
-            'modulo_elabora_nombre': modulo_elabora_nombre, 
+            'modulo_elabora_nombre': modulo_elabora_nombre,
         }
         baja = BajaRepository.create(datos_baja)
         BajaDetalleRepository.bulk_create(baja, items)
         bienes = [it['bien'] for it in items]
         TransferenciaService._cambiar_estado_bienes(bienes, 'PENDIENTE_BAJA')
-        baja = BajaRepository.get_by_id(baja.pk)
+        baja   = BajaRepository.get_by_id(baja.pk)
         doc_ok = BajaService._regenerar_documentos(baja)
         BajaAprobacionRepository.registrar(
             baja=baja,
@@ -186,10 +195,7 @@ class BajaService:
         msg = f'Informe {numero_informe} registrado. Pendiente de aprobación.'
         if not doc_ok:
             msg += ' (El documento PDF no pudo generarse; revise los logs del servidor.)'
-        return {
-            'success': True,
-            'message': msg,
-        }
+        return {'success': True, 'message': msg}
 
     @staticmethod
     @transaction.atomic
@@ -203,10 +209,8 @@ class BajaService:
         campos['estado_baja']       = 'PENDIENTE_APROBACION'
         campos['motivo_devolucion'] = None
         BajaRepository.update_fields(baja, campos)
-
         baja = BajaRepository.get_by_id(baja.pk)
         BajaService._regenerar_documentos(baja)
-
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='ENVIADO',
@@ -215,11 +219,7 @@ class BajaService:
             observacion='Informe corregido y reenviado a aprobación.',
         )
         baja = BajaRepository.get_by_id(baja.pk)
-        return {
-            'success': True,
-            'message': 'Informe reenviado a aprobación.',
-            'data':    baja,
-        }
+        return {'success': True, 'message': 'Informe reenviado a aprobación.', 'data': baja}
 
     @staticmethod
     @transaction.atomic
@@ -331,18 +331,13 @@ class BajaService:
         if baja.pdf_firmado_path:
             raise ValidationError(
                 'Ya existe un documento firmado para esta baja. No se puede reemplazar.'
-            ) 
-        media_root = getattr(settings, 'MEDIA_ROOT', 'media')
-        carpeta    = os.path.join(media_root, 'bajas', 'pdfs', 'firmados')
-        os.makedirs(carpeta, exist_ok=True) 
-        ext    = os.path.splitext(getattr(archivo, 'name', '.pdf'))[-1].lower() or '.pdf'
-        nombre = f'BAJ-{baja.pk}-FIRMADO-{timezone.now().strftime("%Y%m%d%H%M%S")}{ext}'
-        ruta   = os.path.join(carpeta, nombre)
-        with open(ruta, 'wb') as f:
-            for chunk in archivo.chunks():
-                f.write(chunk) 
+            )
+        archivo_bytes = b''.join(archivo.chunks())
+        ext    = (getattr(archivo, 'name', '.pdf').rsplit('.', 1)[-1].lower()) or 'pdf'
+        nombre = f'BAJ-{baja.pk}-FIRMADO-{timezone.now().strftime("%Y%m%d%H%M%S")}.{ext}'
+        ruta   = storage_client.subir_pdf_firmado_baja(archivo_bytes, nombre)
         BajaRepository.update_fields(baja, {
-            'pdf_firmado_path':  os.path.join('bajas', 'pdfs', 'firmados', nombre),
+            'pdf_firmado_path':  ruta,
             'fecha_pdf_firmado': timezone.now(),
             'subido_por_id':     usuario_id,
         })
@@ -353,9 +348,10 @@ class BajaService:
             accion='ATENDIDO',
             rol=role,
             usuario_id=usuario_id,
-            observacion='Documento firmado subido y archivado.',
+            observacion='Documento firmado subido y archivado en Supabase Storage.',
         )
         return {'success': True, 'message': 'Documento firmado subido correctamente.'}
+
     @staticmethod
     def obtener_bienes_para_baja(sede_id: int) -> List[Dict[str, Any]]:
         bienes = (
