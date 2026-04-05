@@ -22,8 +22,7 @@ const FILTROS_INICIALES = {
 };
 
 // ── Filtrado LOCAL reactivo ───────────────────────────────────────────────────
-// Recibe los items ya cargados por el hook y aplica filtros en memoria,
-// sin generar ninguna llamada adicional al backend.
+
 function aplicarFiltros(items, filtros, activeTab) {
   let res = [...items];
   const q = filtros.search?.trim().toLowerCase();
@@ -59,8 +58,9 @@ function aplicarFiltros(items, filtros, activeTab) {
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function TransferenciasPage() {
   const toast    = useToast();
-  const { user } = useAuth();
+  const { user,sedes } = useAuth();
   const { can }  = usePermission();
+ 
 
   // ── Permisos por tab ──────────────────────────────────────────────────────
   const canTraslado        = can('ms-bienes:transferencias:view_transferencia');
@@ -295,6 +295,7 @@ export default function TransferenciasPage() {
             crearAsignacion={crearAsignacion}
             reenviarTransferencia={reenviarTransferencia}
             obtenerTransf={obtenerTransf}
+            sedesAuth={sedes}
             onGuardado={() => { setModalForm(false); setItemEditar(null); refetchTransf(); }}
           />
         )}

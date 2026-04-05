@@ -241,14 +241,14 @@ const FORM_BASE = {
 export default function ModalTransferencia({
   open, onClose, activeTab, item, actualizando,
   crearTraslado, crearAsignacion, reenviarTransferencia,
-  obtenerTransf, onGuardado,
+  obtenerTransf, onGuardado,sedesAuth
 }) {
   const toast      = useToast();
   const isTraslado = activeTab === 'TRASLADO_SEDE';
   const isEditar   = !!item;
 
-  const sedes_auth   = useAuthStore(s => s.sedes);
-  const sede_auth_id = sedes_auth?.[0]?.id;
+  // const sedes_auth   = sedesAuth(s => s.sedes);
+  const sede_auth_id = sedesAuth?.[0]?.id;
 
   const { bienes: todosBienes, loading: loadingBienes } = useBienes({});
   const { sedes, modulos, ubicaciones }                 = useLocaciones();
@@ -359,7 +359,7 @@ export default function ModalTransferencia({
         .catch(() => setUsuariosPorSede([]))
         .finally(() => setLoadingUsuariosSede(false));
     }
-  }, [form.sede_destino_id, isTraslado, usuariosMs, sede_auth_id]); 
+  }, [form.sede_destino_id, isTraslado, usuariosMs, sede_auth_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -405,7 +405,7 @@ export default function ModalTransferencia({
   const totalDisponibles = bienesFiltradosBuscador.filter(b => ESTADO_BIEN_COLOR(b.estado_bien_nombre).ok).length;
   const totalBloqueados  = bienesFiltradosBuscador.length - totalDisponibles;
 
-  //const ubicacionesDest = (ubicaciones ?? []).filter(m => m.is_active !== false);
+  // const ubicacionesDest = (ubicaciones ?? []).filter(m => m.is_active !== false);
 
   const toggleBien = id => set('bien_ids',
     form.bien_ids.includes(id) ? form.bien_ids.filter(x => x !== id) : [...form.bien_ids, id]
@@ -455,7 +455,7 @@ export default function ModalTransferencia({
   };
 
   const tipoLabel    = isTraslado ? 'Traslado' : 'Asignación';
-  const origenNombre = itemData?.sede_origen_nombre ?? (sedes_auth?.[0]?.nombre ?? '');
+  const origenNombre = itemData?.sede_origen_nombre ?? (sedesAuth?.[0]?.nombre ?? '');
   const origenModulo = itemData?.modulo_origen_nombre ?? '';
 
   return (
