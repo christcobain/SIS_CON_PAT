@@ -57,7 +57,7 @@ const ESTADO_BIEN_COLOR = (n = '') => {
   if (u === 'ACTIVO')              return { color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)',    ok: true  };
   if (u.includes('TRASLADO'))      return { color: '#b45309', bg: 'rgb(180 83 9 / 0.1)',     ok: false };
   if (u.includes('ASIGNACI'))      return { color: '#b45309', bg: 'rgb(180 83 9 / 0.1)',     ok: false };
-  if (u.includes('MANTENIMIENTO')) return { color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)',  ok: false };
+  if (u.includes('MANTENIMIENTO')) return { color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)',   ok: false };
   if (u.includes('BAJA'))          return { color: '#dc2626', bg: 'rgb(220 38 38 / 0.1)',    ok: false };
   return { color: '#64748b', bg: 'var(--color-border-light)', ok: false };
 };
@@ -318,16 +318,30 @@ export default function ModalTransferencia({
   const itemData = itemCompleto ?? item;
 
   useEffect(() => {
+    // ── ASIGNACION INTERNA: siempre carga los usuarios de la sede del registrador ──
+    if (!isTraslado) {
+      const misUsuarios = usuariosMs.filter(u =>
+        (u.sedes ?? []).some(s => String(s.id) === String(sede_auth_id))
+      );
+      if (misUsuarios.length > 0) {
+        setUsuariosPorSede(misUsuarios);
+      } else if (sede_auth_id) {
+        setLoadingUsuariosSede(true);
+        usuariosService.filtrar({ is_active: true, sedes: [sede_auth_id] })
+          .then(data => {
+            const lista = Array.isArray(data) ? data : data?.results ?? [];
+            setUsuariosPorSede(lista);
+          })
+          .catch(() => setUsuariosPorSede([]))
+          .finally(() => setLoadingUsuariosSede(false));
+      }
+      return;
+    }
+
+    // ── TRASLADO SEDE: carga los usuarios de la sede destino elegida ──
     const sedeId = form.sede_destino_id;
     if (!sedeId) {
-      if (!isTraslado) {
-        const misUsuarios = usuariosMs.filter(u =>
-          (u.sedes ?? []).some(s => String(s.id) === String(sede_auth_id))
-        );
-        setUsuariosPorSede(misUsuarios);
-      } else {
-        setUsuariosPorSede([]);
-      }
+      setUsuariosPorSede([]);
       return;
     }
     const usuariosFiltrados = usuariosMs.filter(u =>
@@ -345,7 +359,7 @@ export default function ModalTransferencia({
         .catch(() => setUsuariosPorSede([]))
         .finally(() => setLoadingUsuariosSede(false));
     }
-  }, [form.sede_destino_id, isTraslado, usuariosMs, sede_auth_id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [form.sede_destino_id, isTraslado, usuariosMs, sede_auth_id]); 
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -391,8 +405,7 @@ export default function ModalTransferencia({
   const totalDisponibles = bienesFiltradosBuscador.filter(b => ESTADO_BIEN_COLOR(b.estado_bien_nombre).ok).length;
   const totalBloqueados  = bienesFiltradosBuscador.length - totalDisponibles;
 
-  const ubicacionesDest = (ubicaciones ?? []).filter(m => m.is_active !== false);
-  // const modulosActivos  = (modulos ?? []).filter(m => m.is_active !== false);
+  //const ubicacionesDest = (ubicaciones ?? []).filter(m => m.is_active !== false);
 
   const toggleBien = id => set('bien_ids',
     form.bien_ids.includes(id) ? form.bien_ids.filter(x => x !== id) : [...form.bien_ids, id]
@@ -400,9 +413,9 @@ export default function ModalTransferencia({
 
   const validar = () => {
     const e = {};
-    if (!form.bien_ids.length)    e.bien_ids           = 'Selecciona al menos un bien.';
-    if (!form.usuario_destino_id) e.usuario_destino_id = 'Campo obligatorio.';
-    if (isTraslado && !form.sede_destino_id) e.sede_destino_id = 'Campo obligatorio.';
+    if (!form.bien_ids.length)                       e.bien_ids           = 'Selecciona al menos un bien.';
+    if (!form.usuario_destino_id)                    e.usuario_destino_id = 'Campo obligatorio.';
+    if (isTraslado && !form.sede_destino_id)         e.sede_destino_id    = 'Campo obligatorio.';
     return e;
   };
 
@@ -412,12 +425,12 @@ export default function ModalTransferencia({
     const payload = {
       bien_ids:           form.bien_ids.map(Number),
       usuario_destino_id: Number(form.usuario_destino_id),
-      sede_destino_id:    Number(form.sede_destino_id),
-      ...(form.modulo_destino_id    && { modulo_destino_id:    Number(form.modulo_destino_id)    }),
-      ...(form.ubicacion_destino_id && { ubicacion_destino_id: Number(form.ubicacion_destino_id) }),
-      ...(form.piso_destino         && { piso_destino:         Number(form.piso_destino)         }),
+      sede_destino_id:    Number(form.sede_destino_id || sede_auth_id),
+      ...(form.modulo_destino_id       && { modulo_destino_id:       Number(form.modulo_destino_id)       }),
+      ...(form.ubicacion_destino_id    && { ubicacion_destino_id:    Number(form.ubicacion_destino_id)    }),
+      ...(form.piso_destino            && { piso_destino:            Number(form.piso_destino)            }),
       ...(form.motivo_transferencia_id && { motivo_transferencia_id: Number(form.motivo_transferencia_id) }),
-      ...(form.descripcion?.trim()  && { descripcion: form.descripcion.trim() }),
+      ...(form.descripcion?.trim()     && { descripcion:             form.descripcion.trim()              }),
     };
     try {
       let result;
@@ -576,7 +589,7 @@ export default function ModalTransferencia({
                 </div>
               </div>
 
-              {/* ── Panel lateral resumen + destino ── */}
+              {/* ── Panel lateral: destino ── */}
               <aside className="w-60 shrink-0 p-4 space-y-4 overflow-y-auto border-l"
                 style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface-alt)' }}>
 
@@ -626,7 +639,7 @@ export default function ModalTransferencia({
                   </div>
                 )}
 
-                {/* Sede destino — solo TRASLADO_SEDE */}
+                {/* ── Sede destino: solo visible en TRASLADO_SEDE ── */}
                 {isTraslado && (
                   <div>
                     <FLabel required>Sede destino</FLabel>
@@ -647,16 +660,22 @@ export default function ModalTransferencia({
                   </div>
                 )}
 
-                {/* Usuario destinatario */}
+                {/* ── Usuario destinatario ── */}
                 <div>
                   <FLabel required>
                     Usuario destinatario
                     {isTraslado && form.sede_destino_id && (
                       <span className="ml-1 text-[8px] font-bold normal-case" style={{ color: 'var(--color-text-muted)' }}>
-                        (de la sede)
+                        (de la sede destino)
+                      </span>
+                    )}
+                    {!isTraslado && (
+                      <span className="ml-1 text-[8px] font-bold normal-case" style={{ color: 'var(--color-text-muted)' }}>
+                        (usuarios de tu sede)
                       </span>
                     )}
                   </FLabel>
+
                   {loadingUsuariosSede ? (
                     <div className="skeleton h-10 rounded-xl" />
                   ) : (
@@ -679,6 +698,7 @@ export default function ModalTransferencia({
                       ))}
                     </FSelect>
                   )}
+
                   {errors.usuario_destino_id && (
                     <p className="text-[10px] text-red-500 mt-1">{errors.usuario_destino_id}</p>
                   )}
@@ -747,10 +767,10 @@ export default function ModalTransferencia({
                   <p className="text-[9px] font-black uppercase tracking-widest"
                     style={{ color: 'var(--color-text-muted)' }}>Leyenda estados</p>
                   {[
-                    { label: 'Activo',         color: '#16a34a' },
-                    { label: 'Traslado',       color: '#b45309' },
-                    { label: 'Mantenimiento',  color: '#7c3aed' },
-                    { label: 'Baja',           color: '#dc2626' },
+                    { label: 'Activo',        color: '#16a34a' },
+                    { label: 'Traslado',      color: '#b45309' },
+                    { label: 'Mantenimiento', color: '#7c3aed' },
+                    { label: 'Baja',          color: '#dc2626' },
                   ].map(l => (
                     <div key={l.label} className="flex items-center gap-1.5">
                       <div className="size-2 rounded-full shrink-0" style={{ background: l.color }} />
