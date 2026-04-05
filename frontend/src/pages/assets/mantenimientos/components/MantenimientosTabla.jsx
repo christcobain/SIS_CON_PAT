@@ -19,14 +19,13 @@ const BADGE = {
 
 // ── Fila de acciones ──────────────────────────────────────────────────────────
 // Maneja su propio estado busy y toast. Llama directamente a acciones del hook.
-// Para acciones que requieren modal (cancelar, aprobación) usa navegacion.
 function AccionesFila({ item, onVerDetalle, acciones, navegacion }) {
   const toast = useToast();
   const { can, canAny } = usePermission();
   const [busy, setBusy] = useState(false);
 
   const { enviarAprobacion,  descargarPDFMant } = acciones;
-  const { abrirCancelar, abrirAprobacion } = navegacion;
+  const { abrirEnviar,abrirCancelar, abrirAprobacion } = navegacion;
 
   const puedeEnviarAprobacion = can('ms-bienes:mantenimientos:add_mantenimiento')
     && item.estado_mantenimiento === 'EN_PROCESO';
@@ -72,7 +71,7 @@ function AccionesFila({ item, onVerDetalle, acciones, navegacion }) {
       {/* Enviar a aprobación — acción directa (abre ModalEnviarAprobacion con informe técnico) */}
       {puedeEnviarAprobacion && (
         <button
-          onClick={() => ejecutar(enviarAprobacion, item.id)}
+          onClick={() => abrirEnviar(item)}
           disabled={busy}
           className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-blue-600 disabled:opacity-50"
           title="Enviar a Aprobación"

@@ -246,7 +246,6 @@ export default function ModalTransferencia({
   const toast      = useToast();
   const isTraslado = activeTab === 'TRASLADO_SEDE';
   const isEditar   = !!item;
-
   // const sedes_auth   = sedesAuth(s => s.sedes);
   const sede_auth_id = sedesAuth?.[0]?.id;
 
@@ -272,7 +271,6 @@ export default function ModalTransferencia({
     setErrors({});
     setBuscador('');
     setItemCompleto(null);
-
     if (isEditar && item) {
       setLoadingDetalle(true);
       obtenerTransf(item.id)
@@ -280,9 +278,7 @@ export default function ModalTransferencia({
           const detalle = data?.data ?? data;
           setItemCompleto(detalle);
           const bienIds = (detalle.bienes ?? []).map(b => b.bien_id).filter(Boolean);
-          const motivoEncontrado = motivosTransferencia.find(
-            m => m.nombre === detalle.motivo_transferencia_nombre
-          );
+          const motivoEncontrado = motivosTransferencia.find(m => m.nombre === detalle.motivo_transferencia_nombre);
           setForm({
             bien_ids:             bienIds,
             usuario_destino_id:   String(detalle.usuario_destino_id ?? ''),
@@ -318,7 +314,6 @@ export default function ModalTransferencia({
   const itemData = itemCompleto ?? item;
 
   useEffect(() => {
-    // ── ASIGNACION INTERNA: siempre carga los usuarios de la sede del registrador ──
     if (!isTraslado) {
       const misUsuarios = usuariosMs.filter(u =>
         (u.sedes ?? []).some(s => String(s.id) === String(sede_auth_id))
