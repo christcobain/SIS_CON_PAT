@@ -73,9 +73,9 @@ function StepIndicator({ paso, total, labels }) {
 }
 
 function InfoBox({ text, color }) {
-  const c = color === 'blue' ? '#1d4ed8' : 'var(--color-primary)';
-  const bg = color === 'blue' ? 'rgb(37 99 235 / 0.06)' : 'rgb(127 29 29 / 0.05)';
-  const border = color === 'blue' ? 'rgb(37 99 235 / 0.15)' : 'rgb(127 29 29 / 0.15)';
+  const c      = color === 'blue' ? '#1d4ed8' : 'var(--color-primary)';
+  const bg     = color === 'blue' ? 'rgb(37 99 235 / 0.06)'  : 'rgb(127 29 29 / 0.05)';
+  const border = color === 'blue' ? 'rgb(37 99 235 / 0.15)'  : 'rgb(127 29 29 / 0.15)';
   return (
     <div className="flex items-start gap-2 p-3 rounded-xl"
       style={{ background: bg, border: `1px solid ${border}` }}>
@@ -246,10 +246,12 @@ function BienRow({ bien, seleccionado, motivosBaja, onToggle, onMotivoChange, on
 }
 
 export default function ModalCrearBaja({ open, onClose, acciones, onGuardado }) {
-  const toast      = useToast();
-  const { bienesParaBaja, crear } = acciones;
-  const { fetchCatalogos, motivosBaja }         = useCatalogos();
-  const { filtrarUsuarios, loading: loadingUsuarios } = useUsuarios();
+  const toast = useToast();
+
+  const { bienesParaBaja, crear } = acciones ?? {};
+
+  const { fetchCatalogos, motivosBaja }               = useCatalogos();
+  const { filtrarUsuarios, loading: loadingUsuarios }  = useUsuarios();
 
   const authUser   = useAuthStore((s) => s.user);
   const authSedes  = useAuthStore((s) => s.sedes);
@@ -258,9 +260,9 @@ export default function ModalCrearBaja({ open, onClose, acciones, onGuardado }) 
   const cargoRegistrador  = authUser?.cargo || '';
   const sedeRegistrador   = authSedes?.[0]?.nombre || '';
 
-  const [paso,     setPaso]     = useState(0);
+  const [paso,      setPaso]      = useState(0);
   const [guardando, setGuardando] = useState(false);
-  const [confirm,  setConfirm]  = useState(false);
+  const [confirm,   setConfirm]   = useState(false);
   const [loadingBienes,     setLoadingBienes]     = useState(false);
   const [bienesDisponibles, setBienesDisponibles] = useState([]);
   const [busquedaSearch, setBusquedaSearch] = useState('');
@@ -284,12 +286,19 @@ export default function ModalCrearBaja({ open, onClose, acciones, onGuardado }) 
     if (!open) return;
     setPaso(0);
     setCoordSeleccionado(null);
-    setBusquedaSearch(''); setBusquedaCargo('');
+    setBusquedaSearch('');
+    setBusquedaCargo('');
     setCoordinadores([]);
     setBienesSeleccionados({});
     setImagenesSeleccionadas({});
     setForm({ cargo_elabora: '', antecedentes: '', observaciones: '', sustento_tecnico: '', conclusiones: '', recomendaciones: '' });
     fetchCatalogos(['motivosBaja']);
+
+    if (typeof bienesParaBaja !== 'function') {
+      console.error('[ModalCrearBaja] acciones.bienesParaBaja no es una función. Verifica el objeto acciones en BajasPage.');
+      return;
+    }
+
     setLoadingBienes(true);
     bienesParaBaja()
       .then((d) => setBienesDisponibles(Array.isArray(d) ? d : []))
@@ -316,7 +325,8 @@ export default function ModalCrearBaja({ open, onClose, acciones, onGuardado }) 
   const handleSeleccionarCoord = (u) => {
     setCoordSeleccionado(u);
     setCoordinadores([]);
-    setBusquedaSearch(''); setBusquedaCargo('');
+    setBusquedaSearch('');
+    setBusquedaCargo('');
   };
 
   const handleToggleBien = (bien) => {
@@ -397,7 +407,7 @@ export default function ModalCrearBaja({ open, onClose, acciones, onGuardado }) 
   return (
     <>
       <Modal open={open} onClose={onClose} size="xl">
-        <ModalHeader title="Nuevo Informe de Baja Técnica" icon="delete_sweep" onClose={onClose} />
+        <ModalHeader title="Registrar Informe de Baja Técnica" icon="delete_sweep" onClose={onClose} />
 
         <ModalBody>
           <StepIndicator paso={paso} total={PASOS_LABELS.length} labels={PASOS_LABELS} />
@@ -405,7 +415,7 @@ export default function ModalCrearBaja({ open, onClose, acciones, onGuardado }) 
           {/* ══ PASO 0: DESTINATARIO ══ */}
           {paso === 0 && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              <InfoBox text='Busque al Coordinador de Informática destinatario del informe. Puede buscar por nombre/apellido/DNI o por cargo.' />
+              <InfoBox text="Busque al Coordinador de Informática destinatario del informe. Puede buscar por nombre/apellido/DNI o por cargo." />
 
               <div>
                 <p className="text-[9px] font-black uppercase tracking-widest mb-3"
@@ -459,7 +469,7 @@ export default function ModalCrearBaja({ open, onClose, acciones, onGuardado }) 
                     style={{ border: '1px solid var(--color-border)' }}>
                     {coordinadores.map((u) => (
                       <button key={u.id} type="button" onClick={() => handleSeleccionarCoord(u)}
-                        className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left"
+                        className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
                         style={{ borderBottom: '1px solid var(--color-border-light)' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--color-surface-alt)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>

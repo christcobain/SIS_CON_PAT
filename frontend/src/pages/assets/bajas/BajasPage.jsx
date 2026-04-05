@@ -9,8 +9,8 @@ import BajasStats        from './components/BajasStats';
 import BajasFiltros      from './components/BajasFiltros';
 import BajasTabla        from './components/BajasTabla';
 
-const ModalCrearBaja    = lazy(() => import('./modals/ModalCrearBaja'));
-const ModalDetalleBaja  = lazy(() => import('./modals/ModalDetalleBaja'));
+const ModalCrearBaja     = lazy(() => import('./modals/ModalCrearBaja'));
+const ModalDetalleBaja   = lazy(() => import('./modals/ModalDetalleBaja'));
 const ModalGestionarBaja = lazy(() => import('./modals/ModalGestionarBaja'));
 const ModalCancelarBaja  = lazy(() => import('./modals/ModalCancelarBaja'));
 
@@ -21,27 +21,26 @@ const Icon = ({ name, className = '' }) => (
 const FILTROS_INICIALES = { estado_baja: '', sede_elabora_id: '', misInformes: false };
 
 export default function BajasPage() {
-  const toast      = useToast();
-  const { sedes }  = useLocaciones();
-  const { can }    = usePermission();
-  const userId     = useAuthStore((s) => s.user?.id);
+  const toast     = useToast();
+  const { sedes } = useLocaciones();
+  const { can }   = usePermission();
+  const userId    = useAuthStore((s) => s.user?.id);
 
   const {
     bajas, loading, error,
     refetch, aplicarFiltros,
-    filtros,
+    bienesParaBaja,
+    crear,
     aprobar, devolver, cancelar, reenviar,
     descargarPDF, pdfFirmado,
     obtener,
-    crear,
   } = useBajas({});
 
   const [filtrosLocales, setFiltrosLocales] = useState(FILTROS_INICIALES);
-
-  const [itemEditar,    setItemEditar]    = useState(null);
-  const [itemActivo,    setItemActivo]    = useState(null);
-  const [itemCancelar,  setItemCancelar]  = useState(null);
-  const [modoGestion,   setModoGestion]   = useState('aprobar');
+  const [itemEditar,     setItemEditar]     = useState(null);
+  const [itemActivo,     setItemActivo]     = useState(null);
+  const [itemCancelar,   setItemCancelar]   = useState(null);
+  const [modoGestion,    setModoGestion]    = useState('aprobar');
 
   const [modalCrear,     setModalCrear]     = useState(false);
   const [modalDetalle,   setModalDetalle]   = useState(false);
@@ -59,7 +58,7 @@ export default function BajasPage() {
     aplicarFiltros(FILTROS_INICIALES);
   };
 
-  const handleNuevo      = ()    => { setItemEditar(null); setModalCrear(true); };
+  const handleNuevo      = ()     => { setItemEditar(null); setModalCrear(true); };
   const handleVerDetalle = (item) => { setItemActivo(item); setModalDetalle(true); };
 
   const handleGestionar = (item, modo) => {
@@ -86,6 +85,8 @@ export default function BajasPage() {
   };
 
   const acciones = {
+    bienesParaBaja,
+    crear,
     aprobar,
     devolver,
     cancelar,
@@ -93,7 +94,6 @@ export default function BajasPage() {
     descargarPDF,
     pdfFirmado,
     obtener,
-    crear,
   };
 
   return (
@@ -122,8 +122,8 @@ export default function BajasPage() {
             </button>
             <Can perform="ms-bienes:bajas:add_baja">
               <button onClick={handleNuevo} className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm">
-                <Icon name="add_circle" className="text-[18px]" />
-                <span className="font-black uppercase tracking-widest text-[10px]">Nuevo Informe</span>
+                <Icon name="description" className="text-[18px]" />
+                <span className="font-black uppercase tracking-widest text-[10px]">Registrar Baja</span>
               </button>
             </Can>
           </div>
