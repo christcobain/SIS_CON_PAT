@@ -24,10 +24,11 @@ const BADGE = {
 };
 
 const TABS = [
-  { id: 'ruta',        label: 'Ruta y logística',   icon: 'alt_route'     },
-  { id: 'bienes',      label: 'Bienes',              icon: 'inventory_2'   },
-  { id: 'aprobaciones',label: 'Flujo aprobaciones',  icon: 'verified_user' },
+  { id: 'ruta',         label: 'Ruta y logística',  icon: 'alt_route'     },
+  { id: 'bienes',       label: 'Bienes',             icon: 'inventory_2'   },
+  { id: 'aprobaciones', label: 'Flujo aprobaciones', icon: 'verified_user' },
 ];
+
 function ActionBtn({ icon, label, onClick, disabled, color, bgColor, borderColor }) {
   return (
     <button
@@ -45,15 +46,15 @@ function ActionBtn({ icon, label, onClick, disabled, color, bgColor, borderColor
   );
 }
 
-function Campo({ label, value, icon }) {
+function InfoRow({ label, value, icon }) {
   if (!value && value !== 0) return null;
   return (
-    <div className="p-3 rounded-xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
-      <p className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 mb-1" style={{ color: 'var(--color-text-muted)' }}>
-        {icon && <Icon name={icon} className="text-[13px]" style={{ color: 'var(--color-text-faint)' }} />}
-        {label}
-      </p>
-      <p className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>{value}</p>
+    <div className="flex items-start gap-3 py-2.5" style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+      <Icon name={icon ?? 'info'} className="text-[15px] mt-0.5 shrink-0" style={{ color: 'var(--color-text-faint)' }} />
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>{label}</p>
+        <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--color-text-primary)' }}>{value}</p>
+      </div>
     </div>
   );
 }
@@ -63,14 +64,23 @@ function FlujoPaso({ label, nombre, fecha, hecho }) {
     <div className="flex items-start gap-3">
       <div className="size-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
         style={{ background: hecho ? 'rgb(22 163 74 / 0.12)' : 'var(--color-border-light)' }}>
-        <Icon name={hecho ? 'check_circle' : 'radio_button_unchecked'} className="text-[16px]"
+        <Icon name={hecho ? 'check_circle' : 'radio_button_unchecked'} className="text-[15px]"
           style={{ color: hecho ? '#16a34a' : 'var(--color-text-faint)' }} />
       </div>
       <div className="min-w-0 flex-1 pb-4">
-        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: hecho ? 'var(--color-text-primary)' : 'var(--color-text-faint)' }}>{label}</p>
-        {hecho && nombre && <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--color-text-body)' }}>{nombre}</p>}
-        {hecho && fecha && <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{fmtT(fecha)}</p>}
-        {!hecho && <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-faint)' }}>Pendiente</p>}
+        <p className="text-[10px] font-black uppercase tracking-widest"
+          style={{ color: hecho ? 'var(--color-text-primary)' : 'var(--color-text-faint)' }}>
+          {label}
+        </p>
+        {hecho && nombre && (
+          <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--color-text-body)' }}>{nombre}</p>
+        )}
+        {hecho && fecha && (
+          <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{fmtT(fecha)}</p>
+        )}
+        {!hecho && (
+          <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-faint)' }}>Pendiente</p>
+        )}
       </div>
     </div>
   );
@@ -78,46 +88,54 @@ function FlujoPaso({ label, nombre, fecha, hecho }) {
 
 function TabRuta({ t }) {
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <p className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: 'var(--color-text-muted)' }}>
-          <Icon name="upload" className="text-[14px]" style={{ color: 'var(--color-primary)' }} />Origen
+        <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-1.5"
+          style={{ color: 'var(--color-text-muted)' }}>
+          <Icon name="upload" className="text-[14px]" style={{ color: 'var(--color-primary)' }} />
+          Origen
         </p>
-        <div className="grid grid-cols-2 gap-2">
-          <Campo label="Sede"         value={t.sede_origen_nombre}       icon="domain"       />
-          <Campo label="Módulo"       value={t.modulo_origen_nombre}     icon="grid_view"    />
-          <Campo label="Ubicación"    value={t.ubicacion_origen_nombre}  icon="place"        />
-          <Campo label="Piso"         value={t.piso_origen ? `Piso ${t.piso_origen}` : null} icon="stairs" />
-          <Campo label="Responsable"  value={t.usuario_origen_nombre}    icon="person"       />
-        </div>
+        <InfoRow label="Sede"        value={t.sede_origen_nombre}      icon="domain"       />
+        <InfoRow label="Módulo"      value={t.modulo_origen_nombre}    icon="grid_view"    />
+        <InfoRow label="Ubicación"   value={t.ubicacion_origen_nombre} icon="place"        />
+        <InfoRow label="Piso"        value={t.piso_origen ? `Piso ${t.piso_origen}` : null} icon="stairs" />
+        <InfoRow label="Responsable" value={t.usuario_origen_nombre}   icon="person"       />
       </div>
-      <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '1rem' }}>
-        <p className="text-[9px] font-black uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: 'var(--color-text-muted)' }}>
-          <Icon name="download" className="text-[14px]" style={{ color: '#16a34a' }} />Destino
+      <div>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-3 flex items-center gap-1.5"
+          style={{ color: 'var(--color-text-muted)' }}>
+          <Icon name="download" className="text-[14px]" style={{ color: '#16a34a' }} />
+          Destino
         </p>
-        <div className="grid grid-cols-2 gap-2">
-          <Campo label="Sede"         value={t.sede_destino_nombre}      icon="domain"       />
-          <Campo label="Módulo"       value={t.modulo_destino_nombre}    icon="grid_view"    />
-          <Campo label="Ubicación"    value={t.ubicacion_destino_nombre} icon="place"        />
-          <Campo label="Piso"         value={t.piso_destino ? `Piso ${t.piso_destino}` : null} icon="stairs" />
-          <Campo label="Destinatario" value={t.usuario_destino_nombre}   icon="person_check" />
-        </div>
+        <InfoRow label="Sede"         value={t.sede_destino_nombre}      icon="domain"       />
+        <InfoRow label="Módulo"       value={t.modulo_destino_nombre}    icon="grid_view"    />
+        <InfoRow label="Ubicación"    value={t.ubicacion_destino_nombre} icon="place"        />
+        <InfoRow label="Piso"         value={t.piso_destino ? `Piso ${t.piso_destino}` : null} icon="stairs" />
+        <InfoRow label="Destinatario" value={t.usuario_destino_nombre}   icon="person_check" />
       </div>
+
       {(t.motivo_transferencia_nombre || t.descripcion) && (
-        <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '1rem' }}>
-          <p className="text-[9px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--color-text-muted)' }}>Motivo</p>
+        <div className="md:col-span-2"
+          style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '1rem' }}>
+          <p className="text-[9px] font-black uppercase tracking-widest mb-2"
+            style={{ color: 'var(--color-text-muted)' }}>Motivo</p>
           {t.motivo_transferencia_nombre && (
-            <p className="text-xs font-bold mb-1" style={{ color: 'var(--color-primary)' }}>{t.motivo_transferencia_nombre}</p>
+            <p className="text-xs font-bold mb-1" style={{ color: 'var(--color-primary)' }}>
+              {t.motivo_transferencia_nombre}
+            </p>
           )}
           {t.descripcion && (
-            <p className="text-sm italic p-3 rounded-xl" style={{ color: 'var(--color-text-body)', background: 'var(--color-surface-alt)', border: '1px dashed var(--color-border)' }}>
+            <p className="text-sm italic p-3 rounded-xl"
+              style={{ color: 'var(--color-text-body)', background: 'var(--color-surface-alt)', border: '1px dashed var(--color-border)' }}>
               {t.descripcion}
             </p>
           )}
         </div>
       )}
+
       {(t.motivo_devolucion || t.cancelacion_nombre) && (
-        <div className="p-3 rounded-xl" style={{ background: 'rgb(220 38 38 / 0.06)', border: '1px solid rgb(220 38 38 / 0.2)' }}>
+        <div className="md:col-span-2 p-3 rounded-xl"
+          style={{ background: 'rgb(220 38 38 / 0.06)', border: '1px solid rgb(220 38 38 / 0.2)' }}>
           <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#dc2626' }}>
             {t.estado_transferencia === 'CANCELADO' ? 'Motivo de cancelación' : 'Motivo de devolución'}
           </p>
@@ -132,32 +150,50 @@ function TabRuta({ t }) {
 
 function TabBienes({ bienes = [] }) {
   if (!bienes.length) return (
-    <div className="text-center py-10">
-      <Icon name="inventory_2" className="text-[40px]" style={{ color: 'var(--color-text-faint)' }} />
-      <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>Sin bienes registrados</p>
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <Icon name="inventory_2" className="text-[44px]" style={{ color: 'var(--color-text-faint)' }} />
+      <p className="text-sm font-semibold" style={{ color: 'var(--color-text-muted)' }}>Sin bienes registrados</p>
     </div>
   );
   return (
-    <div className="table-wrapper rounded-xl overflow-hidden">
-      <table className="table w-full">
-        <thead><tr>
-          <th>Cód. Patrimonial</th><th>Tipo / Categoría</th><th>Marca</th><th>Modelo</th><th>N° Serie</th>
-        </tr></thead>
-        <tbody>
-          {bienes.map(b => (
-            <tr key={b.id ?? b.bien_id} className="hover:bg-surface-alt/60">
-              <td className="font-mono text-xs font-black" style={{ color: 'var(--color-primary)' }}>{b.codigo_patrimonial}</td>
-              <td>
-                <p className="text-xs font-bold" style={{ color: 'var(--color-text-primary)' }}>{b.tipo_bien_nombre}</p>
-                <p className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>{b.categoria_bien_nombre ?? '—'}</p>
-              </td>
-              <td className="text-xs" style={{ color: 'var(--color-text-body)' }}>{b.marca_nombre ?? '—'}</td>
-              <td className="text-xs" style={{ color: 'var(--color-text-body)' }}>{b.modelo ?? '—'}</td>
-              <td className="font-mono text-xs" style={{ color: 'var(--color-text-muted)' }}>{b.numero_serie ?? 'S/N'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-3">
+      {bienes.map((b, idx) => (
+        <div key={b.id ?? b.bien_id} className="rounded-2xl overflow-hidden"
+          style={{ border: '1px solid var(--color-border)' }}>
+          <div className="flex items-center gap-3 px-4 py-3"
+            style={{ background: 'var(--color-surface-alt)', borderBottom: '1px solid var(--color-border)' }}>
+            <span className="size-6 flex items-center justify-center rounded-full text-white text-[10px] font-black shrink-0"
+              style={{ background: 'var(--color-primary)' }}>{idx + 1}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-black uppercase" style={{ color: 'var(--color-text-primary)' }}>
+                {b.tipo_bien_nombre}
+              </p>
+              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                  Cód: <strong>{b.codigo_patrimonial || 'S/C'}</strong>
+                </span>
+                {b.marca_nombre && (
+                  <span className="text-[10px]" style={{ color: 'var(--color-text-faint)' }}>
+                    {b.marca_nombre} — {b.modelo}
+                  </span>
+                )}
+                {b.numero_serie && (
+                  <span className="text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                    S/N: {b.numero_serie}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          {b.categoria_bien_nombre && (
+            <div className="px-4 py-2">
+              <span className="text-[10px]" style={{ color: 'var(--color-text-muted)' }}>
+                Categoría: <strong style={{ color: 'var(--color-text-body)' }}>{b.categoria_bien_nombre}</strong>
+              </span>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -165,57 +201,59 @@ function TabBienes({ bienes = [] }) {
 function TabAprobaciones({ t }) {
   const esTraslado = t.tipo === 'TRASLADO_SEDE';
   const pasos = esTraslado ? [
-    { label: 'Registrado por:',             nombre: t.usuario_origen_nombre,                 fecha: t.fecha_registro,                   hecho: true },
-    { label: 'Aprobado por:', nombre: t.aprobado_por_adminsede_nombre,         fecha: t.fecha_aprobacion_adminsede,       hecho: !!t.aprobado_por_adminsede_id },
-    { label: 'V°B° Salida (Segur.)',    nombre: t.aprobado_segur_salida_nombre,          fecha: t.fecha_aprobacion_segur_salida,    hecho: !!t.aprobado_segur_salida_id },
-    { label: 'V°B° Entrada (Segur.)',   nombre: t.aprobado_segur_entrada_nombre,         fecha: t.fecha_aprobacion_segur_entrada,   hecho: !!t.aprobado_segur_entrada_id },
-    { label: 'Confirmado por',  nombre: t.confirmado_por_usuario_destino_nombre, fecha: t.fecha_confirmacion_destino,       hecho: !!t.confirmado_por_usuario_destino_id },
+    { label: 'Registrado por',          nombre: t.usuario_origen_nombre,                  fecha: t.fecha_registro,                  hecho: true },
+    { label: 'Aprobado por',            nombre: t.aprobado_por_adminsede_nombre,           fecha: t.fecha_aprobacion_adminsede,      hecho: !!t.aprobado_por_adminsede_id },
+    { label: 'V°B° Salida (Segur.)',    nombre: t.aprobado_segur_salida_nombre,            fecha: t.fecha_aprobacion_segur_salida,   hecho: !!t.aprobado_segur_salida_id },
+    { label: 'V°B° Entrada (Segur.)',   nombre: t.aprobado_segur_entrada_nombre,           fecha: t.fecha_aprobacion_segur_entrada,  hecho: !!t.aprobado_segur_entrada_id },
+    { label: 'Confirmado por destino',  nombre: t.confirmado_por_usuario_destino_nombre,   fecha: t.fecha_confirmacion_destino,      hecho: !!t.confirmado_por_usuario_destino_id },
   ] : [
-    { label: 'Registrado por:',              nombre: t.usuario_origen_nombre,               fecha: t.fecha_registro,                   hecho: true },
-    { label: 'Aprobado por', nombre: t.aprobado_por_adminsede_nombre,       fecha: t.fecha_aprobacion_adminsede,       hecho: !!t.aprobado_por_adminsede_id },
+    { label: 'Registrado por',  nombre: t.usuario_origen_nombre,         fecha: t.fecha_registro,              hecho: true },
+    { label: 'Aprobado por',    nombre: t.aprobado_por_adminsede_nombre, fecha: t.fecha_aprobacion_adminsede,  hecho: !!t.aprobado_por_adminsede_id },
   ];
 
   const historial = t.aprobaciones ?? [];
 
   return (
-    <div className="grid grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <p className="text-[9px] font-black uppercase tracking-widest mb-4" style={{ color: 'var(--color-text-muted)' }}>Flujo de aprobaciones</p>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-4"
+          style={{ color: 'var(--color-text-muted)' }}>Flujo de aprobaciones</p>
         <div className="relative pl-3.5" style={{ borderLeft: '2px solid var(--color-border)' }}>
           {pasos.map((p, i) => <FlujoPaso key={i} {...p} />)}
         </div>
       </div>
       <div>
-        <p className="text-[9px] font-black uppercase tracking-widest mb-4" style={{ color: 'var(--color-text-muted)' }}>Historial de acciones</p>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-4"
+          style={{ color: 'var(--color-text-muted)' }}>Historial de acciones</p>
         {historial.length === 0 ? (
           <p className="text-xs" style={{ color: 'var(--color-text-faint)' }}>Sin historial registrado.</p>
         ) : (
           <div className="space-y-2">
-            {historial.map((h, i) => (
-              <div key={h.id ?? i} className="p-3 rounded-xl" style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <span 
-                    className="text-[10px] font-black uppercase" 
-                    style={{ 
-                      color: h.accion === 'RECHAZADO' 
-                        ? '#dc2626' 
-                        : h.accion === 'DEVUELTO' 
-                          ? '#b45309' 
-                          : ['APROBADO', 'COMPLETADO', 'ACEPTADO', 'ENTREGADO'].includes(h.accion) 
-                            ? '#16a34a' 
-                            : 'var(--color-text-muted)' 
-                    }}
-                  >
-                    {h.accion}
-                  </span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
-                    {h.rol_aprobador}
-                  </span>
+            {historial.map((h, i) => {
+              const accionColor =
+                h.accion === 'RECHAZADO' ? '#dc2626' :
+                h.accion === 'DEVUELTO'  ? '#b45309' :
+                ['APROBADO', 'COMPLETADO', 'ACEPTADO', 'ENTREGADO'].includes(h.accion) ? '#16a34a' :
+                'var(--color-text-muted)';
+              return (
+                <div key={h.id ?? i} className="p-3 rounded-xl"
+                  style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-[10px] font-black uppercase" style={{ color: accionColor }}>
+                      {h.accion}
+                    </span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md"
+                      style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
+                      {h.rol_aprobador}
+                    </span>
+                  </div>
+                  {h.detalle && (
+                    <p className="text-[11px] mt-1 italic" style={{ color: 'var(--color-text-body)' }}>{h.detalle}</p>
+                  )}
+                  <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-faint)' }}>{fmtT(h.fecha)}</p>
                 </div>
-                {h.detalle && <p className="text-[11px] mt-1 italic" style={{ color: 'var(--color-text-body)' }}>{h.detalle}</p>}
-                <p className="text-[10px] mt-1" style={{ color: 'var(--color-text-faint)' }}>{fmtT(h.fecha)}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -241,7 +279,8 @@ function MiniModalMotivo({ open, onClose, onConfirm, loading, titulo, placeholde
         style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="size-8 rounded-xl flex items-center justify-center" style={{ background: 'rgb(220 38 38 / 0.1)' }}>
+            <div className="size-8 rounded-xl flex items-center justify-center"
+              style={{ background: 'rgb(220 38 38 / 0.1)' }}>
               <Icon name="reply" className="text-[16px]" style={{ color: '#dc2626' }} />
             </div>
             <p className="text-sm font-black" style={{ color: 'var(--color-text-primary)' }}>{titulo}</p>
@@ -256,7 +295,12 @@ function MiniModalMotivo({ open, onClose, onConfirm, loading, titulo, placeholde
           rows={3}
           placeholder={placeholder}
           className="w-full text-sm rounded-xl px-3 py-2.5 resize-none"
-          style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', outline: 'none' }}
+          style={{
+            background: 'var(--color-surface-alt)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-primary)',
+            outline: 'none',
+          }}
           onFocus={e => { e.currentTarget.style.border = '1px solid var(--color-primary)'; }}
           onBlur={e => { e.currentTarget.style.border = '1px solid var(--color-border)'; }}
         />
@@ -298,31 +342,29 @@ export default function ModalDetalleTransferencia({
   const t      = item;
   const estado = t.estado_transferencia;
 
-  // ── Clasificación del tipo ────────────────────────────────────────────────
   const esTraslado   = t.tipo === 'TRASLADO_SEDE';
   const badge        = BADGE[estado] ?? { label: estado, color: 'var(--color-text-muted)', bg: 'var(--color-border-light)' };
   const bienes       = t.bienes ?? [];
-  // ── Sede del usuario autenticado ─────────────────────────────────────────
-  const miSede     = String(sedes?.[0]?.id ?? '');
+
+  const miSede      = String(sedes?.[0]?.id ?? '');
   const sedeOrigen  = String(t.sede_origen_id  ?? '');
   const sedeDestino = String(t.sede_destino_id ?? '');
-  // ── Roles base  ─────────────
+
   const esAdminAprobador = can('ms-bienes:transferencias:change_transferencia') && !t.aprobado_por_adminsede_id;
   const esSegur          = can('ms-bienes:transferencias:add_transferenciaaprobacion');
   const esUsuarioFinal   = canAny('ms-bienes:transferencias:add_transferenciadetalle', 'ms-bienes:transferencias:view_transferencia');
-  // ── Flags de aprobación ───────────────────────────────────────────────────
+
   const segurSalidaOk   = !!t.aprobado_segur_salida_id;
   const segurEntradaOk  = !!t.aprobado_segur_entrada_id;
   const retornoSalidaOk = !!t.aprobado_retorno_salida_id;
-  // ── Permisos de acción ─
+
   const puedeAprobarAdmin       = esAdminAprobador && estado === 'PENDIENTE_APROBACION';
   const puedeAprobarSalida      = esSegur && esTraslado && estado === 'PENDIENTE_APROBACION' && !segurSalidaOk  && sedeOrigen  === miSede;
   const puedeAprobarEntrada     = esSegur && esTraslado && estado === 'PENDIENTE_APROBACION' &&  segurSalidaOk  && !segurEntradaOk && sedeDestino === miSede;
   const puedeConfirmarRecepcion = esUsuarioFinal && esTraslado && estado === 'EN_ESPERA_CONFORMIDAD' && sedeDestino === miSede;
-  const puedeRetornoSalida      = esSegur && esTraslado && estado === 'EN_RETORNO' && !retornoSalidaOk                           && sedeDestino === miSede;
-  const puedeRetornoEntrada     = esSegur && esTraslado && estado === 'EN_RETORNO' &&  retornoSalidaOk && !t.aprobado_retorno_entrada_id && sedeOrigen === miSede;
+  const puedeRetornoSalida      = esSegur && esTraslado && estado === 'EN_RETORNO' && !retornoSalidaOk && sedeDestino === miSede;
+  const puedeRetornoEntrada     = esSegur && esTraslado && estado === 'EN_RETORNO' && retornoSalidaOk && !t.aprobado_retorno_entrada_id && sedeOrigen === miSede;
 
-  // ── Documentación ─────────────────────────────────────────────────────────
   const puedeDescargarPDF = (
     (esUsuarioFinal && estado === 'EN_ESPERA_FIRMA') ||
     (estado === 'ATENDIDO' && (t.pdf_path || t.tiene_pdf_firmado))
@@ -332,13 +374,10 @@ export default function ModalDetalleTransferencia({
   const ejecutar = async (fn, ...args) => {
     try {
       const res = await fn(...args);
-      if (res?.success === false) { 
-        toast.error(res.error); 
-        return; 
-      }
-      toast.success(res?.message||res?.response?.data?.message||'Operación ejecutada correctamente.');
+      if (res?.success === false) { toast.error(res.error); return; }
+      toast.success(res?.message || res?.response?.data?.message || 'Operación ejecutada correctamente.');
       onAccionExitosa?.();
-      onClose();      
+      onClose();
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Error en la operación.');
     }
@@ -362,195 +401,229 @@ export default function ModalDetalleTransferencia({
     } catch {
       toast.error('Error al descargar el PDF.');
     }
-  }; 
+  };
+
   const MODAL_CFG = {
-    devolver: { titulo: 'Devolver al registrador', placeholder: 'Describe el motivo de la devolución...' },
-    rechazar_salida: { titulo: 'Rechazar salida física', placeholder: 'Describe el motivo del rechazo de salida...' },
-    rechazar_entrada: { titulo: 'Rechazar entrada — retorno', placeholder: 'Describe el motivo del rechazo de entrada...' },
+    devolver:         { titulo: 'Devolver al registrador',     placeholder: 'Describe el motivo de la devolución...'        },
+    rechazar_salida:  { titulo: 'Rechazar salida física',      placeholder: 'Describe el motivo del rechazo de salida...'   },
+    rechazar_entrada: { titulo: 'Rechazar entrada — retorno',  placeholder: 'Describe el motivo del rechazo de entrada...'  },
   };
 
   return (
-    <>  
-    {modalDv && MODAL_CFG[modalDv] && (
-                    <MiniModalMotivo
-                      open={!!modalDv}
-                      onClose={() => setModalDv(null)}
-                      loading={actualizando}
-                      titulo={MODAL_CFG[modalDv].titulo}
-                      placeholder={MODAL_CFG[modalDv].placeholder}
-                      onConfirm={(m) => {
-                        const fn = modalDv === 'devolver' ? acciones.devolver : modalDv === 'rechazar_salida' ? acciones.rechazarSalidaSeguridad : acciones.rechazarEntradaSeguridad;
-                        setModalDv(null);
-                        ejecutar(fn, t.id, { motivo_devolucion: m });
-                      }}
-                    />
-                  )}
-    <Modal open={open} onClose={onClose} size="xl">
-      <ModalHeader
-        icon={esTraslado ? 'local_shipping' : 'person_add'}
-        title={`${esTraslado ? 'Traslado' : 'Asignación'} ${t.numero_orden}`}
-        subtitle={`${t.sede_origen_nombre ?? ''} → ${t.sede_destino_nombre ?? ''} · ${bienes.length} bien(es)`}
-        onClose={onClose}
-      />
+    <>
+      {modalDv && MODAL_CFG[modalDv] && (
+        <MiniModalMotivo
+          open={!!modalDv}
+          onClose={() => setModalDv(null)}
+          loading={actualizando}
+          titulo={MODAL_CFG[modalDv].titulo}
+          placeholder={MODAL_CFG[modalDv].placeholder}
+          onConfirm={m => {
+            const fn =
+              modalDv === 'devolver'         ? acciones.devolver :
+              modalDv === 'rechazar_salida'  ? acciones.rechazarSalidaSeguridad :
+              acciones.rechazarEntradaSeguridad;
+            setModalDv(null);
+            ejecutar(fn, t.id, { motivo_devolucion: m });
+          }}
+        />
+      )}
 
-      <ModalBody padding={false}>
-        <div className="flex" style={{ minHeight: '55vh' }}>
-          <div className="flex-1 min-w-0 flex flex-col">
-            <div className="flex gap-6 px-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
-              {TABS.map(tb => (
-                <button key={tb.id} onClick={() => setTab(tb.id)}
-                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-3 pt-4 transition-all border-b-2"
-                  style={{ borderBottomColor: tab === tb.id ? 'var(--color-primary)' : 'transparent', color: tab === tb.id ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
-                  <Icon name={tb.icon} className="text-[16px]" />{tb.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1 overflow-y-auto p-6">
-              {tab === 'ruta'         && <TabRuta         t={t} />}
-              {tab === 'bienes'       && <TabBienes       bienes={bienes} />}
-              {tab === 'aprobaciones' && <TabAprobaciones t={t} />}
-            </div>
-          </div>
+      <Modal open={open} onClose={onClose} size="xl">
+        <ModalHeader
+          icon={esTraslado ? 'local_shipping' : 'person_add'}
+          title={`${esTraslado ? 'Traslado' : 'Asignación'} ${t.numero_orden}`}
+          subtitle={`${t.sede_origen_nombre ?? ''} → ${t.sede_destino_nombre ?? ''} · ${bienes.length} bien(es)`}
+          onClose={onClose}
+        />
 
-          {/* ── Panel lateral derecho ── */}
-          <aside className="w-56 shrink-0 p-4 space-y-3 overflow-y-auto" style={{ borderLeft: '1px solid var(--color-border)' }}>
-            <div className="card p-3 text-center space-y-2">
-              <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Estado</p>
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-xl"
-                style={{ background: badge.bg, color: badge.color }}>
-                {badge.label}
-              </span>
-              <p className="text-[9px] font-black font-mono" style={{ color: 'var(--color-primary)' }}>{t.numero_orden}</p>
-            </div>
+        <ModalBody padding={false}>
+          <div className="flex" style={{ minHeight: '55vh' }}>
+            <div className="flex-1 min-w-0 flex flex-col">
 
-            <div className="card p-3 space-y-2">
-              <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Resumen</p>
-              {[
-                { label: 'Tipo',     value: esTraslado ? 'Traslado' : 'Asignación', icon: 'sync_alt'       },
-                { label: 'Bienes',   value: bienes.length,                           icon: 'inventory_2'    },
-                { label: 'Registro', value: t.fecha_registro ? fmtT(t.fecha_registro) : '—', icon: 'calendar_today' },
-                { label: 'Aprobado', value: t.aprobado_por_adminsede_nombre ?? '—',  icon: 'verified'       },
-              ].map(s => (
-                <div key={s.label} className="flex items-start gap-1.5">
-                  <Icon name={s.icon} className="text-[13px] mt-0.5 shrink-0" style={{ color: 'var(--color-text-faint)' }} />
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>{s.label}</p>
-                    <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text-primary)' }}>{s.value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* ── Documentación ── */}
-            <div className="space-y-2">
-              <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
-              {/* Descargar PDF — visible cuando estado es EN_ESPERA_FIRMA o ATENDIDO */}
-              {puedeDescargarPDF && (
-                <button
-                  onClick={handleDescargarPDF}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
-                  style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
-                  <Icon name="picture_as_pdf" className="text-[16px]" />Descargar PDF
-                </button>
-              )}
-
-              {/* Subir acta firmada — visible cuando estado es EN_ESPERA_FIRMA y es traslado y no tiene firma */}
-              {mostrarSubirActa && (
-                <>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                    onChange={handleSubirFirmado}
-                  />
-                  <button
-                    onClick={() => fileRef.current?.click()}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
-                    style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
-                    <Icon name="upload_file" className="text-[16px]" />Subir acta firmada
+              {/* ── Tabs ── */}
+              <div className="flex gap-6 px-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                {TABS.map(tb => (
+                  <button key={tb.id} onClick={() => setTab(tb.id)}
+                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest pb-3 pt-4 transition-all border-b-2"
+                    style={{
+                      borderBottomColor: tab === tb.id ? 'var(--color-primary)' : 'transparent',
+                      color: tab === tb.id ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                    }}>
+                    <Icon name={tb.icon} className="text-[16px]" />
+                    {tb.label}
+                    {tb.id === 'bienes' && bienes.length > 0 && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
+                        style={{ background: 'rgb(127 29 29 / 0.1)', color: 'var(--color-primary)' }}>
+                        {bienes.length}
+                      </span>
+                    )}
+                    {tb.id === 'aprobaciones' && (t.aprobaciones ?? []).length > 0 && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
+                        style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
+                        {(t.aprobaciones ?? []).length}
+                      </span>
+                    )}
                   </button>
-                </>
-              )}
+                ))}
+              </div>
 
-              {/* Confirmación de acta firmada subida */}
-              {(t.tiene_pdf_firmado || estado === 'ATENDIDO') && (
-                <div className="flex items-center gap-2 p-2.5 rounded-xl"
-                  style={{ background: 'rgb(22 163 74 / 0.08)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
-                  <Icon name="task_alt" className="text-[15px]" style={{ color: '#16a34a' }} />
-                  <p className="text-[10px] font-black" style={{ color: '#16a34a' }}>Acta firmada y subida</p>
-                </div>
-              )}
+              {/* ── Contenido del tab ── */}
+              <div className="flex-1 overflow-y-auto p-6 min-w-0">
+                {tab === 'ruta'         && <TabRuta         t={t} />}
+                {tab === 'bienes'       && <TabBienes       bienes={bienes} />}
+                {tab === 'aprobaciones' && <TabAprobaciones t={t} />}
+              </div>
             </div>
 
-            {t.fecha_pdf && (
-              <p className="text-[9px]" style={{ color: 'var(--color-text-faint)' }}>PDF generado: {fmtT(t.fecha_pdf)}</p>
+            {/* ── Panel lateral derecho ── */}
+            <aside className="w-52 shrink-0 p-4 space-y-3 overflow-y-auto border-l"
+              style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface-alt)' }}>
+
+              {/* Estado */}
+              <div className="card p-3 text-center space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-widest"
+                  style={{ color: 'var(--color-text-muted)' }}>Estado</p>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-xl"
+                  style={{ background: badge.bg, color: badge.color }}>
+                  {badge.label}
+                </span>
+                <p className="font-black text-xs font-mono" style={{ color: 'var(--color-primary)' }}>
+                  {t.numero_orden}
+                </p>
+              </div>
+
+              {/* Resumen */}
+              <div className="card p-3 space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-widest"
+                  style={{ color: 'var(--color-text-muted)' }}>Resumen</p>
+                {[
+                  { label: 'Tipo',     value: esTraslado ? 'Traslado' : 'Asignación',                 icon: 'sync_alt'       },
+                  { label: 'Bienes',   value: bienes.length,                                           icon: 'inventory_2'    },
+                  { label: 'Registro', value: t.fecha_registro ? fmtT(t.fecha_registro) : '—',        icon: 'calendar_today' },
+                  { label: 'Aprobado', value: t.aprobado_por_adminsede_nombre ?? '—',                  icon: 'verified'       },
+                ].map(s => (
+                  <div key={s.label} className="flex items-start gap-1.5">
+                    <Icon name={s.icon} className="text-[13px] mt-0.5 shrink-0"
+                      style={{ color: 'var(--color-text-faint)' }} />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-black uppercase tracking-widest"
+                        style={{ color: 'var(--color-text-muted)' }}>{s.label}</p>
+                      <p className="text-[11px] font-semibold"
+                        style={{ color: 'var(--color-text-primary)' }}>{s.value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Documentación */}
+              <div className="space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-widest"
+                  style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
+
+                {puedeDescargarPDF && (
+                  <button
+                    onClick={handleDescargarPDF}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                    style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
+                    <Icon name="picture_as_pdf" className="text-[15px]" />Descargar PDF
+                  </button>
+                )}
+
+                {mostrarSubirActa && (
+                  <>
+                    <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+                      onChange={handleSubirFirmado} />
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                      style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
+                      <Icon name="upload_file" className="text-[15px]" />Subir acta firmada
+                    </button>
+                  </>
+                )}
+
+                {(t.tiene_pdf_firmado || estado === 'ATENDIDO') && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl"
+                    style={{ background: 'rgb(22 163 74 / 0.08)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
+                    <Icon name="task_alt" className="text-[14px]" style={{ color: '#16a34a' }} />
+                    <p className="text-[10px] font-black" style={{ color: '#16a34a' }}>Acta firmada y subida</p>
+                  </div>
+                )}
+
+                {t.fecha_pdf && (
+                  <p className="text-[9px]" style={{ color: 'var(--color-text-faint)' }}>
+                    PDF generado: {fmtT(t.fecha_pdf)}
+                  </p>
+                )}
+              </div>
+            </aside>
+          </div>
+        </ModalBody>
+
+        <ModalFooter align="space" className="bg-slate-50 dark:bg-slate-900/80">
+          <button onClick={onClose}
+            className="px-6 py-2 text-[11px] font-black uppercase tracking-widest text-muted hover:text-body transition-colors">
+            Cerrar Ficha
+          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+
+            {puedeAprobarAdmin && (<>
+              <ActionBtn
+                icon="reply" label="Devolver"
+                color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
+                disabled={actualizando} onClick={() => setModalDv('devolver')} />
+              <ActionBtn
+                icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'}
+                color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
+                disabled={actualizando} onClick={() => ejecutar(acciones.aprobarAdminsede, t.id)} />
+            </>)}
+
+            {puedeAprobarSalida && (<>
+              <ActionBtn
+                icon="block" label="Rechazar Salida"
+                color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
+                disabled={actualizando} onClick={() => setModalDv('rechazar_salida')} />
+              <ActionBtn
+                icon="output" label="V°B° Salida Sede"
+                color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)"
+                disabled={actualizando} onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} />
+            </>)}
+
+            {puedeAprobarEntrada && (<>
+              <ActionBtn
+                icon="keyboard_return" label="Rechazar Entrada"
+                color="#c2410c" bgColor="rgb(194 65 12 / 0.06)" borderColor="rgb(194 65 12 / 0.25)"
+                disabled={actualizando} onClick={() => setModalDv('rechazar_entrada')} />
+              <ActionBtn
+                icon="input" label="V°B° Entrada Sede"
+                color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
+                disabled={actualizando} onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} />
+            </>)}
+
+            {puedeConfirmarRecepcion && (
+              <ActionBtn
+                icon="front_hand" label="Confirmar Recepción"
+                color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
+                disabled={actualizando} onClick={() => ejecutar(acciones.confirmarRecepcion, t.id, {})} />
             )}
-          </aside>
-        </div>
-      </ModalBody>
 
-      <ModalFooter align="space">        
-        <button onClick={onClose} className="btn-secondary">Cerrar</button>
-        <div className="flex items-center gap-2 flex-wrap">
+            {puedeRetornoSalida && (
+              <ActionBtn
+                icon="undo" label="Confirmar Retorno Salida"
+                color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)"
+                disabled={actualizando} onClick={() => ejecutar(acciones.retornoSalida, t.id)} />
+            )}
 
-          {puedeAprobarAdmin && (<>
-            <ActionBtn
-              icon="reply" label="Devolver"
-              color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
-              disabled={actualizando} onClick={() => setModalDv('devolver')} />
-            <ActionBtn
-              icon="check_circle" label={esTraslado ? 'Aprobar Traslado' : 'Aprobar Asignación'}
-              color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
-              disabled={actualizando} onClick={() => ejecutar(acciones.aprobarAdminsede, t.id)} />
-          </>)}
-
-          {puedeAprobarSalida && (<>
-            <ActionBtn
-              icon="block" label="Rechazar Salida"
-              color="#dc2626" bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
-              disabled={actualizando} onClick={() => setModalDv('rechazar_salida')} />
-            <ActionBtn
-              icon="output" label="V°B° Salida Sede"
-              color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)"
-              disabled={actualizando} onClick={() => ejecutar(acciones.aprobarSalidaSeguridad, t.id)} />
-          </>)}
-
-          {puedeAprobarEntrada && (<>
-            <ActionBtn
-              icon="keyboard_return" label="Rechazar Entrada"
-              color="#c2410c" bgColor="rgb(194 65 12 / 0.06)" borderColor="rgb(194 65 12 / 0.25)"
-              disabled={actualizando} onClick={() => setModalDv('rechazar_entrada')} />
-            <ActionBtn
-              icon="input" label="V°B° Entrada Sede"
-              color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
-              disabled={actualizando} onClick={() => ejecutar(acciones.aprobarEntradaSeguridad, t.id)} />
-          </>)}
-
-          {puedeConfirmarRecepcion && (
-            <ActionBtn
-              icon="front_hand" label="Confirmar Recepción"
-              color="#1d4ed8" bgColor="rgb(37 99 235 / 0.08)" borderColor="rgb(37 99 235 / 0.3)"
-              disabled={actualizando} onClick={() => ejecutar(acciones.confirmarRecepcion, t.id, {})} />
-          )}
-
-          {puedeRetornoSalida && (
-            <ActionBtn
-              icon="undo" label="Confirmar Retorno Salida"
-              color="#b45309" bgColor="rgb(180 83 9 / 0.08)" borderColor="rgb(180 83 9 / 0.3)"
-              disabled={actualizando} onClick={() => ejecutar(acciones.retornoSalida, t.id)} />
-          )}
-
-          {puedeRetornoEntrada && (
-            <ActionBtn
-              icon="home" label="Confirmar Retorno Entrada"
-              color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
-              disabled={actualizando} onClick={() => ejecutar(acciones.retornoEntrada, t.id)} />
-          )}
-
-        </div>
-      </ModalFooter>
-    </Modal>
+            {puedeRetornoEntrada && (
+              <ActionBtn
+                icon="home" label="Confirmar Retorno Entrada"
+                color="#16a34a" bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
+                disabled={actualizando} onClick={() => ejecutar(acciones.retornoEntrada, t.id)} />
+            )}
+          </div>
+        </ModalFooter>
+      </Modal>
     </>
   );
 }

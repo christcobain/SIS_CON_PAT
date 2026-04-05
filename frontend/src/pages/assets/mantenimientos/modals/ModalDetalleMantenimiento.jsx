@@ -226,7 +226,7 @@ function TabImagenes({ mantenimientoId, imagenes = [], puedeGestionar, onImagenS
     );
     setImagenesUrls(urls);
     setLoadingUrls(false);
-  }, [mantenimientoId, imagenes]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mantenimientoId, imagenes]); 
 
   useEffect(() => { cargarUrls(); }, [imagenes.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -435,7 +435,7 @@ function TabHistorial({ aprobaciones = [] }) {
         style={{ background: 'var(--color-border)' }} />
 
       <div className="space-y-3">
-        {aprobaciones.map((a, idx) => {
+        {aprobaciones.map((a) => {
           const cfg = ACCION_ICON[a.accion] ?? { icon: 'history', color: '#64748b', label: a.accion };
           return (
             <div key={a.id} className="relative flex gap-3 items-start">
@@ -488,7 +488,7 @@ function TabHistorial({ aprobaciones = [] }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function ModalDetalleMantenimiento({
-  open, onClose, item, actualizando, acciones, navegacion,
+  open, onClose, item, acciones, navegacion,
 }) {
   const toast    = useToast();
   const user     = useAuthStore(s => s.user);
@@ -539,7 +539,7 @@ export default function ModalDetalleMantenimiento({
       setBusy(false);
     }
   };
-
+  
   const handleDescargar = () => ejecutar(acciones.descargarPDFMant, m.id);
 
   const handleSubirFirmado = async e => {
@@ -548,9 +548,7 @@ export default function ModalDetalleMantenimiento({
     await ejecutar(acciones.subirFirmadoMant, m.id, archivo, user?.id);
     if (fileFirmRef.current) fileFirmRef.current.value = '';
   };
-
-  // Refrescar item local tras cambios en imágenes (no necesita refetch global)
-  const refrescarItem = async () => {
+    const refrescarItem = async () => {
     try {
       const actualizado = await mantenimientosService.obtener(m.id);
       setItemLocal(actualizado);

@@ -328,7 +328,6 @@ export default function AlertasMantenimientos({ onVerDetalle,sedeId,userId, acci
   const [loading,    setLoading]    = useState(false);
   const [recargar,   setRecargar]   = useState(0);
   const { canAny } = usePermission();
-  // const esAprobador = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
   const esAprobador = canAny(
     'ms-bienes:mantenimientos:add_mantenimientoaprobacion',
     'ms-bienes:mantenimientos:add_mantenimiento'
