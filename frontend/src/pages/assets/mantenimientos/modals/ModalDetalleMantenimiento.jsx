@@ -699,7 +699,7 @@ export default function ModalDetalleMantenimiento({
         </button>
         <div className="flex items-center gap-2 flex-wrap">
           {puedeEnviar && (
-            <button onClick={() => { onClose(); navegacion.abrirEnviar(m); }}
+            <button onClick={() => { navegacion.abrirEnviar(m); }}
               className="btn-primary flex items-center gap-2">
               <Icon name="send" className="text-[16px]" />
               {estado === 'DEVUELTO' ? 'Reenviar a aprobación' : 'Enviar a aprobación'}
@@ -708,7 +708,7 @@ export default function ModalDetalleMantenimiento({
           {puedeAprobar && (
             <>
               <button
-                onClick={() => { onClose(); abrirAprobacion({ ...m, _modo: 'devolver' }); }}
+                onClick={() => { abrirAprobacion({ ...m, _modo: 'devolver' }); }}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
                 style={{ background: 'rgb(180 83 9 / 0.1)', color: '#b45309', border: '1px solid rgb(180 83 9 / 0.25)' }}>
                 <Icon name="reply" className="text-[16px]" />Devolver
