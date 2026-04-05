@@ -348,9 +348,9 @@ export default function ModalDetalleBaja({
                       </div>
                     ) : (
                       <div className="relative pl-3.5" style={{ borderLeft: '2px solid var(--color-border)' }}>
-                        {b.aprobaciones.map((aprob, idx) => {
+                        {b.aprobaciones.map((aprob) => {
                           const meta    = ICONO_ACCION[aprob.accion] || ICONO_ACCION.REGISTRADO;
-                          const esUlitmo = idx === b.aprobaciones.length - 1;
+                          // const esUlitmo = idx === b.aprobaciones.length - 1;
                           return (
                             <div key={aprob.id} className="flex items-start gap-3 pb-4">
                               <div className="size-7 rounded-full flex items-center justify-center shrink-0 -ml-3.5"
