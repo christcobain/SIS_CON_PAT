@@ -51,7 +51,7 @@ export function useMantenimientos(filtrosIniciales = {}) {
     }
   };
 
-  const subirImagen = async (id, archivo, descripcion) => {
+  const subirImagenMant = async (id, archivo, descripcion) => {
     setActualizando(true);
     try {
       return await mantenimientosService.subirImagen(id, archivo, descripcion);
@@ -92,10 +92,10 @@ export function useMantenimientos(filtrosIniciales = {}) {
     obtener:             (id)          => mantenimientosService.obtener(id),
     misMantenimientos:   (params)      => mantenimientosService.misMantenimientos(params),
     descargarPDFMant,
-    subirImagen,
+    subirImagenMant,
     eliminarImagen:     (id,imagen_id)          => mantenimientosService.eliminarImagen(id, imagen_id),
     obtenerImagen:     (id,imagen_id)          => mantenimientosService.obtenerImagen(id, imagen_id),
-    crear:               (data)        => ejecutarYRefrescar(mantenimientosService.crear, data),
+    crearMant:               (data)        => ejecutarYRefrescar(mantenimientosService.crear, data),
     enviarAprobacion:    (id, data)    => ejecutarYRefrescar(mantenimientosService.enviarAprobacion, id, data),
     aprobarMant:             (id, obs)     => ejecutarYRefrescar(mantenimientosService.aprobar, id, obs),
     devolverMant:            (id, motivo)  => ejecutarYRefrescar(mantenimientosService.devolver, id, motivo),

@@ -1,53 +1,54 @@
 import { useState, lazy, Suspense } from 'react';
 import { useMantenimientos } from '../../../hooks/useMantenimientos';
-import { useLocaciones } from '../../../hooks/useLocaciones';
-import { useToast } from '../../../hooks/useToast';
-import { usePermission } from '../../../hooks/usePermission';
-import MantenimientosStats from './components/MantenimientosStats';
+import { useLocaciones }     from '../../../hooks/useLocaciones';
+import MantenimientosStats   from './components/MantenimientosStats';
 import MantenimientosFiltros from './components/MantenimientosFiltros';
-import MantenimientosTabla from './components/MantenimientosTabla';
-import Can from '../../../components/auth/Can';
+import MantenimientosTabla   from './components/MantenimientosTabla';
 
-const ModalCrearMantenimiento     = lazy(() => import('./modals/ModalCrearMantenimiento'));
-const ModalDetalleMantenimiento   = lazy(() => import('./modals/ModalDetalleMantenimiento'));
-const ModalEnviarAprobacion       = lazy(() => import('./modals/ModalEnviarAprobacion'));
+const ModalCrearMantenimiento      = lazy(() => import('./modals/ModalCrearMantenimiento'));
+const ModalDetalleMantenimiento    = lazy(() => import('./modals/ModalDetalleMantenimiento'));
+const ModalEnviarAprobacion        = lazy(() => import('./modals/ModalEnviarAprobacion'));
 const ModalAprobacionMantenimiento = lazy(() => import('./modals/ModalAprobacionMantenimiento'));
-const ModalCancelarMantenimiento  = lazy(() => import('./modals/ModalCancelarMantenimiento'));
+const ModalCancelarMantenimiento   = lazy(() => import('./modals/ModalCancelarMantenimiento'));
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
 );
+
 const FILTROS_INICIALES = { estado: '', sede_id: '', search: '', misMantenimientos: false };
 
 export default function MantenimientosPage() {
-  const toast    = useToast();
-  const { sedes } = useLocaciones();
-  const { can }  = usePermission();
+  const { sedes }  = useLocaciones();
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
+
   const {
     mantenimientos,
     loading,
     actualizandoMant,
-    refetchMant,         
+    refetchMant,
     aplicarFiltros,
     enviarAprobacion,
-    aprobar,
-    devolver,
-    cancelar,
-    descargarPDF
+    aprobarMant,
+    devolverMant,
+    cancelarMant,
+    descargarPDFMant,
+    subirFirmadoMant,
+    subirImagenMant,
+    crearMant,
   } = useMantenimientos(filtros);
-  const [itemEditar, setItemEditar] = useState(null);
+
+  // ── Estado de modales ──────────────────────────────────────────────────────
+  const [itemEditar,   setItemEditar]   = useState(null);
+  const [itemActivo,   setItemActivo]   = useState(null);
+  const [itemCancelar, setItemCancelar] = useState(null);
 
   const [modalCrear,      setModalCrear]      = useState(false);
   const [modalDetalle,    setModalDetalle]    = useState(false);
   const [modalEnviar,     setModalEnviar]     = useState(false);
   const [modalAprobacion, setModalAprobacion] = useState(false);
-  const [modalCancelar,   setModalCancelar]   = useState(false);  
-  const [modoAprobacion,  setModoAprobacion]  = useState('aprobar');
-  const [itemActivo,      setItemActivo]      = useState(null);
-  const [itemCancelar,    setItemCancelar]    = useState(null);
+  const [modalCancelar,   setModalCancelar]   = useState(false);
 
-  // ── Filtros ───────────────────────────────────────────────────────────────
+  // ── Filtros ────────────────────────────────────────────────────────────────
   const onFiltroChange = (key, val) => {
     const next = { ...filtros, [key]: val };
     setFiltros(next);
@@ -59,53 +60,44 @@ export default function MantenimientosPage() {
     aplicarFiltros(FILTROS_INICIALES);
   };
 
-  // ── Handlers de navegación entre modales ──────────────────────────────────
-  const handleVerDetalle = item => { setItemActivo(item); setModalDetalle(true); };
-  const handleEditar = (item) => { setItemEditar(item); setModalCrear(true); setModalDetalle(false); };
+  // ── Navegación entre modales ───────────────────────────────────────────────
+  const handleNuevo      = ()     => { setItemEditar(null); setModalCrear(true); };
+  const handleEditar     = item   => { setItemEditar(item); setModalCrear(true); setModalDetalle(false); };
+  const handleVerDetalle = item   => { setItemActivo(item); setModalDetalle(true); };
 
-  const handleAprobar = item => {
-    setItemActivo(item);
-    setModoAprobacion('aprobar');
-    setModalDetalle(false);
-    setModalAprobacion(true);
-  };
-
-  const handleDevolver = item => {
-    setItemActivo(item);
-    setModoAprobacion('devolver');
-    setModalDetalle(false);
-    setModalAprobacion(true);
-  };
-
-  const handleEnviar = item => {
+  const handleAbrirEnviar = item => {
     setItemActivo(item);
     setModalDetalle(false);
     setModalEnviar(true);
   };
-
-  const handleConformar = item => {
+  const handleAbrirAprobacion = item => {
     setItemActivo(item);
-    setModoAprobacion('conformidad');
     setModalDetalle(false);
     setModalAprobacion(true);
   };
-
-  // ── Cancelar: abre el nuevo modal con selección de motivo ─────────────────
-  const handleCancelar = item => {
+  const handleAbrirCancelar = item => {
     setItemCancelar(item);
-    setModalDetalle(false);   
+    setModalDetalle(false);
     setModalCancelar(true);
   };
 
-  const handleAccionExitosa = (res) => {
-    setModalAprobacion(false);
-    setModalEnviar(false);
-    setModalDetalle(false);
-    setModalCancelar(false);
-    setItemActivo(null);
-    setItemCancelar(null);
-    toast.success(res?.message || 'Operación realizada con éxito');
-    refetchMant();
+  const acciones = {
+    enviarAprobacion,
+    aprobarMant,
+    devolverMant,
+    cancelarMant,
+    descargarPDFMant,
+    subirFirmadoMant,
+    subirImagenMant,
+    crearMant,
+  };
+
+  // ── Navegación de modales agrupada ────────────────────────────────────────
+  const navegacion = {
+    abrirEnviar:     handleAbrirEnviar,
+    abrirAprobacion: handleAbrirAprobacion,
+    abrirCancelar:   handleAbrirCancelar,
+    abrirEditar:     handleEditar,
   };
 
   return (
@@ -133,16 +125,14 @@ export default function MantenimientosPage() {
             >
               <Icon name="refresh" className={`text-[20px] ${loading ? 'animate-spin text-primary' : 'text-faint'}`} />
             </button>
-
-            <Can perform="ms-bienes:mantenimientos:add_mantenimiento">
-              <button
-                onClick={() => setModalCrear(true)}
-                className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
-              >
-                <Icon name="add_circle" className="text-[18px]" />
-                <span className="font-black uppercase tracking-widest text-[10px]">Nueva orden</span>
-              </button>
-            </Can>
+            <button
+              className="btn-primary flex items-center gap-2 px-4 py-2 shadow-sm"
+              onClick={handleNuevo}
+              disabled={actualizandoMant}
+            >
+              <Icon name="add_circle" className="text-[18px]" />
+              <span className="font-black uppercase tracking-widest text-[10px]">Nuevo Mantenimiento</span>
+            </button>
           </div>
         </div>
       </div>
@@ -162,58 +152,41 @@ export default function MantenimientosPage() {
           items={mantenimientos}
           loading={loading}
           onVerDetalle={handleVerDetalle}
-          onAprobar={handleAprobar}
-          onDevolver={handleDevolver}
-          onEnviar={handleEnviar}
-          onCancelar={handleCancelar}
-          onEditar={handleEditar}
-          onDescargarPDF={descargarPDF}
+          acciones={acciones}
+          navegacion={navegacion}
         />
       </div>
 
       {/* ── Modales ── */}
       <Suspense fallback={null}>
 
-        {/* Crear */}
         {modalCrear && (
           <ModalCrearMantenimiento
             open={modalCrear}
-            onClose={() => setModalCrear(false)}
+            onClose={() => { setModalCrear(false); setItemEditar(null); }}
             item={itemEditar}
-            onGuardado={() => {
-              setModalCrear(false);
-              refetchMant();
-            }}            
+            onGuardado={() => { setModalCrear(false); refetchMant(); }}
           />
         )}
 
-        {/* Detalle */}
         {modalDetalle && (
           <ModalDetalleMantenimiento
             open={modalDetalle}
             onClose={() => { setModalDetalle(false); setItemActivo(null); }}
             item={itemActivo}
-            onAprobar={handleAprobar}
-            onDevolver={handleDevolver}
-            onEnviar={handleEnviar}
-            onConformar={handleConformar}
-            onCancelar={handleCancelar}
-            refetchMant={refetchMant}
-            puedeAccionesTecnicas={can('ms-bienes:mantenimientos:add_mantenimiento')}
-            puedeAccionesAdmin={can('ms-bienes:mantenimientos:change_mantenimiento')}
+            actualizando={actualizandoMant}
+            acciones={acciones}
+            navegacion={navegacion}
           />
         )}
 
-        {/* Enviar a aprobación */}
         {modalEnviar && (
           <ModalEnviarAprobacion
             open={modalEnviar}
             onClose={() => { setModalEnviar(false); setItemActivo(null); }}
             item={itemActivo}
-            onEnviar={async (id, data) => {
-              const res = await enviarAprobacion(id, data)
-              handleAccionExitosa(res);
-            }}
+            acciones={acciones}
+            onGuardado={() => { setModalEnviar(false); refetchMant(); }}
           />
         )}
 
@@ -222,15 +195,9 @@ export default function MantenimientosPage() {
             open={modalAprobacion}
             onClose={() => { setModalAprobacion(false); setItemActivo(null); }}
             item={itemActivo}
-            modo={modoAprobacion}
-            onAprobar={async (id, obs) => { 
-                const res = await aprobar(id, obs); 
-                handleAccionExitosa(res); 
-            }}
-            onDevolver={async (id, motivo) => { 
-                const res = await devolver(id, motivo); 
-                handleAccionExitosa(res); 
-            }}
+            actualizando={actualizandoMant}
+            acciones={acciones}
+            onGuardado={() => { setModalAprobacion(false); refetchMant(); }}
           />
         )}
 
@@ -239,13 +206,12 @@ export default function MantenimientosPage() {
             open={modalCancelar}
             onClose={() => { setModalCancelar(false); setItemCancelar(null); }}
             item={itemCancelar}
-            onCancelar={async (id, payload) => {
-              const res = await cancelar(id, payload);
-              handleAccionExitosa(res); 
-            }}
             actualizando={actualizandoMant}
+            acciones={acciones}
+            onGuardado={() => { setModalCancelar(false); refetchMant(); }}
           />
         )}
+
       </Suspense>
     </div>
   );

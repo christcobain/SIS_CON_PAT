@@ -20,26 +20,21 @@ const INPUT_STYLE = {
 
 const FORM_INICIAL = { motivo_cancelacion_id: '', detalle_cancelacion: '' };
 
+// acciones: { cancelarMant }
+// onGuardado: callback tras éxito (Page hace refetch)
 export default function ModalCancelarMantenimiento({
-  open,
-  onClose,
-  item,
-  onCancelar,
-  actualizando = false,
+  open, onClose, item, actualizando = false, acciones, onGuardado,
 }) {
   const toast = useToast();
-
-  // Carga motivos de cancelación desde el catálogo
   const { fetchCatalogos, motivosCancelacion = [] } = useCatalogos();
 
   const [form,    setForm]    = useState(FORM_INICIAL);
   const [errors,  setErrors]  = useState({});
   const [confirm, setConfirm] = useState(false);
 
-  // Carga los motivos al abrir y resetea el formulario
   useEffect(() => {
     if (!open) return;
-    setForm(FORM_INICIAL);
+    setForm(FORM_INICIAL); 
     setErrors({});
     setConfirm(false);
     fetchCatalogos(['motivosCancelacion']);
@@ -56,7 +51,6 @@ export default function ModalCancelarMantenimiento({
     m => String(m.id) === String(form.motivo_cancelacion_id)
   );
 
-  // ── Validación ────────────────────────────────────────────────────────────
   const validar = () => {
     const e = {};
     if (!form.motivo_cancelacion_id) e.motivo_cancelacion_id = 'Selecciona un motivo.';
@@ -70,18 +64,14 @@ export default function ModalCancelarMantenimiento({
     setConfirm(true);
   };
 
-  // ── Ejecutar cancelación ──────────────────────────────────────────────────
-  // cancelar() en el hook llama a ejecutarYRefrescar → fetchMantenimientos automático.
-  // La Page recibe el callback onCancelar y tras completarlo llama handleAccionExitosa
-  // que además ejecuta refetchMant() una vez más para sincronizar stats.
   const handleConfirmar = async () => {
     setConfirm(false);
     try {
-      await onCancelar(item.id, {
+      await acciones.cancelarMant(item.id, {
         motivo_cancelacion_id: parseInt(form.motivo_cancelacion_id, 10),
         detalle_cancelacion:   form.detalle_cancelacion.trim(),
       });
-      // El toast de éxito lo emite handleAccionExitosa en MantenimientosPage
+      onGuardado();
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Error al cancelar el mantenimiento.');
     }
@@ -92,36 +82,30 @@ export default function ModalCancelarMantenimiento({
       <Modal open={open} onClose={onClose} size="sm" closeOnOverlay={!confirm}>
         <ModalHeader
           icon="cancel"
-          title={`Cancelar mantenimiento`}
+          title="Cancelar mantenimiento"
           subtitle={`Orden: ${item.numero_orden}`}
           onClose={onClose}
         />
 
         <ModalBody>
           <div className="space-y-5">
-
             {/* Aviso de impacto */}
             <div className="flex items-start gap-3 p-3.5 rounded-xl"
               style={{ background: 'rgb(220 38 38 / 0.06)', border: '1px solid rgb(220 38 38 / 0.2)' }}>
               <Icon name="warning" className="text-[18px] shrink-0 mt-0.5" style={{ color: '#dc2626' }} />
               <div>
-                <p className="text-[11px] font-black" style={{ color: '#dc2626' }}>
-                  Esta acción no se puede deshacer
-                </p>
+                <p className="text-[11px] font-black" style={{ color: '#dc2626' }}>Esta acción no se puede deshacer</p>
                 <p className="text-[11px] mt-0.5 leading-relaxed" style={{ color: 'var(--color-text-body)' }}>
-                  Los bienes asociados volverán a su estado anterior y quedarán disponibles
-                  para nuevas operaciones.
+                  Los bienes asociados volverán a su estado anterior y quedarán disponibles para nuevas operaciones.
                 </p>
               </div>
             </div>
 
             {/* Selector de motivo */}
             <div>
-              <p className="text-[9px] font-black uppercase tracking-widest mb-2"
-                style={{ color: 'var(--color-text-muted)' }}>
+              <p className="text-[9px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--color-text-muted)' }}>
                 Motivo de cancelación <span className="text-red-500">*</span>
               </p>
-
               {motivosCancelacion.length === 0 ? (
                 <div className="skeleton h-10 rounded-xl" />
               ) : (
@@ -143,10 +127,7 @@ export default function ModalCancelarMantenimiento({
                         >
                           <div
                             className="size-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all"
-                            style={{
-                              borderColor: sel ? '#dc2626' : 'var(--color-border)',
-                              background: sel ? '#dc2626' : 'transparent',
-                            }}
+                            style={{ borderColor: sel ? '#dc2626' : 'var(--color-border)', background: sel ? '#dc2626' : 'transparent' }}
                           >
                             {sel && <Icon name="check" className="text-[10px] text-white" />}
                           </div>
@@ -156,8 +137,7 @@ export default function ModalCancelarMantenimiento({
                               {m.nombre}
                             </p>
                             {m.descripcion && (
-                              <p className="text-[10px] mt-0.5 leading-relaxed"
-                                style={{ color: 'var(--color-text-muted)' }}>
+                              <p className="text-[10px] mt-0.5 leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
                                 {m.descripcion}
                               </p>
                             )}
@@ -167,7 +147,6 @@ export default function ModalCancelarMantenimiento({
                     })}
                 </div>
               )}
-
               {errors.motivo_cancelacion_id && (
                 <p className="text-[10px] text-red-500 font-semibold mt-1.5 flex items-center gap-1">
                   <Icon name="error" className="text-[12px]" />{errors.motivo_cancelacion_id}
@@ -175,10 +154,9 @@ export default function ModalCancelarMantenimiento({
               )}
             </div>
 
-            {/* Detalle / descripción libre */}
+            {/* Detalle libre */}
             <div>
-              <p className="text-[9px] font-black uppercase tracking-widest mb-2"
-                style={{ color: 'var(--color-text-muted)' }}>
+              <p className="text-[9px] font-black uppercase tracking-widest mb-2" style={{ color: 'var(--color-text-muted)' }}>
                 Detalle adicional <span className="text-red-500">*</span>
               </p>
               <textarea
@@ -198,7 +176,7 @@ export default function ModalCancelarMantenimiento({
               )}
             </div>
 
-            {/* Resumen de lo seleccionado */}
+            {/* Resumen */}
             {motivoSeleccionado && (
               <div className="flex items-center gap-2 p-2.5 rounded-xl"
                 style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)' }}>
@@ -208,14 +186,11 @@ export default function ModalCancelarMantenimiento({
                 </p>
               </div>
             )}
-
           </div>
         </ModalBody>
 
         <ModalFooter align="right">
-          <button onClick={onClose} disabled={actualizando} className="btn-secondary">
-            Cancelar
-          </button>
+          <button onClick={onClose} disabled={actualizando} className="btn-secondary">Cancelar</button>
           <button
             onClick={handleSolicitar}
             disabled={actualizando}

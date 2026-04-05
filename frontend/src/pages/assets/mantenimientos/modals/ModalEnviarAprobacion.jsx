@@ -18,42 +18,43 @@ const INPUT_STYLE = {
   outline: 'none',
 };
 
-export default function ModalEnviarAprobacion({ open, onClose, item, onEnviar }) {
+// acciones: { enviarAprobacion }
+// onGuardado: callback tras éxito (Page hace refetch)
+export default function ModalEnviarAprobacion({ open, onClose, item, acciones, onGuardado }) {
   const toast = useToast();
-  const { fetchCatalogos,estadosFuncionamiento } = useCatalogos();
-  
+  const { fetchCatalogos, estadosFuncionamiento } = useCatalogos();
+
   const [detalles, setDetalles] = useState([]);
   const [confirm,  setConfirm]  = useState(false);
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
-    if (open && item?.detalles) {
-      const iniciales = item.detalles.map(d => ({
-        bien_id: d.bien_id,
-        bien_nombre: d.tipo_bien_nombre  || `Bien #${d.bien_id}`,
-        codigo_patrimonial: d.codigo_patrimonial,
-        marca_nombre:d.marca_nombre,
-        modelo:d.modelo,
-        estado_funcionamiento_final_id: d.estado_funcionamiento_final || '',
-        diagnostico_inicial: d.diagnostico_inicial|| '', 
-        trabajo_realizado:d.trabajo_realizado|| '',
-        diagnostico_final: d.diagnostico_final||'',
-        observacion_detalle: d.observacion_detalle||''
-      }));
-      setDetalles(iniciales);
-      fetchCatalogos(['estadosFuncionamiento']);
-    }
-  }, [open, item]);
+    if (!open || !item?.detalles) return;
+    const iniciales = item.detalles.map(d => ({
+      bien_id:                        d.bien_id,
+      bien_nombre:                    d.tipo_bien_nombre || `Bien #${d.bien_id}`,
+      codigo_patrimonial:             d.codigo_patrimonial,
+      marca_nombre:                   d.marca_nombre,
+      modelo:                         d.modelo,
+      estado_funcionamiento_final_id: d.estado_funcionamiento_final || '',
+      diagnostico_inicial:            d.diagnostico_inicial  || '',
+      trabajo_realizado:              d.trabajo_realizado    || '',
+      diagnostico_final:              d.diagnostico_final    || '',
+      observacion_detalle:            d.observacion_detalle  || '',
+    }));
+    setDetalles(iniciales);
+    fetchCatalogos(['estadosFuncionamiento']);
+  }, [open, item]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleUpdateDetalle = (bienId, field, value) => {
-    setDetalles(prev => prev.map(d => 
-      d.bien_id === bienId ? { ...d, [field]: value } : d
-    ));
-  };
+  const handleUpdateDetalle = (bienId, field, value) =>
+    setDetalles(prev => prev.map(d => d.bien_id === bienId ? { ...d, [field]: value } : d));
 
   const validar = () => {
-    const incompleto = detalles.some(d => 
-      !String(d.estado_funcionamiento_final_id).trim() || !d.diagnostico_inicial.trim()|| !d.trabajo_realizado.trim() || !d.diagnostico_final.trim()
+    const incompleto = detalles.some(d =>
+      !String(d.estado_funcionamiento_final_id).trim() ||
+      !d.diagnostico_inicial.trim() ||
+      !d.trabajo_realizado.trim()   ||
+      !d.diagnostico_final.trim()
     );
     if (incompleto) {
       toast.error('Por favor, completa el informe técnico de todos los bienes (Estado, Trabajo y Diagnóstico Final).');
@@ -62,9 +63,7 @@ export default function ModalEnviarAprobacion({ open, onClose, item, onEnviar })
     return true;
   };
 
-  const handleConfirmar = () => {
-    if (validar()) setConfirm(true);
-  };
+  const handleConfirmar = () => { if (validar()) setConfirm(true); };
 
   const handleEnviar = async () => {
     setConfirm(false);
@@ -72,20 +71,18 @@ export default function ModalEnviarAprobacion({ open, onClose, item, onEnviar })
     try {
       const payload = {
         detalles_tecnicos: detalles.map(d => ({
-          bien_id: d.bien_id,
+          bien_id:                        d.bien_id,
           estado_funcionamiento_final_id: parseInt(d.estado_funcionamiento_final_id),
-          diagnostico_inicial: d.diagnostico_inicial.trim(),
-          trabajo_realizado: d.trabajo_realizado.trim(),
-          diagnostico_final: d.diagnostico_final.trim(),
-          observacion_detalle: d.observacion_detalle.trim()
-        }))
+          diagnostico_inicial:            d.diagnostico_inicial.trim(),
+          trabajo_realizado:              d.trabajo_realizado.trim(),
+          diagnostico_final:              d.diagnostico_final.trim(),
+          observacion_detalle:            d.observacion_detalle.trim(),
+        })),
       };
-
-      await onEnviar(item.id, payload);
-      onClose();
+      await acciones.enviarAprobacion(item.id, payload);
+      onGuardado();
     } catch (e) {
-      console.error("Error al enviar aprobación:", e?.response?.error);
-      toast.error(e?.response?.error||e?.response?.data?.error || 'Error al enviar el informe técnico.');
+      toast.error(e?.response?.data?.error || 'Error al enviar el informe técnico.');
     } finally {
       setEnviando(false);
     }
@@ -94,25 +91,24 @@ export default function ModalEnviarAprobacion({ open, onClose, item, onEnviar })
   return (
     <>
       <Modal open={open} onClose={onClose} size="xl">
-        <ModalHeader 
-          icon="fact_check" 
+        <ModalHeader
+          icon="fact_check"
           title={`Finalizar Mantenimiento: ${item?.numero_orden}`}
           subtitle="Registra el informe técnico final para cada bien"
-          onClose={onClose} 
+          onClose={onClose}
         />
-        
-        <ModalBody>          
+
+        <ModalBody>
           <div className="space-y-6">
             {detalles.map((d, idx) => (
               <div key={d.bien_id} className="p-4 rounded-2xl border border-border bg-surface-alt/30 space-y-4">
-                {/* Cabecera del Bien */}
+                {/* Cabecera del bien */}
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
                   <div className="flex items-center gap-2">
                     <span className="size-6 flex items-center justify-center rounded-full bg-primary text-white text-[10px] font-black">{idx + 1}</span>
-                    <p className="text-xs font-black uppercase text-primary">{d.bien_nombre} - </p>
-                    <p className="text-xs font-black uppercase text-orange-500"> Cód. Pat. {d.codigo_patrimonial}</p>
+                    <p className="text-xs font-black uppercase text-primary">{d.bien_nombre} -</p>
+                    <p className="text-xs font-black uppercase text-orange-500">Cód. Pat. {d.codigo_patrimonial}</p>
                   </div>
-                  
                   <div className="flex items-center gap-2">
                     <label className="text-[10px] font-black text-muted uppercase">Estado Final:</label>
                     <select
@@ -129,50 +125,41 @@ export default function ModalEnviarAprobacion({ open, onClose, item, onEnviar })
                   </div>
                 </div>
 
-                {/* Grid de Informe */}
+                {/* Grid de informe */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-                  {/* Diagnóstico Inicial  */}
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-black uppercase text-muted ml-1">Diagnóstico Inicial<span className="text-red-500">*</span></p>
+                    <p className="text-[10px] font-black uppercase text-muted ml-1">Diagnóstico Inicial <span className="text-red-500">*</span></p>
                     <textarea
                       value={d.diagnostico_inicial}
                       onChange={e => handleUpdateDetalle(d.bien_id, 'diagnostico_inicial', e.target.value)}
-                      rows={2}
-                      placeholder="Ej. Equipo con suciedad total en componentes...."
+                      rows={2} placeholder="Ej. Equipo con suciedad total en componentes...."
                       className="w-full text-xs rounded-xl px-3 py-2 transition-all resize-none focus:border-primary"
                       style={INPUT_STYLE}
                     />
                   </div>
-
-                  {/* Trabajo Realizado */}
                   <div className="space-y-1.5">
                     <p className="text-[10px] font-black uppercase text-muted ml-1">Trabajo Realizado <span className="text-red-500">*</span></p>
                     <textarea
                       value={d.trabajo_realizado}
                       onChange={e => handleUpdateDetalle(d.bien_id, 'trabajo_realizado', e.target.value)}
-                      rows={2}
-                      placeholder="Ej. Limpieza de ventiladores, cambio de pasta..."
+                      rows={2} placeholder="Ej. Limpieza de ventiladores, cambio de pasta..."
                       className="w-full text-xs rounded-xl px-3 py-2 transition-all resize-none focus:border-primary"
                       style={INPUT_STYLE}
                     />
                   </div>
-
-                  {/* Diagnóstico Final */}
                   <div className="space-y-1.5">
                     <p className="text-[10px] font-black uppercase text-muted ml-1">Diagnóstico Final <span className="text-red-500">*</span></p>
                     <textarea
                       value={d.diagnostico_final}
                       onChange={e => handleUpdateDetalle(d.bien_id, 'diagnostico_final', e.target.value)}
-                      rows={2}
-                      placeholder="Ej. Equipo operativo sin recalentamiento..."
+                      rows={2} placeholder="Ej. Equipo operativo sin recalentamiento..."
                       className="w-full text-xs rounded-xl px-3 py-2 transition-all resize-none focus:border-primary"
                       style={INPUT_STYLE}
                     />
                   </div>
                 </div>
 
-                {/* Observación Detalle */}
+                {/* Observación adicional */}
                 <div className="space-y-1.5">
                   <p className="text-[10px] font-black uppercase text-muted ml-1">Observación adicional (Opcional)</p>
                   <input
@@ -191,9 +178,9 @@ export default function ModalEnviarAprobacion({ open, onClose, item, onEnviar })
 
         <ModalFooter align="right">
           <button onClick={onClose} className="btn-secondary" disabled={enviando}>Cancelar</button>
-          <button 
-            onClick={handleConfirmar} 
-            disabled={enviando || detalles.length === 0} 
+          <button
+            onClick={handleConfirmar}
+            disabled={enviando || detalles.length === 0}
             className="btn-primary flex items-center gap-2"
           >
             {enviando ? <span className="btn-loading-spin" /> : <Icon name="send" className="text-[16px]" />}
@@ -202,15 +189,15 @@ export default function ModalEnviarAprobacion({ open, onClose, item, onEnviar })
         </ModalFooter>
       </Modal>
 
-      <ConfirmDialog 
+      <ConfirmDialog
         open={confirm}
         title="¿Enviar a Aprobación?"
         message={`Se generará el informe técnico de ${detalles.length} equipo(s). El Administrador de Sede deberá dar el visto bueno final.`}
-        confirmLabel="Sí, enviar ahora" 
-        variant="primary" 
+        confirmLabel="Sí, enviar ahora"
+        variant="primary"
         loading={enviando}
-        onConfirm={handleEnviar} 
-        onClose={() => setConfirm(false)} 
+        onConfirm={handleEnviar}
+        onClose={() => setConfirm(false)}
       />
     </>
   );

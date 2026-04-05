@@ -27,9 +27,7 @@ const FILTROS_INICIALES = {
 function aplicarFiltros(items, filtros, activeTab) {
   let res = [...items];
   const q = filtros.search?.trim().toLowerCase();
-
   switch (activeTab) {
-
     case 'TRASLADO_SEDE':
       if (q) res = res.filter(t =>
         t.numero_orden?.toLowerCase().includes(q)          ||
@@ -137,7 +135,6 @@ export default function TransferenciasPage() {
     { misTransferencias: filtros.misTransferencias, usuarioId: user?.id },
   );
 
-  // ── Filtrado LOCAL sobre los datos ya cargados por el hook ───────────────
   const itemsFiltrados = useMemo(
     () => aplicarFiltros(transferencias ?? [], filtros, activeTab),
     [transferencias, filtros, activeTab]
@@ -154,19 +151,16 @@ export default function TransferenciasPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [TABS]);
 
-  // ── Limpiar filtros al cambiar de tab ─────────────────────────────────────
   useEffect(() => {
     setFiltros(FILTROS_INICIALES);
   }, [activeTab]);
 
-  // ── Acciones de modales ───────────────────────────────────────────────────
   const handleNuevo      = ()     => { setItemEditar(null); setModalForm(true); };
   const handleEditar     = (item) => { setItemEditar(item); setModalForm(true); setModalDetalle(false); };
   const handleVerDetalle = (item) => { setItemDetalle(item); setModalDetalle(true); };
 
   // ── Acción: cancelar ──────────────────────────────────────────────────────
   const handleCancelarClick = (item) => { setItemCancel(item); setConfirmCancel(true); };
-
   const confirmarCancelacion = async () => {
     setConfirmCancel(false); setCancelling(true);
     try {

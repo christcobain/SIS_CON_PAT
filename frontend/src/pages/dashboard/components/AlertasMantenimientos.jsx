@@ -128,7 +128,7 @@ function InfoChip({ icon, label, color }) {
 }
 
 // ── Tarjeta individual de mantenimiento pendiente ─────────────────────────────
-function TarjetaMantenimiento({ m, sedeId,userId, onDetalle, onAprobado,  acciones  }) {
+function TarjetaMantenimiento({ m, sedeId,userId, onDetalle,  acciones  }) {
   const toast = useToast();
   const fileRef = useRef();
   const [busy,    setBusy]    = useState(false);
@@ -158,7 +158,6 @@ function TarjetaMantenimiento({ m, sedeId,userId, onDetalle, onAprobado,  accion
     try {
       const res = await fn(...args);
       toast.success(res?.message || res?.response?.data?.message || 'Operación realizada con éxito');
-      onAprobado();
     } catch (e) {
       toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Error al procesar la solicitud');
     } finally {
@@ -173,29 +172,6 @@ function TarjetaMantenimiento({ m, sedeId,userId, onDetalle, onAprobado,  accion
     if (fileRef.current) fileRef.current.value = "";
   };
  
-  // const handleAprobar = async() =>{    
-  //   try{
-  //     const result = await mantenimientosService.aprobar(m.id, '');
-  //     toast.success(result?.message || 'Acta firmada subida correctamente.');
-  //   }catch (err) {
-  //     toast.error(err?.response?.data?.error || 'Error al subir el acta.');
-  //   }finally {
-  //     setBusy(false);
-  //   }    
-  // };
-
-  // const handleDevolver = async(motivo) => {
-  //   setModalDv(false);
-  //   try{
-  //     const result = await mantenimientosService.devolver(m.id, motivo);
-  //     toast.success(result?.message||result?.response?.data?.message|| 'Mant. Devuelto.');
-  //   }catch (err) {
-  //     toast.error(err?.response?.data?.error || 'Error al subir el acta.');
-  //   }finally {
-  //     setBusy(false);
-  //   }    
-  // };
-
   // ── Indicador de paso activo ───────────────────────────────────────────────
   const getPaso = () => {
     if (puedeAprobar) return {paso: '①', desc: 'Requiere V°B° de Admin Sede para continuar el flujo', color: 'var(--color-primary)',};

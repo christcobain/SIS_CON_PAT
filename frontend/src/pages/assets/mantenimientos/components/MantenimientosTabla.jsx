@@ -1,4 +1,6 @@
-import Can from '../../../../components/auth/Can';
+import { useState } from 'react';
+import { useToast }      from '../../../../hooks/useToast';
+import { usePermission } from '../../../../hooks/usePermission';
 
 const Icon = ({ name, className = '' }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`}>{name}</span>
@@ -7,65 +9,121 @@ const Icon = ({ name, className = '' }) => (
 const fmtT = iso => !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
 const BADGE = {
-  EN_PROCESO:           { label: 'En proceso',         color: '#1d4ed8', bg: 'rgb(37 99 235 / 0.1)'  },
-  PENDIENTE_APROBACION: { label: 'Pend. aprobación',   color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
-  APROBADO:             { label: 'Pend. Firma',     color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)' },
-  ATENDIDO:             { label: 'Atendido',           color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
-  DEVUELTO:             { label: 'Devuelto',           color: '#e11d48', bg: 'rgb(225 29 72 / 0.1)'  },
-  CANCELADO:            { label: 'Cancelado',          color: '#64748b', bg: 'rgb(100 116 139 / 0.1)' },
+  EN_PROCESO:           { label: 'En proceso',       color: '#1d4ed8', bg: 'rgb(37 99 235 / 0.1)'  },
+  PENDIENTE_APROBACION: { label: 'Pend. aprobación', color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
+  APROBADO:             { label: 'Pend. Firma',       color: '#7c3aed', bg: 'rgb(124 58 237 / 0.1)' },
+  ATENDIDO:             { label: 'Atendido',          color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
+  DEVUELTO:             { label: 'Devuelto',          color: '#e11d48', bg: 'rgb(225 29 72 / 0.1)'  },
+  CANCELADO:            { label: 'Cancelado',         color: '#64748b', bg: 'rgb(100 116 139 / 0.1)' },
 };
 
-function AccionesFila({ item, role, onVerDetalle, onEnviar, onGestionar, onCancelar, onDescargarPDF }) {
-  const isOwner = true; 
-  const canApprove = ['ADMINSEDE', 'COORDSISTEMA', 'SYSADMIN'].includes(role);
+// ── Fila de acciones ──────────────────────────────────────────────────────────
+// Maneja su propio estado busy y toast. Llama directamente a acciones del hook.
+// Para acciones que requieren modal (cancelar, aprobación) usa navegacion.
+function AccionesFila({ item, onVerDetalle, acciones, navegacion }) {
+  const toast = useToast();
+  const { can, canAny } = usePermission();
+  const [busy, setBusy] = useState(false);
+
+  const { enviarAprobacion,  descargarPDFMant } = acciones;
+  const { abrirCancelar, abrirAprobacion } = navegacion;
+
+  const puedeEnviarAprobacion = can('ms-bienes:mantenimientos:add_mantenimiento')
+    && item.estado_mantenimiento === 'EN_PROCESO';
+
+  const esAdminAprobador = can('ms-bienes:mantenimientos:add_mantenimientoaprobacion')
+    && !item.aprobado_por_adminsede_id;
+
+  const puedeDescargarPDF = (item.estado_mantenimiento === 'APROBADO' || item.estado_mantenimiento === 'ATENDIDO')
+    && canAny(
+      'ms-bienes:mantenimientos:add_mantenimiento',
+      'ms-bienes:mantenimientos:VIEW_mantenimiento',
+    );
+
+  const puedeGestionarAprobacion = item.estado_mantenimiento === 'PENDIENTE_APROBACION' && esAdminAprobador;
+
+  const puedeCancelar = puedeEnviarAprobacion
+    && item.estado_mantenimiento !== 'ATENDIDO'
+    && item.estado_mantenimiento !== 'CANCELADO';
+
+  const ejecutar = async (fn, ...args) => {
+    if (!fn) return;
+    setBusy(true);
+    try {
+      const res = await fn(...args);
+      toast.success(res?.message || 'Operación realizada con éxito');
+    } catch (e) {
+      toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Error al procesar la solicitud');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="flex items-center justify-end gap-1">
-      <button onClick={() => onVerDetalle(item)} className="p-2 hover:bg-surface-alt rounded-lg transition-colors text-muted hover:text-primary" title="Ver Detalle">
+      <button
+        onClick={() => onVerDetalle(item)}
+        className="p-2 hover:bg-surface-alt rounded-lg transition-colors text-muted hover:text-primary"
+        title="Ver Detalle"
+      >
         <Icon name="visibility" className="text-[18px]" />
       </button>
 
-      {item.estado_mantenimiento === 'EN_PROCESO' && isOwner && (
-        <button onClick={() => onEnviar(item)} className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-blue-600" title="Enviar a Aprobación">
+      {/* Enviar a aprobación — acción directa (abre ModalEnviarAprobacion con informe técnico) */}
+      {puedeEnviarAprobacion && (
+        <button
+          onClick={() => ejecutar(enviarAprobacion, item.id)}
+          disabled={busy}
+          className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-blue-600 disabled:opacity-50"
+          title="Enviar a Aprobación"
+        >
           <Icon name="send" className="text-[18px]" />
         </button>
       )}
 
-      {item.estado_mantenimiento === 'PENDIENTE_APROBACION' && canApprove && (
-        <button onClick={() => onGestionar(item, 'aprobar')} className="p-2 hover:bg-amber-50 rounded-lg transition-colors text-amber-600" title="Gestionar Aprobación">
+      {/* Gestionar aprobación — abre modal de aprobación/devolución */}
+      {puedeGestionarAprobacion && (
+        <button
+          onClick={() => abrirAprobacion(item)}
+          className="p-2 hover:bg-amber-50 rounded-lg transition-colors text-amber-600"
+          title="Gestionar Aprobación"
+        >
           <Icon name="fact_check" className="text-[18px]" />
         </button>
       )}
 
-      {( item.estado_mantenimiento === 'ATENDIDO') && (
-        <button onClick={() => onDescargarPDF(item.id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600" title="Descargar Documento">
+      {/* Descargar PDF — acción directa */}
+      {puedeDescargarPDF && (
+        <button
+          onClick={() => ejecutar(descargarPDFMant, item.id)}
+          disabled={busy}
+          className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600 disabled:opacity-50"
+          title="Descargar Documento"
+        >
           <Icon name="picture_as_pdf" className="text-[18px]" />
         </button>
       )}
-      <Can perform="ms-bienes:mantenimientos:delete_mantenimiento">
-          {!['ATENDIDO', 'CANCELADO'].includes(item.estado_mantenimiento) && (
-        <button onClick={() => onCancelar(item)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-faint hover:text-red-500" title="Cancelar Orden">
+
+      {/* Cancelar — abre modal de cancelación */}
+      {puedeCancelar && (
+        <button
+          onClick={() => abrirCancelar(item)}
+          className="p-2 hover:bg-red-50 rounded-lg transition-colors text-faint hover:text-red-500"
+          title="Cancelar Orden"
+        >
           <Icon name="cancel" className="text-[18px]" />
         </button>
       )}
-      </Can>
-      
     </div>
   );
-} 
+}
 
-export default function MantenimientosTabla({ items, loading, error, onVerDetalle, onEnviar, onGestionar, onCancelar, onDescargarPDF, role }) {
+// ── Tabla principal ───────────────────────────────────────────────────────────
+export default function MantenimientosTabla({ items, loading, onVerDetalle, acciones, navegacion }) {
   if (loading) return (
     <div className="card p-12 flex flex-col items-center justify-center gap-4">
       <div className="size-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
       <p className="text-xs font-bold text-faint uppercase tracking-widest">Cargando mantenimientos...</p>
-    </div>
-  );
-
-  if (error) return (
-    <div className="card p-12 text-center">
-      <Icon name="error" className="text-red-500 text-4xl mb-2" />
-      <p className="text-sm font-bold text-body">{error}</p>
     </div>
   );
 
@@ -85,14 +143,12 @@ export default function MantenimientosTabla({ items, loading, error, onVerDetall
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {items.map((m) => {
+            {items.map(m => {
               const badge = BADGE[m.estado_mantenimiento] || BADGE.EN_PROCESO;
               return (
                 <tr key={m.id} className="hover:bg-surface-alt/30 transition-colors group">
                   <td className="px-4 py-3">
-                    <p className="text-xs font-bold text-primary r" >
-                      {m.numero_orden}
-                    </p>
+                    <p className="text-xs font-bold text-primary">{m.numero_orden}</p>
                     <p className="text-[10px] text-faint font-medium">Realiza: {m.usuario_realiza_nombre || `ID: ${m.usuario_realiza_id}`}</p>
                   </td>
                   <td className="px-4 py-3">
@@ -111,36 +167,27 @@ export default function MantenimientosTabla({ items, loading, error, onVerDetall
                     )}
                   </td>
                   <td className="px-4 py-3 text-[11px] text-muted">{fmtT(m.fecha_registro)}</td>
-                  <td className="px-4 py-3 text-[11px] text-muted">{m.fecha_inicio_mant ? new Date(m.fecha_inicio_mant).toLocaleDateString() : '—'}</td>
+                  <td className="px-4 py-3 text-[11px] text-muted">
+                    {m.fecha_inicio_mant ? new Date(m.fecha_inicio_mant).toLocaleDateString() : '—'}
+                  </td>
                   <td className="px-4 py-3">
                     {m.estado_mantenimiento === 'CANCELADO' ? (
-                      <span className="text-red-500 font-bold text-[10px] uppercase">
-                        Cancelado
-                      </span>
+                      <span className="text-red-500 font-bold text-[10px] uppercase">Cancelado</span>
                     ) : m.fecha_aprobacion_adminsede ? (
                       <div>
-                        <p className="text-[10px] font-bold text-body">
-                          {m.aprobado_por_adminsede_nombre || 'Admin'}
-                        </p>
-                        <p className="text-[9px] text-faint">
-                          {fmtT(m.fecha_aprobacion_adminsede)}
-                        </p>
+                        <p className="text-[10px] font-bold text-body">{m.aprobado_por_adminsede_nombre || 'Admin'}</p>
+                        <p className="text-[9px] text-faint">{fmtT(m.fecha_aprobacion_adminsede)}</p>
                       </div>
                     ) : (
-                      <span className="text-faint text-[10px]">
-                        Pendiente
-                      </span>
+                      <span className="text-faint text-[10px]">Pendiente</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <AccionesFila 
-                      item={m} 
-                      role={role}
-                      onVerDetalle={onVerDetalle} 
-                      onEnviar={onEnviar}
-                      onGestionar={onGestionar} 
-                      onCancelar={onCancelar}
-                      onDescargarPDF={onDescargarPDF}
+                    <AccionesFila
+                      item={m}
+                      onVerDetalle={onVerDetalle}
+                      acciones={acciones}
+                      navegacion={navegacion}
                     />
                   </td>
                 </tr>
