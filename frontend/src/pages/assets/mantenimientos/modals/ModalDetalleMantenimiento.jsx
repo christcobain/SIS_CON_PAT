@@ -494,6 +494,7 @@ export default function ModalDetalleMantenimiento({
   const user     = useAuthStore(s => s.user);
   const { can }  = usePermission();
   const fileFirmRef = useRef();
+   const {  abrirAprobacion } = navegacion;
 
   const [tab,       setTab]       = useState('info');
   const [busy,      setBusy]      = useState(false);
@@ -707,13 +708,14 @@ export default function ModalDetalleMantenimiento({
           {puedeAprobar && (
             <>
               <button
-                onClick={() => { onClose(); navegacion.abrirAprobacion({ ...m, _modo: 'devolver' }); }}
+                onClick={() => { onClose(); abrirAprobacion({ ...m, _modo: 'devolver' }); }}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
                 style={{ background: 'rgb(180 83 9 / 0.1)', color: '#b45309', border: '1px solid rgb(180 83 9 / 0.25)' }}>
                 <Icon name="reply" className="text-[16px]" />Devolver
               </button>
               <button
-                onClick={() => { onClose(); navegacion.abrirAprobacion({ ...m, _modo: 'aprobar' }); }}
+          
+                onClick={() => abrirAprobacion(item)}
                 className="btn-primary flex items-center gap-2">
                 <Icon name="check_circle" className="text-[16px]" />Aprobar
               </button>

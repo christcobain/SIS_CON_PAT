@@ -18,8 +18,6 @@ const INPUT_STYLE = {
   outline: 'none',
 };
 
-// acciones: { enviarAprobacion }
-// onGuardado: callback tras éxito (Page hace refetch)
 export default function ModalEnviarAprobacion({ open, onClose, item, acciones, onGuardado }) {
   const toast = useToast();
   const { fetchCatalogos, estadosFuncionamiento } = useCatalogos();
@@ -79,7 +77,8 @@ export default function ModalEnviarAprobacion({ open, onClose, item, acciones, o
           observacion_detalle:            d.observacion_detalle.trim(),
         })),
       };
-      await acciones.enviarAprobacion(item.id, payload);
+      const result=await acciones.enviarAprobacion(item.id, payload);
+      toast.success(result?.message ||result?.response?.message||result?.response?.data?.message||'Operación realizada con éxito')
       onGuardado();
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Error al enviar el informe técnico.');

@@ -24,7 +24,7 @@ function AccionesFila({ item, onVerDetalle, acciones, navegacion }) {
   const { can, canAny } = usePermission();
   const [busy, setBusy] = useState(false);
 
-  const { enviarAprobacion,  descargarPDFMant } = acciones;
+  const { descargarPDFMant } = acciones;
   const { abrirEnviar,abrirCancelar, abrirAprobacion } = navegacion;
 
   const puedeEnviarAprobacion = can('ms-bienes:mantenimientos:add_mantenimiento')
