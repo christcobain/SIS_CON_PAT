@@ -61,12 +61,18 @@ export default function ModalAprobacionMantenimiento({
 
   const handleAccion = async () => {
     setConfirm(false);
-    setProcesando(true);
+    setProcesando(true);    
     try {
-      if (modo === 'aprobar')  await acciones.aprobarMant(item.id, observacion.trim());
-      if (modo === 'devolver') await acciones.devolverMant(item.id, observacion.trim());
-      setObservacion('');
-      onGuardado();
+      const obsTrim = observacion.trim();
+      if (modo === 'aprobar') {
+        const result = await acciones.aprobarMant(item.id, obsTrim);
+         toast.success(result?.message || 'Mant. Aprobado correctamente.');
+      } else if (modo === 'devolver') {
+        const result = await acciones.devolverMant(item.id, obsTrim);
+        toast.success(result?.message || 'Mant. Devuelto para corrección.');
+      }
+        setObservacion('');
+        onGuardado();
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Error al procesar la acción.');
     } finally {
