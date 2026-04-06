@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback,useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast }      from '../../../hooks/useToast';
 import bajasService      from '../../../services/bajas.service';
 import { usePermission } from '../../../hooks/usePermission';
@@ -10,7 +10,6 @@ const Icon = ({ name, className = '', style = {} }) => (
 const fmtT = (iso) =>
   !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
-// ── Mini-modal motivo devolución ──────────────────────────────────────────────
 function MiniModalMotivo({ open, onClose, onConfirm, loading }) {
   const [motivo, setMotivo] = useState('');
   if (!open) return null;
@@ -79,7 +78,6 @@ function MiniModalMotivo({ open, onClose, onConfirm, loading }) {
   );
 }
 
-// ── Botón de acción ───────────────────────────────────────────────────────────
 function ActionBtn({ icon, label, onClick, disabled, color, bgColor, borderColor }) {
   return (
     <button
@@ -97,30 +95,37 @@ function ActionBtn({ icon, label, onClick, disabled, color, bgColor, borderColor
   );
 }
 
-// ── Tarjeta individual de baja pendiente ─────────────────────────────────────
-function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
-  const toast            = useToast();
-  const fileRef = useRef();
-  const [busy, setBusy]  = useState(false);
-  const [modalDv, setModalDv] = useState(false);
-  const { can } = usePermission();
-  const {aprobarBaja,devolverBaja,descargarPDFBaja,pdfFirmadoBaja}=acciones;
-  const esAprobador = can('ms-bienes:bajas:add_bajaaprobacion')&&baja.usuario_destino_id==userId &&!baja.aprobado_por_coordsistema_id;
-  const esUsuarioRegistra = can('ms-bienes:bajas:add_baja')&&baja.usuario_elabora_id&&baja.sede_elabora_id==sedeId;
-  
-  const puedeAprobar =    esAprobador && baja.estado_baja === 'PENDIENTE_APROBACION';
-  const puedeDescargarPDF = esUsuarioRegistra&& baja.estado_baja === 'APROBADO' && baja.sede_elabora_id === sedeId ;
-  const puedeSubirActa = puedeDescargarPDF;
-  const hayAccion = puedeAprobar ;
+function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
+  const toast                             = useToast();
+  const fileRef                           = useRef();
+  const [busy, setBusy]                   = useState(false);
+  const [modalDv, setModalDv]             = useState(false);
+  const { can }                           = usePermission();
+  const { aprobarBaja, devolverBaja, descargarPDFBaja, pdfFirmadoBaja } = acciones;
 
+  const esAprobadorPermiso  = can('ms-bienes:bajas:add_bajaaprobacion');
+  const esRegistradorPermiso = can('ms-bienes:bajas:add_baja');
 
+  const esAprobador = esAprobadorPermiso
+    && String(baja.usuario_destino_id) === String(userId)
+    && !baja.aprobado_por_coordsistema_id;
+
+  const esRegistrador = esRegistradorPermiso
+    && String(baja.usuario_elabora_id) === String(userId)
+    && String(baja.sede_elabora_id) === String(sedeId);
+
+  const puedeAprobar       = esAprobador   && baja.estado_baja === 'PENDIENTE_APROBACION';
+  const puedeDescargarPDF  = esRegistrador && baja.estado_baja === 'APROBADO';
+  const puedeSubirActa     = puedeDescargarPDF && !baja.pdf_firmado_path;
+  const hayAccion          = puedeAprobar || puedeDescargarPDF || puedeSubirActa;
 
   const ejecutar = async (fn, ...args) => {
     if (!fn) return;
     setBusy(true);
     try {
       const res = await fn(...args);
-      toast.success(res?.message || res?.response?.message ||res?.response?.data?.message || 'Operación realizada con éxito');
+      toast.success(res?.message || 'Operación realizada con éxito');
+      onRefresh?.();
     } catch (e) {
       toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Error al procesar la solicitud');
     } finally {
@@ -128,56 +133,37 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
     }
   };
 
-
-  // const handleAprobar = async () => {
-  //   setBusy(true);
-  //   try {
-  //     const res = await bajasService.aprobar(baja.id);
-  //     toast.success(res?.message || 'Baja aprobada correctamente.');
-  //     onAprobado();
-  //   } catch (err) {
-  //     toast.error(err?.response?.data?.error || 'Error al aprobar la baja.');
-  //   } finally {
-  //     setBusy(false);
-  //   }
-  // };
-
-  // const handleDevolver = async (motivo) => {
-  //   setModalDv(false);
-  //   setBusy(true);
-  //   try {
-  //     const res = await bajasService.devolver(baja.id, motivo);
-  //     toast.success(res?.message || 'Informe devuelto al asistente.');
-  //     onAprobado();
-  //   } catch (err) {
-  //     toast.error(err?.response?.data?.error || 'Error al devolver el informe.');
-  //   } finally {
-  //     setBusy(false);
-  //   }
-  // };
-
   const handleSubirFirmado = async (e) => {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
-    await ejecutar(pdfFirmadoBaja, baja.id, archivo, userId);
-    if (fileRef.current) fileRef.current.value = "";
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    await ejecutar(pdfFirmadoBaja, baja.id, formData);
+    if (fileRef.current) fileRef.current.value = '';
   };
-  // ── Indicador de paso activo ───────────────────────────────────────────────
+
   const getPaso = () => {
-    if (puedeAprobar) return {paso: '①', desc: 'Requiere V°B° de Admin Sede para continuar el flujo', color: 'var(--color-primary)',};
+    if (puedeAprobar)      return { paso: '①', desc: 'Requiere tu aprobación como Coordinador de Sistemas', color: 'var(--color-primary)' };
+    if (puedeDescargarPDF) return { paso: '②', desc: 'Informe aprobado — descarga, firma y sube el acta', color: '#7c3aed' };
     return null;
   };
   const paso = getPaso();
 
-
+  const BADGE = {
+    PENDIENTE_APROBACION: { label: 'Pendiente',  color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
+    APROBADO:             { label: 'Aprobado',   color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
+    DEVUELTO:             { label: 'Devuelto',   color: '#e11d48', bg: 'rgb(225 29 72 / 0.1)'  },
+    CANCELADO:            { label: 'Cancelado',  color: '#64748b', bg: 'rgb(100 116 139 / 0.1)' },
+    ATENDIDO:             { label: 'Atendido',   color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
+  };
+  const badge = BADGE[baja.estado_baja] ?? { label: baja.estado_baja, color: '#64748b', bg: 'var(--color-border-light)' };
 
   return (
     <>
       <div
         className="card p-4 hover:shadow-md transition-shadow"
-        style={{ borderLeft: puedeAprobar ? '3px solid rgb(127 29 29 / 0.4)' : undefined }}
+        style={{ borderLeft: puedeAprobar ? '3px solid rgb(127 29 29 / 0.4)' : puedeDescargarPDF ? '3px solid rgb(124 58 237 / 0.4)' : undefined }}
       >
-        {/* ── Cabecera ── */}
         <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
           <div className="flex items-start gap-3 min-w-0">
             <div
@@ -192,13 +178,12 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
                   {baja.numero_informe}
                 </p>
                 <span
-                  className="text-[9px] font-black px-2 py-0.5 rounded-md uppercase"
-                  style={{ background: 'rgb(180 83 9 / 0.1)', color: '#b45309' }}
+                  className="text-[9px] font-black px-2 py-0.5 rounded-md"
+                  style={{ color: badge.color, background: badge.bg }}
                 >
-                  Pend. Aprobación
+                  {badge.label}
                 </span>
               </div>
-
               <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-faint)' }}>
                 Elaborado por: <span className="font-bold">{baja.nombre_elabora || '—'}</span>
                 {baja.cargo_elabora ? ` · ${baja.cargo_elabora}` : ''}
@@ -213,7 +198,6 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
             </div>
           </div>
 
-          {/* Botón Detalle */}
           <button
             onClick={() => onDetalle(baja)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer shrink-0"
@@ -228,7 +212,6 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
           </button>
         </div>
 
-        {/* ── Indicador de paso ── */}
         {paso && (
           <div
             className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3"
@@ -243,7 +226,6 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
           </div>
         )}
 
-        {/* ── Barra de acciones ── */}
         <div
           className="flex items-center gap-2 flex-wrap border-t pt-3"
           style={{ borderColor: 'var(--color-border-light)' }}
@@ -253,28 +235,37 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
               <ActionBtn
                 icon="check_circle" label="Aprobar Baja" color="#16a34a"
                 bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
-                disabled={busy}  onClick={() => ejecutar(aprobarBaja, baja.id)} 
+                disabled={busy} onClick={() => ejecutar(aprobarBaja, baja.id)}
               />
               <ActionBtn
-                icon="assignment_return" label="Devolver"  color="#dc2626"
+                icon="assignment_return" label="Devolver" color="#dc2626"
                 bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
-                disabled={busy} onClick={() => setModalDv('devolverBaja')}
+                disabled={busy} onClick={() => setModalDv(true)}
               />
             </>
           )}
-          {puedeDescargarPDF && 
-          <ActionBtn icon="download" label="Descargar Acta PDF" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)" 
-            disabled={busy} onClick={() => ejecutar(descargarPDFBaja, baja.id, {})} />}
-          <input 
-          ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" 
-          className="hidden" onChange={handleSubirFirmado} />
 
-          {puedeSubirActa && 
-          <ActionBtn 
-          icon="upload_file" label="Subir Acta Firmada" 
-          color="#7c3aed" bgColor="rgb(124 58 237 / 0.12)" borderColor="rgb(124 58 237 / 0.45)" disabled={busy} 
-          onClick={() => fileRef.current?.click()} />
-          }
+          {puedeDescargarPDF && (
+            <ActionBtn
+              icon="download" label="Descargar Acta PDF" color="#7c3aed"
+              bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)"
+              disabled={busy} onClick={() => ejecutar(descargarPDFBaja, baja.id)}
+            />
+          )}
+
+          <input
+            ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png"
+            className="hidden" onChange={handleSubirFirmado}
+          />
+
+          {puedeSubirActa && (
+            <ActionBtn
+              icon="upload_file" label="Subir Acta Firmada" color="#7c3aed"
+              bgColor="rgb(124 58 237 / 0.12)" borderColor="rgb(124 58 237 / 0.45)"
+              disabled={busy} onClick={() => fileRef.current?.click()}
+            />
+          )}
+
           {!hayAccion && (
             <p className="text-[10px] italic" style={{ color: 'var(--color-text-faint)' }}>
               Sin acciones disponibles para tu rol en esta etapa.
@@ -287,28 +278,28 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
         open={modalDv}
         onClose={() => setModalDv(false)}
         loading={busy}
-        onConfirm={(m) => {
-            const fn = modalDv === 'devolverBaja' ? devolverBaja:null;
-            setModalDv(null);
-            ejecutar(fn, m.id, { motivo_devolucion: m });
+        onConfirm={(motivo) => {
+          setModalDv(false);
+          ejecutar(devolverBaja, baja.id, motivo);
         }}
       />
     </>
   );
 }
 
-// ── Componente principal exportado ────────────────────────────────────────────
-export default function AlertasBajas({ onVerDetalle, userId,sedeId, 
-  acciones,onRefreshReady }) {
-
+export default function AlertasBajas({ onVerDetalle, userId, sedeId, acciones, onRefreshReady }) {
   const [pendientes, setPendientes] = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [recargar,   setRecargar]   = useState(0);
-  const { canAny } = usePermission();
-  const esAprobador = canAny('ms-bienes:mantenimientos:add_baja','ms-bienes:mantenimientos:add_bajaaprobacion');
+  const { canAny }                  = usePermission();
+
+  const tieneAcceso = canAny(
+    'ms-bienes:bajas:add_baja',
+    'ms-bienes:bajas:add_bajaaprobacion'
+  );
 
   const cargar = useCallback(async () => {
-    if (!esAprobador) { setPendientes([]); return; }
+    if (!tieneAcceso) { setPendientes([]); return; }
     setLoading(true);
     try {
       const data = await bajasService.pendientesAprobacion();
@@ -318,21 +309,22 @@ export default function AlertasBajas({ onVerDetalle, userId,sedeId,
     } finally {
       setLoading(false);
     }
-  }, [ recargar]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tieneAcceso, recargar]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { cargar(); }, [cargar]);
-  const refresh = () => setRecargar((r) => r + 1); 
+
+  const refresh = useCallback(() => setRecargar((r) => r + 1), []);
 
   useEffect(() => {
     onRefreshReady?.(refresh);
-  }, [refresh]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [onRefreshReady, refresh]);
 
-  if (!esAprobador) {
+  if (!tieneAcceso) {
     return (
       <div className="text-center py-10 card rounded-xl">
         <Icon name="check_circle" className="text-[40px]" style={{ color: 'var(--color-text-faint)' }} />
         <p className="text-sm mt-2 font-semibold" style={{ color: 'var(--color-text-muted)' }}>
-          No tienes informes de baja pendientes de aprobar
+          No tienes acceso a los informes de baja pendientes
         </p>
       </div>
     );
@@ -354,7 +346,7 @@ export default function AlertasBajas({ onVerDetalle, userId,sedeId,
           Sin informes de baja pendientes
         </p>
         <p className="text-xs mt-1" style={{ color: 'var(--color-text-faint)' }}>
-          No hay bajas que requieran tu aprobación en este momento.
+          No hay bajas que requieran tu acción en este momento.
         </p>
       </div>
     );
@@ -364,7 +356,7 @@ export default function AlertasBajas({ onVerDetalle, userId,sedeId,
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
         <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>
-          {pendientes.length} informe(s) pendiente(s) de aprobación
+          {pendientes.length} informe(s) pendiente(s)
         </p>
         <button
           onClick={refresh}
@@ -388,6 +380,7 @@ export default function AlertasBajas({ onVerDetalle, userId,sedeId,
           sedeId={sedeId}
           onDetalle={onVerDetalle}
           acciones={acciones}
+          onRefresh={refresh}
         />
       ))}
     </div>

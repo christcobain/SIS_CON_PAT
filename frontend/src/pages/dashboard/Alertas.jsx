@@ -1,12 +1,12 @@
 import { useState, lazy, Suspense, useMemo, useRef } from 'react';
 import { useTransferencias }             from '../../hooks/useTransferencias';
 import { useMantenimientos }             from '../../hooks/useMantenimientos';
-import { useBajas }             from '../../hooks/useBajas';
+import { useBajas }                      from '../../hooks/useBajas';
 import { useNotificaciones,
          dispararRefetchNotificaciones } from '../../hooks/useNotificaciones ';
 import { useToast }                      from '../../hooks/useToast';
 import { usePermission }                 from '../../hooks/usePermission';
-import { useAuthStore }      from '../../store/authStore';
+import { useAuthStore }                  from '../../store/authStore';
 import AlertasStats                      from './components/AlertasStats';
 import AlertasMantenimientos             from './components/AlertasMantenimientos';
 import AlertasHistorial                  from './components/AlertasHistorial';
@@ -38,10 +38,10 @@ const Icon = ({ name, className = '' }) => (
 
 export default function Alertas() {
   const sedes  = useAuthStore(s => s.sedes);
-  const user = useAuthStore(s => s.user);
-  const userId= user?.id;
+  const user   = useAuthStore(s => s.user);
+  const userId = user?.id;
   const sedeId = sedes?.[0]?.id;
-  const toast    = useToast();
+  const toast  = useToast();
   const { canAny, can } = usePermission();
   const [activeTab,   setActiveTab]   = useState('pendientes');
   const [loadingSync, setLoadingSync] = useState(false);
@@ -84,7 +84,7 @@ export default function Alertas() {
       },
     ];
     return allTabs.filter((tab) => tab.visible);
-  }, [ canAny]);
+  }, [canAny]);
 
   const {
     historial,
@@ -96,7 +96,6 @@ export default function Alertas() {
     refetchNotif,
   } = useNotificaciones();
 
-  // ── Transferencias ────────────────────────────────────────────────────────
   const [modalDetalleTransf, setModalDetalleTransf] = useState(false);
   const [itemDetalleTransf,  setItemDetalleTransf]  = useState(null);
 
@@ -115,12 +114,11 @@ export default function Alertas() {
     refetchTransf,
   } = useTransferencias('TRASLADO_SEDE', { misTransferencias: false, usuarioId: user?.id });
 
-  // ── Mantenimientos ────────────────────────────────────────────────────────
-  const [modalDetalleMant, setModalDetalleMant] = useState(false);
-  const [    setModalEnviar]      = useState(false);
-  const [ setModalAprobacion]  = useState(false);
-  const [   setModoAprobacion]   = useState('aprobar');
-  const [itemActivoMant,   setItemActivoMant]   = useState(null);
+  const [modalDetalleMant,  setModalDetalleMant]  = useState(false);
+  const [modalEnviar,       setModalEnviar]        = useState(false);
+  const [modalAprobacion,   setModalAprobacion]    = useState(false);
+  const [modoAprobacion,    setModoAprobacion]     = useState('aprobar');
+  const [itemActivoMant,    setItemActivoMant]     = useState(null);
 
   const {
     refetchMant,
@@ -130,17 +128,21 @@ export default function Alertas() {
     subirFirmadoMant,
   } = useMantenimientos({});
 
-  // ── Bajas ─────────────────────────────────────────────────────────────────
-  const [modalDetalleBaja,  setModalDetalleBaja]  = useState(false);
+  const [modalDetalleBaja,   setModalDetalleBaja]   = useState(false);
   const [modalGestionarBaja, setModalGestionarBaja] = useState(false);
-  const [modoGestionBaja,   setModoGestionBaja]   = useState('aprobar');
-  const [itemActivoBaja,    setItemActivoBaja]    = useState(null);
-  const {aprobarBaja,devolverBaja,descargarPDFBaja,pdfFirmadoBaja
+  const [modoGestionBaja,    setModoGestionBaja]    = useState('aprobar');
+  const [itemActivoBaja,     setItemActivoBaja]     = useState(null);
 
-  }=useBajas({});
+  const {
+    aprobar:     aprobarBaja,
+    devolver:    devolverBaja,
+    descargarPDF: descargarPDFBaja,
+    pdfFirmado:  pdfFirmadoBaja,
+  } = useBajas({});
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  const notificarYRefrescar = () => {    
+  const refreshPendientesRef = useRef(null);
+
+  const notificarYRefrescar = () => {
     dispararRefetchNotificaciones();
     refetchNotif();
   };
@@ -151,72 +153,72 @@ export default function Alertas() {
     setTimeout(() => setLoadingSync(false), 600);
   };
 
-  // ── Transferencias handlers ───────────────────────────────────────────────
-  const refreshPendientesRef = useRef(null);
-
-  const handleVerDetalleTransf = (item) => { 
-    setItemDetalleTransf(item); 
-    setModalDetalleTransf(true); 
+  const handleVerDetalleTransf = (item) => {
+    setItemDetalleTransf(item);
+    setModalDetalleTransf(true);
   };
 
-
-  // ── Mantenimientos handlers ───────────────────────────────────────────────
-  const handleVerDetalleMant = (item) => { setItemActivoMant(item); setModalDetalleMant(true); };
-
-  const handleAprobarMant    = (item) => { setItemActivoMant(item); setModoAprobacion('aprobar'); setModalDetalleMant(false); setModalAprobacion(true); };
-  const handleDevolverMant   = (item) => { setItemActivoMant(item); setModoAprobacion('devolver'); setModalDetalleMant(false); setModalAprobacion(true); };
-  const handleEnviarMant     = (item) => { setItemActivoMant(item); setModalDetalleMant(false); setModalEnviar(true); };
-  const handleConformarMant  = (item) => { setItemActivoMant(item); setModoAprobacion('conformidad'); setModalDetalleMant(false); setModalAprobacion(true); };
+  const handleVerDetalleMant  = (item) => { setItemActivoMant(item); setModalDetalleMant(true); };
+  const handleAprobarMant     = (item) => { setItemActivoMant(item); setModoAprobacion('aprobar');     setModalDetalleMant(false); setModalAprobacion(true); };
+  const handleDevolverMant    = (item) => { setItemActivoMant(item); setModoAprobacion('devolver');    setModalDetalleMant(false); setModalAprobacion(true); };
+  const handleEnviarMant      = (item) => { setItemActivoMant(item); setModalDetalleMant(false); setModalEnviar(true); };
+  const handleConformarMant   = (item) => { setItemActivoMant(item); setModoAprobacion('conformidad'); setModalDetalleMant(false); setModalAprobacion(true); };
   const handleAccionMantExitosa = () => {
     setModalAprobacion(false); setModalEnviar(false); setModalDetalleMant(false); setItemActivoMant(null);
     toast.success('Proceso actualizado exitosamente.');
     refetchMant(); notificarYRefrescar();
   };
 
-  // ── Bajas handlers ────────────────────────────────────────────────────────
-  const handleVerDetalleBaja = (item) => { 
-    setItemActivoBaja(item); 
-    setModalDetalleBaja(true); 
+  const handleVerDetalleBaja = (item) => {
+    setItemActivoBaja(item);
+    setModalDetalleBaja(true);
   };
 
-  const handleGestionarBaja  = (item, modo) => {
+  const handleGestionarBaja = (item, modo) => {
     setItemActivoBaja(item);
     setModoGestionBaja(modo);
     setModalDetalleBaja(false);
     setModalGestionarBaja(true);
   };
+
   const handleAccionBajaExitosa = (res) => {
     setModalGestionarBaja(false); setModalDetalleBaja(false); setItemActivoBaja(null);
     toast.success(res?.message || 'Operación realizada con éxito.');
     notificarYRefrescar();
   };
 
+  const accionesBaja = {
+    aprobarBaja,
+    devolverBaja,
+    descargarPDFBaja,
+    pdfFirmadoBaja,
+  };
+
   return (
     <div className="p-4 max-w-[1600px] animate-in fade-in duration-500 pb-20">
 
-      {/* ── Cabecera ── */}
       <div className="card p-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-1">
-          <div className="flex items-center gap-2">
-            <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-              <Icon name="notifications_active" className="text-[24px]" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'rgb(127 29 29 / 0.1)' }}>
+              <Icon name="notifications_active" className="text-[24px]" style={{ color: 'var(--color-primary)' }} />
             </div>
             <div>
-              <h1 className="page-title">Centro de Notificaciones</h1>
-              <p className="page-subtitle">Aprobaciones pendientes, mantenimientos y actividad reciente.</p>
+              <h1 className="page-title">Centro de Alertas</h1>
+              <p className="page-subtitle">Acciones y aprobaciones pendientes para tu usuario.</p>
             </div>
           </div>
           <button
             onClick={handleSync}
             disabled={loadingSync}
-            className="btn-icon bg-surface border border-border"
-            title="Sincronizar"
+            className="size-9 flex items-center justify-center rounded-xl transition-all cursor-pointer shadow-sm hover:shadow-md active:scale-95"
+            style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
           >
             <Icon name="sync" className={`text-[18px] ${loadingSync ? 'animate-spin text-primary' : 'text-faint'}`} />
           </button>
         </div>
 
-        {/* ── Tabs ── */}
         <div className="flex gap-6 mt-4 pt-3 border-t border-border">
           {TABS.map(({ id, label, icon }) => (
             <button
@@ -235,7 +237,6 @@ export default function Alertas() {
         </div>
       </div>
 
-      {/* ── stats ── */}
       <div className="page-content mt-6">
         <AlertasStats
           loading={loadingSync || loadingNotif}
@@ -247,7 +248,6 @@ export default function Alertas() {
 
         <div className="mt-6">
 
-          {/* ---------------Transferencias ------------------*/}
           {activeTab === 'pendientes' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
@@ -270,31 +270,31 @@ export default function Alertas() {
               />
             </div>
           )}
-      <Suspense fallback={null}>
-        {modalDetalleTransf && (
-          <ModalDetalleTransferencia
-            open={modalDetalleTransf}
-            onClose={() => { setModalDetalleTransf(false); setItemDetalleTransf(null); }}
-            item={itemDetalleTransf}
-            actualizando={actualizando}
-            acciones={{
-              aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
-              rechazarSalidaSeguridad, rechazarEntradaSeguridad,
-              retornoSalida, retornoEntrada, devolver,
-              descargarPDFTransf, subirFirmado,
-            }}
-            onAccionExitosa={() => { 
-              setModalDetalleTransf(false); 
-              setItemDetalleTransf(null);
-              refreshPendientesRef.current?.();
-              refetchTransf(); 
-              notificarYRefrescar(); 
-            }}
-          />
-        )}
-      </Suspense>
 
-          {/*------- Mantenimientos--------------- */}
+          <Suspense fallback={null}>
+            {modalDetalleTransf && (
+              <ModalDetalleTransferencia
+                open={modalDetalleTransf}
+                onClose={() => { setModalDetalleTransf(false); setItemDetalleTransf(null); }}
+                item={itemDetalleTransf}
+                actualizando={actualizando}
+                acciones={{
+                  aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
+                  rechazarSalidaSeguridad, rechazarEntradaSeguridad,
+                  retornoSalida, retornoEntrada, devolver,
+                  descargarPDFTransf, subirFirmado,
+                }}
+                onAccionExitosa={() => {
+                  setModalDetalleTransf(false);
+                  setItemDetalleTransf(null);
+                  refreshPendientesRef.current?.();
+                  refetchTransf();
+                  notificarYRefrescar();
+                }}
+              />
+            )}
+          </Suspense>
+
           {activeTab === 'mantenimiento' && can('ms-bienes:mantenimientos:view_mantenimiento') && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
@@ -303,54 +303,53 @@ export default function Alertas() {
                   Mantenimientos que requieren tu aprobación
                 </p>
               </div>
-              <AlertasMantenimientos 
-                onVerDetalle={handleVerDetalleMant} 
+              <AlertasMantenimientos
+                onVerDetalle={handleVerDetalleMant}
                 userId={userId}
                 sedeId={sedeId}
-                acciones={{aprobarMant,devolverMant,descargarPDFMant,subirFirmadoMant}}
+                acciones={{ aprobarMant, devolverMant, descargarPDFMant, subirFirmadoMant }}
                 onAccionExitosa={() => { refetchMant(); notificarYRefrescar(); }}
                 onRefreshReady={(fn) => { refreshPendientesRef.current = fn; }}
-                />
+              />
             </div>
           )}
-          {/* ── Modales Mantenimientos ── */}
-      <Suspense fallback={null}>
-        {modalDetalleMant && (
-          <ModalDetalleMantenimiento
-            open={modalDetalleMant}
-            onClose={() => { setModalDetalleMant(false); setItemActivoMant(null); }}
-            item={itemActivoMant}
-            onAprobar={handleAprobarMant}
-            onDevolver={handleDevolverMant}
-            onEnviar={handleEnviarMant}
-            onConformar={handleConformarMant}
-            onSubirFirmado={handleAccionMantExitosa}            
-          />
-        )}
- 
-      </Suspense>
-          {/* ----------------Bajas -----------------------*/}
-          {activeTab === 'bajas' && can('ms-bienes:bajas:view_baja') && (
+
+          <Suspense fallback={null}>
+            {modalDetalleMant && (
+              <ModalDetalleMantenimiento
+                open={modalDetalleMant}
+                onClose={() => { setModalDetalleMant(false); setItemActivoMant(null); }}
+                item={itemActivoMant}
+                onAprobar={handleAprobarMant}
+                onDevolver={handleDevolverMant}
+                onEnviar={handleEnviarMant}
+                onConformar={handleConformarMant}
+                onSubirFirmado={handleAccionMantExitosa}
+              />
+            )}
+          </Suspense>
+
+          {activeTab === 'bajas' && canAny('ms-bienes:bajas:add_baja', 'ms-bienes:bajas:add_bajaaprobacion') && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
                 <Icon name="delete_sweep" className="text-[18px]" />
                 <p className="text-[10px] font-black uppercase tracking-[0.2em]">
-                  Informes de baja que requieren tu aprobación
+                  Informes de baja que requieren tu acción
                 </p>
               </div>
-              <AlertasBajas 
-                onVerDetalle={handleVerDetalleBaja} 
+              <AlertasBajas
+                onVerDetalle={handleVerDetalleBaja}
                 userId={userId}
                 sedeId={sedeId}
-                acciones={{aprobarBaja,devolverBaja,descargarPDFBaja,pdfFirmadoBaja}}
-                 onRefreshReady={(fn) => { refreshPendientesRef.current = fn; }}
-
-                />
+                acciones={accionesBaja}
+                onRefreshReady={(fn) => { refreshPendientesRef.current = fn; }}
+              />
             </div>
           )}
+
         </div>
-      </div>     
-      {/* ── Modales Bajas ── */}
+      </div>
+
       <Suspense fallback={null}>
         {modalDetalleBaja && (
           <ModalDetalleBaja
@@ -358,12 +357,12 @@ export default function Alertas() {
             onClose={() => { setModalDetalleBaja(false); setItemActivoBaja(null); }}
             item={itemActivoBaja}
             onGestionar={handleGestionarBaja}
-            puedeAccionesRegistrador={false}
-            puedeAccionesAprobador={can('ms-bienes:bajas:change_baja')}
+            puedeAccionesRegistrador={can('ms-bienes:bajas:add_baja')}
+            puedeAccionesAprobador={can('ms-bienes:bajas:add_bajaaprobacion')}
             onUser={userId}
-            descargarPDF={async (id, firmado) => {
+            descargarPDF={async (id) => {
               const { default: bajasService } = await import('../../services/bajas.service');
-              const blob = await bajasService.descargarPDF(id, firmado);
+              const blob = await bajasService.descargarPDF(id);
               const url  = window.URL.createObjectURL(new Blob([blob]));
               const link = document.createElement('a');
               link.href  = url;
@@ -372,41 +371,33 @@ export default function Alertas() {
               link.click();
               link.remove();
             }}
-            pdfFirmado={null}
+            pdfFirmado={pdfFirmadoBaja}
           />
         )}
+
         {modalGestionarBaja && (
           <ModalGestionarBaja
             open={modalGestionarBaja}
             onClose={() => { setModalGestionarBaja(false); setItemActivoBaja(null); }}
             item={itemActivoBaja}
             modo={modoGestionBaja}
-            onAprobar={async (id) => {
-              const { default: bajasService } = await import('../../services/bajas.service');
-              const res = await bajasService.aprobar(id);
-              handleAccionBajaExitosa(res);
-            }}
-            onDevolver={async (id, motivo) => {
-              const { default: bajasService } = await import('../../services/bajas.service');
-              const res = await bajasService.devolver(id, motivo);
-              handleAccionBajaExitosa(res);
-            }}
-            onReenviar={() => {}}
+            acciones={accionesBaja}
+            onAccionExitosa={handleAccionBajaExitosa}
           />
         )}
       </Suspense>
-      {/* ----------------Historial ----------------------- */}
-          {activeTab === 'historial' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
-                <Icon name="history" className="text-[18px]" />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">
-                  Registro de Actividad Reciente
-                </p>
-              </div>
-              <AlertasHistorial items={historial} loading={loadingSync || loadingNotif} />
-            </div>
-          )}
+
+      {activeTab === 'historial' && (
+        <div className="space-y-4 mt-6">
+          <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
+            <Icon name="history" className="text-[18px]" />
+            <p className="text-[10px] font-black uppercase tracking-[0.2em]">
+              Registro de Actividad Reciente
+            </p>
+          </div>
+          <AlertasHistorial items={historial} loading={loadingSync || loadingNotif} />
+        </div>
+      )}
     </div>
   );
 }

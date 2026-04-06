@@ -278,26 +278,29 @@ class BajaService:
     def listar_pendientes_aprobacion(user_id: int, role: str, sede_id: int, token: str) -> list:
         qs = BajaRepository.filter({})
         qs = qs.exclude(estado_baja__in=['ATENDIDO', 'CANCELADO'])
+ 
         if role == 'SYSADMIN':
             qs = qs.filter(estado_baja='PENDIENTE_APROBACION')
         else:
             filtros = Q()
+ 
             filtros |= Q(
                 estado_baja='PENDIENTE_APROBACION',
-                sede_id=sede_id,
+                sede_elabora_id=sede_id,
                 usuario_destino_id=user_id,
                 aprobado_por_coordsistema_id__isnull=True,
             )
+ 
             filtros |= Q(
                 estado_baja='APROBADO',
-                sede_id=sede_id,
+                sede_elabora_id=sede_id,
                 usuario_elabora_id=user_id,
-                tiene_pdf_firmado=False  
+                pdf_firmado_path__isnull=True,
             ) & ~Q(aprobado_por_coordsistema_id=user_id)
+ 
             qs = qs.filter(filtros)
-        qs = qs.order_by('-fecha_registro').distinct()
-        lista = list(qs)
-        return lista
+ 
+        return list(qs.order_by('-fecha_registro').distinct())
     
     @staticmethod
     @transaction.atomic
