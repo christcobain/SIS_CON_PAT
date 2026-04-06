@@ -91,6 +91,7 @@ class BajaViewSet(ViewSet):
             'retrieve':                [OR(view_b,view_ba)],
             'create':                  [add_b],
             'reenviar':                [add_b],
+            'pendientes_aprobacion':    [OR(add_b,add_ba)],
             'aprobar':                 [add_ba],
             'devolver':                [add_ba],
             'cancelar':                [add_b],
