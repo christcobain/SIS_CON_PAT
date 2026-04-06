@@ -59,6 +59,7 @@ class BajaListSerializer(serializers.ModelSerializer):
             'modulo_elabora_id',
             'modulo_elabora_nombre',
             'usuario_destino_id',
+            'usuario_destino_nombre'
             'nombre_destino',
             'fecha_registro',
             'fecha_aprobacion',

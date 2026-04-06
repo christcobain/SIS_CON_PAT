@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, Any, List
+from django.db.models import  Q
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, NotFound
@@ -24,14 +25,12 @@ ESTADOS_FUNCIONAMIENTO_BAJA = {'INOPERATIVO', 'OBSOLETO', 'IRRECUPERABLE'}
 
 
 class BajaService:
-
     @staticmethod
     def _get_or_404(pk: int):
         baja = BajaRepository.get_by_id(pk)
         if not baja:
             raise NotFound(f'Baja con id={pk} no encontrada.')
         return baja
-
     @staticmethod
     def _validar_item(item: Dict[str, Any]) -> Dict[str, Any]:
         bien = BienRepository.get_by_id(item['bien_id'])
@@ -274,6 +273,32 @@ class BajaService:
         )
         return {'success': True, 'message': 'Informe devuelto al asistente para corrección.'}
 
+
+    @staticmethod
+    def listar_pendientes_aprobacion(user_id: int, role: str, sede_id: int, token: str) -> list:
+        qs = BajaRepository.filter({})
+        qs = qs.exclude(estado_baja__in=['ATENDIDO', 'CANCELADO'])
+        if role == 'SYSADMIN':
+            qs = qs.filter(estado_baja='PENDIENTE_APROBACION')
+        else:
+            filtros = Q()
+            filtros |= Q(
+                estado_baja='PENDIENTE_APROBACION',
+                sede_id=sede_id,
+                usuario_destino_id=user_id,
+                aprobado_por_coordsistema_id__isnull=True,
+            )
+            filtros |= Q(
+                estado_baja='APROBADO',
+                sede_id=sede_id,
+                usuario_elabora_id=user_id,
+                tiene_pdf_firmado=False  
+            ) & ~Q(aprobado_por_coordsistema_id=user_id)
+            qs = qs.filter(filtros)
+        qs = qs.order_by('-fecha_registro').distinct()
+        lista = list(qs)
+        return lista
+    
     @staticmethod
     @transaction.atomic
     def cancelar(pk: int,motivo_cancelacion_id: int, detalle: str,usuario_id: int,role:str) -> Dict[str, Any]:
@@ -338,6 +363,7 @@ class BajaService:
             'estado_baja': 'ATENDIDO',
             'pdf_firmado_path':  ruta,
             'fecha_pdf_firmado': timezone.now(),
+            'tiene_pdf_firmado':    True,
             'subido_por_id':     usuario_id,
         })
         BajaAprobacionRepository.registrar(

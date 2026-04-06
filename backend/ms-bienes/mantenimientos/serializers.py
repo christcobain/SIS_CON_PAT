@@ -3,12 +3,6 @@ from .models import Mantenimiento, MantenimientoDetalle, MantenimientoImagen, Ma
 
 
 class MantenimientoImagenSerializer(serializers.ModelSerializer):
-    """
-    Serializa las imágenes de evidencia fotográfica.
-    El campo `imagen_path` contiene la ruta relativa dentro del bucket de Supabase.
-    El frontend puede solicitar una URL firmada temporal al endpoint
-    GET /mantenimientos/{id}/imagenes/{imagen_id}/url/
-    """
     class Meta:
         model  = MantenimientoImagen
         fields = [
@@ -18,13 +12,10 @@ class MantenimientoImagenSerializer(serializers.ModelSerializer):
             'subido_por_id',
             'fecha_subida',
         ]
-
-
 class MantenimientoAprobacionSerializer(serializers.ModelSerializer):
     class Meta:
         model  = MantenimientoAprobacion
         fields = ['id', 'rol_aprobador', 'accion', 'usuario_id', 'observacion', 'fecha']
-
 
 class MantenimientoDetalleSerializer(serializers.ModelSerializer):
     bien_id                              = serializers.IntegerField(source='bien.id', read_only=True)

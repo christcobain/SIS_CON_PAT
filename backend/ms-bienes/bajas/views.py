@@ -32,7 +32,7 @@ from .serializers import (
     BienParaBajaSerializer,
 )
 
-def _get_token(self, request) -> str:
+def _get_token(request) -> str:
         cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
         token = request.COOKIES.get(cookie_name)
         if not token:
@@ -40,7 +40,7 @@ def _get_token(self, request) -> str:
             if auth_header.startswith('Bearer '):
                 token = auth_header.split(' ', 1)[1]
         return token
-def _get_sede(self, request) -> int:
+def _get_sede(request) -> int:
         sedes = request.auth.get('sedes_ids', []) if request.auth else []
         if not sedes:
             raise ValidationError('El usuario no tiene sede asignada.')
@@ -183,6 +183,29 @@ class BajaViewSet(ViewSet):
             'message': result['message'],
             'data':    BajaDetailSerializer(result['data']).data,
         })
+
+    @extend_schema(
+        tags=['Bajas'],
+        summary='Pendientes de aprobación Bajas',
+        description=(
+            'Liasta las Bajas en estado `PENDIENTE_APROBACION` '
+            'filtrando por sede del usuario autenticado.\n\n'
+            '- **SYSADMIN**: todos los pendientes.\n'
+            '- **COORDSISTEMA**: de todas las sedes'
+            '- **ASISTSISTEMA**: de su propia sede'
+        ),
+        responses={200: BajaListSerializer(many=True)},
+    )
+    @action(detail=False, methods=['get'], url_path='pendientes-aprobacion')
+    def pendientes_aprobacion(self,request):
+        qs=BajaService.listar_pendientes_aprobacion(
+            user_id=request.user.id,
+            role=_get_role(request),
+            sede_id=_get_sede(request),
+            token=_get_token(request),
+            )
+        return Response(BajaListSerializer(qs,many=True).data)
+
 
     @extend_schema(
         tags=['Bajas'],
