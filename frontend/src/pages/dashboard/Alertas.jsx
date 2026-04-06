@@ -116,9 +116,9 @@ export default function Alertas() {
 
   // ── Mantenimientos ────────────────────────────────────────────────────────
   const [modalDetalleMant, setModalDetalleMant] = useState(false);
-  const [modalEnviar,      setModalEnviar]      = useState(false);
-  const [modalAprobacion,  setModalAprobacion]  = useState(false);
-  const [modoAprobacion,   setModoAprobacion]   = useState('aprobar');
+  const [    setModalEnviar]      = useState(false);
+  const [ setModalAprobacion]  = useState(false);
+  const [   setModoAprobacion]   = useState('aprobar');
   const [itemActivoMant,   setItemActivoMant]   = useState(null);
 
   const {

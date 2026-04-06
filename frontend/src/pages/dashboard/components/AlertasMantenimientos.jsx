@@ -157,7 +157,7 @@ function TarjetaMantenimiento({ m, sedeId,userId, onDetalle,  acciones  }) {
     setBusy(true);
     try {
       const res = await fn(...args);
-      toast.success(res?.message || res?.response?.data?.message || 'Operación realizada con éxito');
+      toast.success(res?.message || res?.response?.message ||res?.response?.data?.message || 'Operación realizada con éxito');
     } catch (e) {
       toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Error al procesar la solicitud');
     } finally {

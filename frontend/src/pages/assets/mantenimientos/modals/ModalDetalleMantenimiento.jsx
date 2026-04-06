@@ -533,7 +533,7 @@ export default function ModalDetalleMantenimiento({
     setBusy(true);
     try {
       const res = await fn(...args);
-      if (res?.message) toast.success(res.message);
+      toast.success(res?.message||res?.response?.message||res?.response?.data?.message||'Accion realizada con exito');
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Error al procesar la acción.');
     } finally {
@@ -548,6 +548,7 @@ export default function ModalDetalleMantenimiento({
     if (!archivo) return;
     await ejecutar(acciones.subirFirmadoMant, m.id, archivo, user?.id);
     if (fileFirmRef.current) fileFirmRef.current.value = '';
+    onClose();
   };
     const refrescarItem = async () => {
     try {
