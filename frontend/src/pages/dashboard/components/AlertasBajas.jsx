@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback,useRef } from 'react';
 import { useToast }      from '../../../hooks/useToast';
 import bajasService      from '../../../services/bajas.service';
 import { usePermission } from '../../../hooks/usePermission';
@@ -14,7 +14,6 @@ const fmtT = (iso) =>
 function MiniModalMotivo({ open, onClose, onConfirm, loading }) {
   const [motivo, setMotivo] = useState('');
   if (!open) return null;
-
   const handleConfirm = () => {
     if (motivo.trim().length < 5) return;
     onConfirm(motivo.trim());
@@ -101,20 +100,21 @@ function ActionBtn({ icon, label, onClick, disabled, color, bgColor, borderColor
 // ── Tarjeta individual de baja pendiente ─────────────────────────────────────
 function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
   const toast            = useToast();
+  const fileRef = useRef();
   const [busy, setBusy]  = useState(false);
   const [modalDv, setModalDv] = useState(false);
   const { can } = usePermission();
   const {aprobarBaja,devolverBaja,descargarPDFBaja,pdfFirmadoBaja}=acciones;
-  const esAprobador = can('ms-bienes:bajas:add_bajaaprobacion') &&!baja.aprobado_por_coordsistema_id;
-  const esUsuarioFinal = can('ms-bienes:bajas:add_baja')&&baja.usuario_elabora_id&&baja.sede_elabora_id==sedeId;
+  const esAprobador = can('ms-bienes:bajas:add_bajaaprobacion')&&baja.usuario_destino_id==userId &&!baja.aprobado_por_coordsistema_id;
+  const esUsuarioRegistra = can('ms-bienes:bajas:add_baja')&&baja.usuario_elabora_id&&baja.sede_elabora_id==sedeId;
   
   const puedeAprobar =    esAprobador && baja.estado_baja === 'PENDIENTE_APROBACION';
-  const puedeDevolver = puedeAprobar;
-  const puedeDescargarPDF = esUsuarioFinal&& baja.estado_baja === 'APROBADO' && baja.sede_elabora_id === miSede ;
+  const puedeDescargarPDF = esUsuarioRegistra&& baja.estado_baja === 'APROBADO' && baja.sede_elabora_id === sedeId ;
   const puedeSubirActa = puedeDescargarPDF;
-  const hayAccion = puedeAprobar || puedeDevolver;
+  const hayAccion = puedeAprobar ;
 
-  const esDestinatario = Number(userId) === Number(baja.usuario_destino_id);
+
+
   const ejecutar = async (fn, ...args) => {
     if (!fn) return;
     setBusy(true);
@@ -129,45 +129,53 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
   };
 
 
-  const handleAprobar = async () => {
-    setBusy(true);
-    try {
-      const res = await bajasService.aprobar(baja.id);
-      toast.success(res?.message || 'Baja aprobada correctamente.');
-      onAprobado();
-    } catch (err) {
-      toast.error(err?.response?.data?.error || 'Error al aprobar la baja.');
-    } finally {
-      setBusy(false);
-    }
-  };
+  // const handleAprobar = async () => {
+  //   setBusy(true);
+  //   try {
+  //     const res = await bajasService.aprobar(baja.id);
+  //     toast.success(res?.message || 'Baja aprobada correctamente.');
+  //     onAprobado();
+  //   } catch (err) {
+  //     toast.error(err?.response?.data?.error || 'Error al aprobar la baja.');
+  //   } finally {
+  //     setBusy(false);
+  //   }
+  // };
 
-  const handleDevolver = async (motivo) => {
-    setModalDv(false);
-    setBusy(true);
-    try {
-      const res = await bajasService.devolver(baja.id, motivo);
-      toast.success(res?.message || 'Informe devuelto al asistente.');
-      onAprobado();
-    } catch (err) {
-      toast.error(err?.response?.data?.error || 'Error al devolver el informe.');
-    } finally {
-      setBusy(false);
-    }
-  };
+  // const handleDevolver = async (motivo) => {
+  //   setModalDv(false);
+  //   setBusy(true);
+  //   try {
+  //     const res = await bajasService.devolver(baja.id, motivo);
+  //     toast.success(res?.message || 'Informe devuelto al asistente.');
+  //     onAprobado();
+  //   } catch (err) {
+  //     toast.error(err?.response?.data?.error || 'Error al devolver el informe.');
+  //   } finally {
+  //     setBusy(false);
+  //   }
+  // };
 
   const handleSubirFirmado = async (e) => {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
-    await ejecutar(subirFirmadoMant, m.id, archivo, userId);
+    await ejecutar(pdfFirmadoBaja, baja.id, archivo, userId);
     if (fileRef.current) fileRef.current.value = "";
   };
+  // ── Indicador de paso activo ───────────────────────────────────────────────
+  const getPaso = () => {
+    if (puedeAprobar) return {paso: '①', desc: 'Requiere V°B° de Admin Sede para continuar el flujo', color: 'var(--color-primary)',};
+    return null;
+  };
+  const paso = getPaso();
+
+
 
   return (
     <>
       <div
         className="card p-4 hover:shadow-md transition-shadow"
-        style={{ borderLeft: esDestinatario ? '3px solid rgb(127 29 29 / 0.4)' : undefined }}
+        style={{ borderLeft: puedeAprobar ? '3px solid rgb(127 29 29 / 0.4)' : undefined }}
       >
         {/* ── Cabecera ── */}
         <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
@@ -221,14 +229,16 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
         </div>
 
         {/* ── Indicador de paso ── */}
-        {esDestinatario && (
+        {paso && (
           <div
             className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3"
-            style={{ background: 'rgb(127 29 29 / 0.05)', border: '1px dashed rgb(127 29 29 / 0.25)' }}
+            style={{ background: `${paso.color}08`, border: `1px dashed ${paso.color}30` }}
           >
-            <span className="text-[12px] font-black shrink-0" style={{ color: 'var(--color-primary)' }}>①</span>
+            <span className="text-[12px] font-black shrink-0" style={{ color: paso.color }}>
+              {paso.paso}
+            </span>
             <p className="text-[10px] font-semibold" style={{ color: 'var(--color-text-muted)' }}>
-              Este informe está dirigido a ti — requiere tu V°B° para proceder con la baja definitiva
+              {paso.desc}
             </p>
           </div>
         )}
@@ -238,28 +248,34 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
           className="flex items-center gap-2 flex-wrap border-t pt-3"
           style={{ borderColor: 'var(--color-border-light)' }}
         >
-          {esDestinatario ? (
+          {puedeAprobar && (
             <>
               <ActionBtn
-                icon="check_circle"
-                label="Aprobar Baja"
-                color="#16a34a"
-                bgColor="rgb(22 163 74 / 0.08)"
-                borderColor="rgb(22 163 74 / 0.3)"
-                disabled={busy}
-                onClick={handleAprobar}
+                icon="check_circle" label="Aprobar Baja" color="#16a34a"
+                bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
+                disabled={busy}  onClick={() => ejecutar(aprobarBaja, baja.id)} 
               />
               <ActionBtn
-                icon="assignment_return"
-                label="Devolver"
-                color="#dc2626"
-                bgColor="rgb(220 38 38 / 0.06)"
-                borderColor="rgb(220 38 38 / 0.25)"
-                disabled={busy}
-                onClick={() => setModalDv(true)}
+                icon="assignment_return" label="Devolver"  color="#dc2626"
+                bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
+                disabled={busy} onClick={() => setModalDv('devolverBaja')}
               />
             </>
-          ) : (
+          )}
+          {puedeDescargarPDF && 
+          <ActionBtn icon="download" label="Descargar Acta PDF" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)" 
+            disabled={busy} onClick={() => ejecutar(descargarPDFBaja, baja.id, {})} />}
+          <input 
+          ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" 
+          className="hidden" onChange={handleSubirFirmado} />
+
+          {puedeSubirActa && 
+          <ActionBtn 
+          icon="upload_file" label="Subir Acta Firmada" 
+          color="#7c3aed" bgColor="rgb(124 58 237 / 0.12)" borderColor="rgb(124 58 237 / 0.45)" disabled={busy} 
+          onClick={() => fileRef.current?.click()} />
+          }
+          {!hayAccion && (
             <p className="text-[10px] italic" style={{ color: 'var(--color-text-faint)' }}>
               Sin acciones disponibles para tu rol en esta etapa.
             </p>
@@ -271,7 +287,11 @@ function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
         open={modalDv}
         onClose={() => setModalDv(false)}
         loading={busy}
-        onConfirm={handleDevolver}
+        onConfirm={(m) => {
+            const fn = modalDv === 'devolverBaja' ? devolverBaja:null;
+            setModalDv(null);
+            ejecutar(fn, m.id, { motivo_devolucion: m });
+        }}
       />
     </>
   );

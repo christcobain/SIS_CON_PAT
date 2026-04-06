@@ -9,7 +9,6 @@ import { useLocaciones } from '../../../../hooks/useLocaciones';
 import { useUsuarios }   from '../../../../hooks/useUsuarios';
 import { useCatalogos }  from '../../../../hooks/useCatalogos';
 import { useBienesEnriquecidos } from '../../../../hooks/useBienesEnriquecidos';
-import { useAuthStore }  from '../../../../store/authStore';
 import { useToast }      from '../../../../hooks/useToast';
 import usuariosService   from '../../../../services/usuarios.service';
 
@@ -238,15 +237,23 @@ const FORM_BASE = {
   piso_destino: '', motivo_transferencia_id: '', descripcion: '',
 };
 
+async function cargarUsuariosDeSede(sedeId) {
+  const data = await usuariosService.listar({ sedes: sedeId, is_active: true });
+  const lista = Array.isArray(data) ? data : data?.results ?? [];
+  return lista.filter(u =>
+    (u.sedes ?? []).some(s => String(s.id) === String(sedeId))
+  );
+}
+
 export default function ModalTransferencia({
   open, onClose, activeTab, item, actualizando,
   crearTraslado, crearAsignacion, reenviarTransferencia,
-  obtenerTransf, onGuardado,sedesAuth
+  obtenerTransf, onGuardado, sedesAuth,
 }) {
   const toast      = useToast();
   const isTraslado = activeTab === 'TRASLADO_SEDE';
   const isEditar   = !!item;
-  // const sedes_auth   = sedesAuth(s => s.sedes);
+
   const sede_auth_id = sedesAuth?.[0]?.id;
 
   const { bienes: todosBienes, loading: loadingBienes } = useBienes({});
@@ -271,6 +278,8 @@ export default function ModalTransferencia({
     setErrors({});
     setBuscador('');
     setItemCompleto(null);
+    setUsuariosPorSede([]);
+
     if (isEditar && item) {
       setLoadingDetalle(true);
       obtenerTransf(item.id)
@@ -278,7 +287,9 @@ export default function ModalTransferencia({
           const detalle = data?.data ?? data;
           setItemCompleto(detalle);
           const bienIds = (detalle.bienes ?? []).map(b => b.bien_id).filter(Boolean);
-          const motivoEncontrado = motivosTransferencia.find(m => m.nombre === detalle.motivo_transferencia_nombre);
+          const motivoEncontrado = motivosTransferencia.find(
+            m => m.nombre === detalle.motivo_transferencia_nombre
+          );
           setForm({
             bien_ids:             bienIds,
             usuario_destino_id:   String(detalle.usuario_destino_id ?? ''),
@@ -307,54 +318,50 @@ export default function ModalTransferencia({
         })
         .finally(() => setLoadingDetalle(false));
     } else {
-      setForm({ ...FORM_BASE, sede_destino_id: isTraslado ? '' : String(sede_auth_id ?? '') });
+      setForm({ ...FORM_BASE });
     }
-  }, [open, item?.id, isTraslado, fetchCatalogos, isEditar, obtenerTransf, sede_auth_id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, item?.id, isTraslado, isEditar]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const itemData = itemCompleto ?? item;
 
   useEffect(() => {
+    if (!open) return;
+
     if (!isTraslado) {
-      const misUsuarios = usuariosMs.filter(u =>
+      if (!sede_auth_id) return;
+      const locales = usuariosMs.filter(u =>
         (u.sedes ?? []).some(s => String(s.id) === String(sede_auth_id))
       );
-      if (misUsuarios.length > 0) {
-        setUsuariosPorSede(misUsuarios);
-      } else if (sede_auth_id) {
-        setLoadingUsuariosSede(true);
-        usuariosService.filtrar({ is_active: true, sedes: [sede_auth_id] })
-          .then(data => {
-            const lista = Array.isArray(data) ? data : data?.results ?? [];
-            setUsuariosPorSede(lista);
-          })
-          .catch(() => setUsuariosPorSede([]))
-          .finally(() => setLoadingUsuariosSede(false));
+      if (locales.length > 0) {
+        setUsuariosPorSede(locales);
+        return;
       }
+      setLoadingUsuariosSede(true);
+      cargarUsuariosDeSede(sede_auth_id)
+        .then(lista => setUsuariosPorSede(lista))
+        .catch(() => setUsuariosPorSede([]))
+        .finally(() => setLoadingUsuariosSede(false));
       return;
     }
 
-    // ── TRASLADO SEDE: carga los usuarios de la sede destino elegida ──
     const sedeId = form.sede_destino_id;
     if (!sedeId) {
       setUsuariosPorSede([]);
       return;
     }
-    const usuariosFiltrados = usuariosMs.filter(u =>
+    const locales = usuariosMs.filter(u =>
       (u.sedes ?? []).some(s => String(s.id) === String(sedeId))
     );
-    if (usuariosFiltrados.length > 0) {
-      setUsuariosPorSede(usuariosFiltrados);
-    } else {
-      setLoadingUsuariosSede(true);
-      usuariosService.filtrar({ is_active: true, sedes: [sedeId] })
-        .then(data => {
-          const lista = Array.isArray(data) ? data : data?.results ?? [];
-          setUsuariosPorSede(lista);
-        })
-        .catch(() => setUsuariosPorSede([]))
-        .finally(() => setLoadingUsuariosSede(false));
+    if (locales.length > 0) {
+      setUsuariosPorSede(locales);
+      return;
     }
-  }, [form.sede_destino_id, isTraslado, usuariosMs, sede_auth_id]); // eslint-disable-line react-hooks/exhaustive-deps
+    setLoadingUsuariosSede(true);
+    cargarUsuariosDeSede(sedeId)
+      .then(lista => setUsuariosPorSede(lista))
+      .catch(() => setUsuariosPorSede([]))
+      .finally(() => setLoadingUsuariosSede(false));
+  }, [open, form.sede_destino_id, isTraslado, usuariosMs, sede_auth_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -400,17 +407,15 @@ export default function ModalTransferencia({
   const totalDisponibles = bienesFiltradosBuscador.filter(b => ESTADO_BIEN_COLOR(b.estado_bien_nombre).ok).length;
   const totalBloqueados  = bienesFiltradosBuscador.length - totalDisponibles;
 
-  // const ubicacionesDest = (ubicaciones ?? []).filter(m => m.is_active !== false);
-
   const toggleBien = id => set('bien_ids',
     form.bien_ids.includes(id) ? form.bien_ids.filter(x => x !== id) : [...form.bien_ids, id]
   );
 
   const validar = () => {
     const e = {};
-    if (!form.bien_ids.length)                       e.bien_ids           = 'Selecciona al menos un bien.';
-    if (!form.usuario_destino_id)                    e.usuario_destino_id = 'Campo obligatorio.';
-    if (isTraslado && !form.sede_destino_id)         e.sede_destino_id    = 'Campo obligatorio.';
+    if (!form.bien_ids.length)               e.bien_ids           = 'Selecciona al menos un bien.';
+    if (!form.usuario_destino_id)            e.usuario_destino_id = 'Campo obligatorio.';
+    if (isTraslado && !form.sede_destino_id) e.sede_destino_id    = 'Campo obligatorio.';
     return e;
   };
 
@@ -420,7 +425,7 @@ export default function ModalTransferencia({
     const payload = {
       bien_ids:           form.bien_ids.map(Number),
       usuario_destino_id: Number(form.usuario_destino_id),
-      sede_destino_id:    Number(form.sede_destino_id || sede_auth_id),
+      sede_destino_id:    isTraslado ? Number(form.sede_destino_id) : Number(sede_auth_id),
       ...(form.modulo_destino_id       && { modulo_destino_id:       Number(form.modulo_destino_id)       }),
       ...(form.ubicacion_destino_id    && { ubicacion_destino_id:    Number(form.ubicacion_destino_id)    }),
       ...(form.piso_destino            && { piso_destino:            Number(form.piso_destino)            }),
@@ -477,7 +482,6 @@ export default function ModalTransferencia({
           ) : (
             <div className="flex" style={{ minHeight: '60vh', maxHeight: '68vh' }}>
 
-              {/* ── Panel principal: selección de bienes ── */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4 min-w-0">
 
                 {isEditar && itemData && (
@@ -584,11 +588,9 @@ export default function ModalTransferencia({
                 </div>
               </div>
 
-              {/* ── Panel lateral: destino ── */}
               <aside className="w-60 shrink-0 p-4 space-y-4 overflow-y-auto border-l"
                 style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface-alt)' }}>
 
-                {/* Selección actual */}
                 <div className="card p-3 space-y-3">
                   <p className="text-[9px] font-black uppercase tracking-widest"
                     style={{ color: 'var(--color-text-muted)' }}>Selección actual</p>
@@ -610,7 +612,6 @@ export default function ModalTransferencia({
                   </div>
                 </div>
 
-                {/* Disponibilidad */}
                 {!loadingBienes && (
                   <div className="card p-3 space-y-2">
                     <p className="text-[9px] font-black uppercase tracking-widest"
@@ -634,7 +635,6 @@ export default function ModalTransferencia({
                   </div>
                 )}
 
-                {/* ── Sede destino: solo visible en TRASLADO_SEDE ── */}
                 {isTraslado && (
                   <div>
                     <FLabel required>Sede destino</FLabel>
@@ -643,6 +643,7 @@ export default function ModalTransferencia({
                       onChange={v => {
                         set('sede_destino_id', v);
                         set('usuario_destino_id', '');
+                        setUsuariosPorSede([]);
                       }}>
                       <option value="">Seleccionar sede...</option>
                       {(sedes ?? []).filter(s => s.is_active !== false).map(s => (
@@ -655,18 +656,17 @@ export default function ModalTransferencia({
                   </div>
                 )}
 
-                {/* ── Usuario destinatario ── */}
                 <div>
                   <FLabel required>
                     Usuario destinatario
                     {isTraslado && form.sede_destino_id && (
                       <span className="ml-1 text-[8px] font-bold normal-case" style={{ color: 'var(--color-text-muted)' }}>
-                        (de la sede destino)
+                        (sede destino)
                       </span>
                     )}
                     {!isTraslado && (
                       <span className="ml-1 text-[8px] font-bold normal-case" style={{ color: 'var(--color-text-muted)' }}>
-                        (usuarios de tu sede)
+                        (tu sede)
                       </span>
                     )}
                   </FLabel>
@@ -701,7 +701,6 @@ export default function ModalTransferencia({
                   <InfoUsuarioDestino usuario={usuarioDestinoObj} />
                 </div>
 
-                {/* Piso + Motivo */}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <FLabel>Piso</FLabel>
@@ -727,7 +726,6 @@ export default function ModalTransferencia({
                   </div>
                 </div>
 
-                {/* Descripción */}
                 <div>
                   <FLabel>Descripción / Justificación</FLabel>
                   <textarea
@@ -742,7 +740,6 @@ export default function ModalTransferencia({
                   />
                 </div>
 
-                {/* Nota informativa */}
                 <div className="flex items-start gap-2 p-3 rounded-xl"
                   style={{
                     background: isTraslado ? 'rgb(37 99 235 / 0.06)' : 'rgb(22 163 74 / 0.06)',
@@ -757,7 +754,6 @@ export default function ModalTransferencia({
                   </p>
                 </div>
 
-                {/* Leyenda de estados */}
                 <div className="space-y-1.5">
                   <p className="text-[9px] font-black uppercase tracking-widest"
                     style={{ color: 'var(--color-text-muted)' }}>Leyenda estados</p>

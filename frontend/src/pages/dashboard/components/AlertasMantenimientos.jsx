@@ -286,7 +286,9 @@ function TarjetaMantenimiento({ m, sedeId,userId, onDetalle,  acciones  }) {
           {puedeDescargarPDF && 
           <ActionBtn icon="download" label="Descargar Acta PDF" color="#7c3aed" bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)" 
             disabled={busy} onClick={() => ejecutar(descargarPDFMant, m.id, {})} />}
-          <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirFirmado} />
+          <input 
+          ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" 
+          className="hidden" onChange={handleSubirFirmado} />
 
           {puedeSubirActa && 
           <ActionBtn 
