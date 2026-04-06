@@ -41,12 +41,6 @@ const bajasService = {
     return response.data;
   },
 
-//   descargarPDF: async (id) => {
-//     const response = await axiosBienes.get(`/bajas/${id}/descargar-pdf/`, {
-//       responseType: 'blob',
-//     });
-//     return response.data;
-//   },
   descargarPDF: async (id, firmado = false) => {
     const response = await axiosBienes.get(`/bajas/${id}/descargar-pdf/`, {
       params: { 
@@ -75,10 +69,15 @@ const bajasService = {
     });
     return response.data;
   },
+  // pendientesAprobacion: async () => {
+  //   const response = await axiosBienes.get('/bajas/', {
+  //     params: { estado_baja: 'PENDIENTE_APROBACION' },
+  //   });
+  //   return response.data;
+  // },
+
   pendientesAprobacion: async () => {
-    const response = await axiosBienes.get('/bajas/', {
-      params: { estado_baja: 'PENDIENTE_APROBACION' },
-    });
+    const response = await axiosBienes.get('/bajas/pendientes-aprobacion/');
     return response.data;
   },
 };
