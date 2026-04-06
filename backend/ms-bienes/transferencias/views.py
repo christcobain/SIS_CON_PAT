@@ -607,8 +607,7 @@ class TransferenciaViewSet(ViewSet):
         parameters=[_PK],
         responses={200: _OK, 400: _ERR, 403: _403, 404: _404},
     )
-    @action(detail=True, methods=['post'], url_path='cerrar-con-firma',
-            parser_classes=[MultiPartParser, FormParser])
+    @action(detail=True, methods=['post'], url_path='cerrar-con-firma',parser_classes=[MultiPartParser, FormParser])
     def cerrar_con_firma(self, request, pk=None):
         archivo = request.FILES.get('archivo')
         role= self._get_role(request)

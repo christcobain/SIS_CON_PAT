@@ -7,10 +7,11 @@ from mantenimientos.models import Mantenimiento
 class Baja(models.Model):
     ESTADO_CHOICES = [
         ('PENDIENTE_APROBACION', 'Pendiente de Aprobación'),
-        ('ATENDIDO',             'Atendido'),
         ('DEVUELTO',             'Devuelto'),
-        ('CANCELADO',            'Cancelado'),
-    ]
+        ('APROBADO',              'Aprobado — Pendiente de Firma'),
+        ('EN_ESPERA_FIRMA', 'En Espera de Firma del Documento'),  
+        ('ATENDIDO',             'Atendido'),        
+        ('CANCELADO',            'Cancelado'),    ]
 
     numero_informe      = models.CharField(max_length=30, unique=True)
 
@@ -98,7 +99,7 @@ class BajaAprobacion(models.Model):
     ACCION_CHOICES = [
         ('REGISTRADO', 'Registrado y derivado para aprobación'),
         ('ENVIADO',    'Reenviado a aprobación con correcciones'),
-        ('APROBADO',   'Aprobado — bienes dados de baja'),
+        ('APROBADO',   'Aprobado — bienes dados de baja'),     
         ('ATENDIDO',   'Atendido con PDF subido'),
         ('DEVUELTO',   'Devuelto para corrección'),
         ('CANCELADO',  'Cancelado'),

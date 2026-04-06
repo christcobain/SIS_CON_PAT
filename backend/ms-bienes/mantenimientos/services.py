@@ -34,11 +34,10 @@ COORD_MODULO_ID = 1
 
 _EXT_IMAGEN_PERMITIDAS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 
-
 class MantenimientoService:
     @staticmethod
     def _get_or_404(pk: int) -> Mantenimiento:
-        m = MantenimientoRepository.get_by_id(pk)
+        m = MantenimientoRepository.get_by_id(pk)        
         if not m:
             raise NotFound(f'Mantenimiento id={pk} no encontrado.')
         return m
@@ -172,12 +171,7 @@ class MantenimientoService:
 
     @staticmethod
     @transaction.atomic
-    def enviar_a_aprobacion(
-        pk: int,
-        usuario_id: int,
-        detalles_tecnicos: List[Dict],
-        role: str,
-    ) -> Dict[str, Any]:
+    def enviar_a_aprobacion(pk: int,usuario_id: int,detalles_tecnicos: List[Dict],role: str,) -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento not in ('EN_PROCESO', 'DEVUELTO'):
             raise ValidationError(
@@ -243,15 +237,8 @@ class MantenimientoService:
 
     @staticmethod
     @transaction.atomic
-    def aprobar(
-        pk: int,
-        aprobador_id: int,
-        role: str,
-        sede_id: int,
-        modulo_id: Optional[int],
-        observacion: str = '',
-        cookie: str = '',
-    ) -> Dict[str, Any]:
+    def aprobar(pk: int,aprobador_id: int,role: str,sede_id: int,
+        modulo_id: Optional[int],observacion: str = '',cookie: str = '') -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento != 'PENDIENTE_APROBACION':
             raise ValidationError(
@@ -428,13 +415,7 @@ class MantenimientoService:
 
     @staticmethod
     @transaction.atomic
-    def subir_pdf_firmado(
-        pk: int,
-        archivo,
-        usuario_id: int,
-        role: str,
-        cookie: str = '',
-    ) -> Dict[str, Any]:
+    def subir_pdf_firmado(pk: int,archivo,usuario_id: int,role: str,cookie: str = '') -> Dict[str, Any]:
         m = MantenimientoService._get_or_404(pk)
         if m.estado_mantenimiento != 'APROBADO':
             raise ValidationError(

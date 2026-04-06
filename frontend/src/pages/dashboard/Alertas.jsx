@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense, useMemo, useRef } from 'react';
 import { useTransferencias }             from '../../hooks/useTransferencias';
 import { useMantenimientos }             from '../../hooks/useMantenimientos';
+import { useBajas }             from '../../hooks/useBajas';
 import { useNotificaciones,
          dispararRefetchNotificaciones } from '../../hooks/useNotificaciones ';
 import { useToast }                      from '../../hooks/useToast';
@@ -134,6 +135,9 @@ export default function Alertas() {
   const [modalGestionarBaja, setModalGestionarBaja] = useState(false);
   const [modoGestionBaja,   setModoGestionBaja]   = useState('aprobar');
   const [itemActivoBaja,    setItemActivoBaja]    = useState(null);
+  const {aprobarBaja,devolverBaja,descargarPDFBaja,pdfFirmadoBaja
+
+  }=useBajas({});
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const notificarYRefrescar = () => {    
@@ -158,17 +162,11 @@ export default function Alertas() {
 
   // ── Mantenimientos handlers ───────────────────────────────────────────────
   const handleVerDetalleMant = (item) => { setItemActivoMant(item); setModalDetalleMant(true); };
+
   const handleAprobarMant    = (item) => { setItemActivoMant(item); setModoAprobacion('aprobar'); setModalDetalleMant(false); setModalAprobacion(true); };
   const handleDevolverMant   = (item) => { setItemActivoMant(item); setModoAprobacion('devolver'); setModalDetalleMant(false); setModalAprobacion(true); };
   const handleEnviarMant     = (item) => { setItemActivoMant(item); setModalDetalleMant(false); setModalEnviar(true); };
   const handleConformarMant  = (item) => { setItemActivoMant(item); setModoAprobacion('conformidad'); setModalDetalleMant(false); setModalAprobacion(true); };
-  const handleCancelarMant   = async (item) => {
-    try {
-      await cancelarMant(item.id, { motivo_cancelacion_id: 1, detalle_cancelacion: 'Cancelado desde alertas' });
-      toast.success('Mantenimiento cancelado.');
-      refetchMant(); notificarYRefrescar();
-    } catch (e) { toast.error(e?.response?.data?.error || 'Error al cancelar.'); }
-  };
   const handleAccionMantExitosa = () => {
     setModalAprobacion(false); setModalEnviar(false); setModalDetalleMant(false); setItemActivoMant(null);
     toast.success('Proceso actualizado exitosamente.');
@@ -180,6 +178,7 @@ export default function Alertas() {
     setItemActivoBaja(item); 
     setModalDetalleBaja(true); 
   };
+
   const handleGestionarBaja  = (item, modo) => {
     setItemActivoBaja(item);
     setModoGestionBaja(modo);
@@ -328,20 +327,8 @@ export default function Alertas() {
             onSubirFirmado={handleAccionMantExitosa}            
           />
         )}
-        {/* {modalAprobacion && (
-          <ModalAprobacionMantenimiento
-            open={modalAprobacion}
-            onClose={() => { setModalAprobacion(false); setItemActivoMant(null); }}
-            item={itemActivoMant}
-            modo={modoAprobacion}
-            onAprobar={async (id, obs) => { await aprobarMant(id, obs); handleAccionMantExitosa(); }}
-            onDevolver={async (id, motivo) => { await devolverMant(id, motivo); handleAccionMantExitosa(); }}
-            onConformar={async (id) => { await confirmarConformidad(id); handleAccionMantExitosa(); }}
-          />
-        )} */}
+ 
       </Suspense>
-
-
           {/* ----------------Bajas -----------------------*/}
           {activeTab === 'bajas' && can('ms-bienes:bajas:view_baja') && (
             <div className="space-y-4">
@@ -353,6 +340,11 @@ export default function Alertas() {
               </div>
               <AlertasBajas 
                 onVerDetalle={handleVerDetalleBaja} 
+                userId={userId}
+                sedeId={sedeId}
+                acciones={{aprobarBaja,devolverBaja,descargarPDFBaja,pdfFirmadoBaja}}
+                 onRefreshReady={(fn) => { refreshPendientesRef.current = fn; }}
+
                 />
             </div>
           )}
@@ -366,7 +358,6 @@ export default function Alertas() {
             onClose={() => { setModalDetalleBaja(false); setItemActivoBaja(null); }}
             item={itemActivoBaja}
             onGestionar={handleGestionarBaja}
-            onCancelar={() => {}}
             puedeAccionesRegistrador={false}
             puedeAccionesAprobador={can('ms-bienes:bajas:change_baja')}
             onUser={userId}

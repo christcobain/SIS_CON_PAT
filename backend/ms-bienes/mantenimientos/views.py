@@ -404,7 +404,7 @@ class MantenimientoViewSet(ViewSet):
     def url_imagen(self, request, pk=None, imagen_id=None):
         url = MantenimientoService.obtener_url_imagen(imagen_id=imagen_id)
         return Response({'url': url}, status=status.HTTP_200_OK)
-
+    
     @extend_schema(
         tags=['Mantenimientos'],
         summary='Descargar PDF del acta de mantenimiento',

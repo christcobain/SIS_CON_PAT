@@ -42,9 +42,7 @@ class BajaDetalleSerializer(serializers.ModelSerializer):
 
 
 class BajaListSerializer(serializers.ModelSerializer):
-    motivo_cancelacion_nombre = serializers.CharField(
-        source='motivo_cancelacion.nombre', read_only=True,
-    )
+    motivo_cancelacion_nombre = serializers.CharField(source='motivo_cancelacion.nombre', read_only=True,)
     total_bienes = serializers.SerializerMethodField()
 
     class Meta:

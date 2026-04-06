@@ -507,8 +507,6 @@ def generar_docx_baja(baja) -> str:
     p_at.paragraph_format.space_after = Pt(30)   # espacio antes de la firma
 
     # ── Bloque de firma ─────────────────────────────────────────────
-    # Tabla de 3 filas sin bordes. Línea superior en primera celda.
-    # Espaciado sencillo entre nombre/cargo/sede (no 1.5).
     tf = doc.add_table(rows=3, cols=1)
     tf.alignment = WD_TABLE_ALIGNMENT.CENTER
     _remove_all_borders(tf)

@@ -77,8 +77,7 @@ function SeccionNarrativa({ label, valor }) {
   );
 }
 
-export default function ModalDetalleBaja({
-  open, onClose, item, acciones, onGestionar, onCancelar,
+export default function ModalDetalleBaja({open, onClose, item, acciones, onGestionar, onCancelar,
   puedeAccionesRegistrador, puedeAccionesAprobador, onUser,
 }) {
   const toast       = useToast();

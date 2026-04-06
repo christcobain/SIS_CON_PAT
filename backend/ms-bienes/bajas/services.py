@@ -14,7 +14,9 @@ from bienes.repositories import BienRepository
 from bienes.models import Bien
 from mantenimientos.models import Mantenimiento, MantenimientoImagen
 from transferencias.services import TransferenciaService
-from shared import storage_client
+from shared.storage_client import (
+    subir_docx_baja,subir_pdf_baja,subir_pdf_firmado_baja,descargar_pdf
+)
 
 logger = logging.getLogger(__name__)
 
@@ -123,9 +125,9 @@ class BajaService:
             pdf_ruta  = None
             docx_ruta = None
             if pdf_bytes:
-                pdf_ruta = storage_client.subir_pdf_baja(pdf_bytes, nombre_pdf)
+                pdf_ruta = subir_pdf_baja(pdf_bytes, nombre_pdf)
             if docx_bytes:
-                docx_ruta = storage_client.subir_docx_baja(docx_bytes, nombre_docx)
+                docx_ruta = subir_docx_baja(docx_bytes, nombre_docx)
             BajaRepository.update_fields(baja, {
                 'docx_path': docx_ruta or docs.get('docx_path'),
                 'pdf_path':  pdf_ruta  or docs.get('pdf_path'),
@@ -153,17 +155,9 @@ class BajaService:
 
     @staticmethod
     @transaction.atomic
-    def crear(
-        data: Dict[str, Any],
-        usuario_elabora_id: int,
-        nombre_elabora: str,
-        cargo_elabora_token: str,
-        sede_elabora_id: int,
-        sede_nombre: str = '',
-        modulo_elabora_id: int = None,
-        modulo_elabora_nombre: str = '',
-        rol: str = '',
-    ) -> Dict[str, Any]:
+    def crear(data: Dict[str, Any],usuario_elabora_id: int,nombre_elabora: str,
+        cargo_elabora_token: str,sede_elabora_id: int,sede_nombre: str = '',
+        modulo_elabora_id: int = None,modulo_elabora_nombre: str = '',rol: str = '') -> Dict[str, Any]:
         items_raw = data.pop('items', [])
         items     = [BajaService._validar_item(item) for item in items_raw]
         numero_informe = BajaRepository.generate_numero_informe()
@@ -188,7 +182,7 @@ class BajaService:
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='REGISTRADO',
-            rol=rol or 'ASISTSISTEMA',
+            rol=rol,
             usuario_id=usuario_elabora_id,
             observacion=f'Informe {numero_informe} registrado y enviado a aprobación.',
         )
@@ -199,7 +193,7 @@ class BajaService:
 
     @staticmethod
     @transaction.atomic
-    def reenviar(pk: int, data: Dict[str, Any], usuario_id: int) -> Dict[str, Any]:
+    def reenviar(pk: int, data: Dict[str, Any], usuario_id: int,role:str,token:str) -> Dict[str, Any]:
         baja = BajaService._get_or_404(pk)
         if baja.estado_baja != 'DEVUELTO':
             raise ValidationError(
@@ -214,7 +208,7 @@ class BajaService:
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='ENVIADO',
-            rol='ASISTSISTEMA',
+            rol=role,
             usuario_id=usuario_id,
             observacion='Informe corregido y reenviado a aprobación.',
         )
@@ -223,12 +217,7 @@ class BajaService:
 
     @staticmethod
     @transaction.atomic
-    def aprobar(
-        pk: int,
-        coordsistema_id: int,
-        nombre_coord: str,
-        cargo_coord: str,
-    ) -> Dict[str, Any]:
+    def aprobar(pk: int,coordsistema_id: int,nombre_coord: str, cargo_coord: str,role:str) -> Dict[str, Any]:
         baja = BajaService._get_or_404(pk)
         if baja.estado_baja != 'PENDIENTE_APROBACION':
             raise ValidationError(
@@ -246,12 +235,12 @@ class BajaService:
             'nombre_coordsistema':          nombre_coord,
             'cargo_coordsistema':           cargo_coord,
             'fecha_aprobacion':             now,
-            'estado_baja':                  'ATENDIDO',
+            'estado_baja':                  'APROBADO',
         })
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='APROBADO',
-            rol='COORDSISTEMA',
+            rol=role,
             usuario_id=coordsistema_id,
             observacion='Baja aprobada. Bienes dados de baja en el sistema.',
         )
@@ -266,7 +255,7 @@ class BajaService:
 
     @staticmethod
     @transaction.atomic
-    def devolver(pk: int, motivo: str, usuario_id: int) -> Dict[str, Any]:
+    def devolver(pk: int, motivo: str, usuario_id: int,role:str) -> Dict[str, Any]:
         baja = BajaService._get_or_404(pk)
         if baja.estado_baja != 'PENDIENTE_APROBACION':
             raise ValidationError(
@@ -279,7 +268,7 @@ class BajaService:
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='DEVUELTO',
-            rol='COORDSISTEMA',
+            rol=role,
             usuario_id=usuario_id,
             observacion=motivo,
         )
@@ -287,12 +276,7 @@ class BajaService:
 
     @staticmethod
     @transaction.atomic
-    def cancelar(
-        pk: int,
-        motivo_cancelacion_id: int,
-        detalle: str,
-        usuario_id: int,
-    ) -> Dict[str, Any]:
+    def cancelar(pk: int,motivo_cancelacion_id: int, detalle: str,usuario_id: int,role:str) -> Dict[str, Any]:
         baja = BajaService._get_or_404(pk)
         if baja.estado_baja in ('ATENDIDO', 'CANCELADO'):
             raise ValidationError(
@@ -307,26 +291,38 @@ class BajaService:
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='CANCELADO',
-            rol='ASISTSISTEMA',
+            rol=role,
             usuario_id=usuario_id,
             observacion=detalle or 'Baja cancelada.',
         )
         return {'success': True, 'message': 'Baja cancelada correctamente.'}
 
     @staticmethod
-    def descargar_pdf(pk: int):
+    def descargar_pdf(pk: int,cookie: str = ''):
         baja = BajaService._get_or_404(pk)
-        if not baja.pdf_path:
-            raise ValidationError('Esta baja no tiene documento PDF generado.')
-        return baja
-
+        if baja.estado_baja not in ('APROBADO', 'ATENDIDO'):
+            raise ValidationError(
+                'El documento solo está disponible cuando el estado es APROBADO o ATENDIDO.'
+            )        
+        if baja.pdf_firmado_path:
+            try:
+                return descargar_pdf(baja.pdf_firmado_path)
+            except Exception as e:
+                logger.warning('No se pudo descargar PDF firmado de mantenimiento %s: %s', baja.pdf_firmado_path, e)
+        if baja.pdf_path:
+            try:
+                return descargar_pdf(baja.pdf_path)
+            except Exception as e:
+                logger.warning('No se pudo descargar PDF de mantenimiento %s: %s', baja.pdf_path, e)
+        return generar_documentos_baja(baja)
+ 
     @staticmethod
     @transaction.atomic
     def subir_pdf_firmado(pk: int, archivo, usuario_id: int, role: str) -> Dict[str, Any]:
         baja = BajaService._get_or_404(pk)
-        if baja.estado_baja != 'ATENDIDO':
+        if baja.estado_baja != 'APROBADO':
             raise ValidationError(
-                'Solo se puede subir el documento firmado cuando el estado es ATENDIDO.'
+                'Solo se puede subir el documento firmado cuando el estado es APROBADO.'
             )
         if baja.pdf_firmado_path:
             raise ValidationError(
@@ -334,24 +330,24 @@ class BajaService:
             )
         archivo_bytes = b''.join(archivo.chunks())
         ext    = (getattr(archivo, 'name', '.pdf').rsplit('.', 1)[-1].lower()) or 'pdf'
-        nombre = f'BAJ-{baja.pk}-FIRMADO-{timezone.now().strftime("%Y%m%d%H%M%S")}.{ext}'
-        ruta   = storage_client.subir_pdf_firmado_baja(archivo_bytes, nombre)
+        nombre_archivo = f'{baja.numero_informe}_firmado{ext}'
+        ruta   = subir_pdf_firmado_baja(archivo_bytes, nombre_archivo)        
+        bienes = [det.bien for det in baja.detalles.select_related('bien')]
+        TransferenciaService._cambiar_estado_bienes(bienes, 'INACTIVO')
         BajaRepository.update_fields(baja, {
+            'estado_baja': 'ATENDIDO',
             'pdf_firmado_path':  ruta,
             'fecha_pdf_firmado': timezone.now(),
             'subido_por_id':     usuario_id,
         })
-        bienes = [det.bien for det in baja.detalles.select_related('bien')]
-        TransferenciaService._cambiar_estado_bienes(bienes, 'INACTIVO')
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='ATENDIDO',
             rol=role,
             usuario_id=usuario_id,
-            observacion='Documento firmado subido y archivado en Supabase Storage.',
+            observacion='Acta firmada recibida. Proceso ATENDIDO',
         )
         return {'success': True, 'message': 'Documento firmado subido correctamente.'}
-
     @staticmethod
     def obtener_bienes_para_baja(sede_id: int) -> List[Dict[str, Any]]:
         bienes = (

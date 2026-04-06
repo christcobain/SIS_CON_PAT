@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuthStore }  from '../../../store/authStore';
 import { useToast }      from '../../../hooks/useToast';
 import bajasService      from '../../../services/bajas.service';
+import { usePermission } from '../../../hooks/usePermission';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
@@ -99,12 +99,35 @@ function ActionBtn({ icon, label, onClick, disabled, color, bgColor, borderColor
 }
 
 // ── Tarjeta individual de baja pendiente ─────────────────────────────────────
-function TarjetaBaja({ baja, userId, onDetalle, onAprobado }) {
+function TarjetaBaja({ baja, userId,sedeId, onDetalle, acciones }) {
   const toast            = useToast();
   const [busy, setBusy]  = useState(false);
   const [modalDv, setModalDv] = useState(false);
+  const { can } = usePermission();
+  const {aprobarBaja,devolverBaja,descargarPDFBaja,pdfFirmadoBaja}=acciones;
+  const esAprobador = can('ms-bienes:bajas:add_bajaaprobacion') &&!baja.aprobado_por_coordsistema_id;
+  const esUsuarioFinal = can('ms-bienes:bajas:add_baja')&&baja.usuario_elabora_id&&baja.sede_elabora_id==sedeId;
+  
+  const puedeAprobar =    esAprobador && baja.estado_baja === 'PENDIENTE_APROBACION';
+  const puedeDevolver = puedeAprobar;
+  const puedeDescargarPDF = esUsuarioFinal&& baja.estado_baja === 'APROBADO' && baja.sede_elabora_id === miSede ;
+  const puedeSubirActa = puedeDescargarPDF;
+  const hayAccion = puedeAprobar || puedeDevolver;
 
   const esDestinatario = Number(userId) === Number(baja.usuario_destino_id);
+  const ejecutar = async (fn, ...args) => {
+    if (!fn) return;
+    setBusy(true);
+    try {
+      const res = await fn(...args);
+      toast.success(res?.message || res?.response?.message ||res?.response?.data?.message || 'Operación realizada con éxito');
+    } catch (e) {
+      toast.error(e?.response?.data?.error || e?.response?.data?.detail || 'Error al procesar la solicitud');
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
   const handleAprobar = async () => {
     setBusy(true);
@@ -131,6 +154,13 @@ function TarjetaBaja({ baja, userId, onDetalle, onAprobado }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleSubirFirmado = async (e) => {
+    const archivo = e.target.files?.[0];
+    if (!archivo) return;
+    await ejecutar(subirFirmadoMant, m.id, archivo, userId);
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   return (
@@ -248,33 +278,34 @@ function TarjetaBaja({ baja, userId, onDetalle, onAprobado }) {
 }
 
 // ── Componente principal exportado ────────────────────────────────────────────
-export default function AlertasBajas({ onVerDetalle, onRefreshTabla }) {
-  const userId = useAuthStore((s) => s.user?.id); 
-  const role   = useAuthStore((s) => s.role);
+export default function AlertasBajas({ onVerDetalle, userId,sedeId, 
+  acciones,onRefreshReady }) {
 
   const [pendientes, setPendientes] = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [recargar,   setRecargar]   = useState(0);
-  const esAprobador = ['COORDSISTEMA', 'SYSADMIN'].includes(role);
+  const { canAny } = usePermission();
+  const esAprobador = canAny('ms-bienes:mantenimientos:add_baja','ms-bienes:mantenimientos:add_bajaaprobacion');
 
   const cargar = useCallback(async () => {
     if (!esAprobador) { setPendientes([]); return; }
     setLoading(true);
     try {
       const data = await bajasService.pendientesAprobacion();
-      setPendientes(Array.isArray(data) ? data : []);
+      setPendientes(Array.isArray(data) ? data : data?.results ?? []);
     } catch {
       setPendientes([]);
     } finally {
       setLoading(false);
     }
-  }, [role, recargar]);
+  }, [ recargar]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { cargar(); }, [cargar]);
-  const refresh = () => {
-    setRecargar((r) => r + 1);
-    onRefreshTabla?.(); 
-  };
+  const refresh = () => setRecargar((r) => r + 1); 
+
+  useEffect(() => {
+    onRefreshReady?.(refresh);
+  }, [refresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!esAprobador) {
     return (
@@ -334,8 +365,9 @@ export default function AlertasBajas({ onVerDetalle, onRefreshTabla }) {
           key={baja.id}
           baja={baja}
           userId={userId}
+          sedeId={sedeId}
           onDetalle={onVerDetalle}
-          onAprobado={refresh}
+          acciones={acciones}
         />
       ))}
     </div>

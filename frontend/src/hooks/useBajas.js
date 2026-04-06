@@ -52,7 +52,7 @@ export function useBajas(filtrosIniciales = {}) {
       setActualizando(false);
     }
   };
-  const descargarPDF = async (id, firmado = false, nombreArchivo = 'baja.pdf') => {
+  const descargarPDFBaja = async (id, firmado = false, nombreArchivo = 'baja.pdf') => {
     try {
         const blob = await bajasService.descargarPDF(id, firmado);        
         const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
@@ -78,12 +78,12 @@ export function useBajas(filtrosIniciales = {}) {
     obtener:               (id)         => bajasService.obtener(id),
     bienesParaBaja:        (params)     => bajasService.bienesParaBaja(params),
     mantenimientosDelBien: (bienId)     => bajasService.mantenimientosDelBien(bienId),
-    crear:                 (data)       => ejecutarYRefrescar(bajasService.crear, data),
-    aprobar:               (id)         => ejecutarYRefrescar(bajasService.aprobar, id),
-    devolver:              (id, motivo) => ejecutarYRefrescar(bajasService.devolver, id, motivo),
-    cancelar:              (id, data)   => ejecutarYRefrescar(bajasService.cancelar, id, data),
-    reenviar:              (id, data)   => ejecutarYRefrescar(bajasService.reenviar, id, data),
-    descargarPDF,
-    pdfFirmado:             (id, formData) => ejecutarYRefrescar(bajasService.pdfFirmado, id, formData),
+    crearBaja:                 (data)       => ejecutarYRefrescar(bajasService.crear, data),
+    aprobarBaja:               (id)         => ejecutarYRefrescar(bajasService.aprobar, id),
+    devolverBaja:              (id, motivo) => ejecutarYRefrescar(bajasService.devolver, id, motivo),
+    cancelarBaja:              (id, data)   => ejecutarYRefrescar(bajasService.cancelar, id, data),
+    reenviarBaja:              (id, data)   => ejecutarYRefrescar(bajasService.reenviar, id, data),
+    descargarPDFBaja,
+    pdfFirmadoBaja:             (id, formData) => ejecutarYRefrescar(bajasService.pdfFirmado, id, formData),
   };
 }

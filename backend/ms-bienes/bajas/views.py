@@ -1,8 +1,9 @@
+from django.conf import settings
 from rest_framework import status
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,OR
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
 
@@ -31,12 +32,19 @@ from .serializers import (
     BienParaBajaSerializer,
 )
 
-
-def _get_sede_id_from_token(request) -> int:
-    sedes = request.auth.get('sedes_ids', []) if request.auth else []
-    if not sedes:
-        raise ValidationError('El usuario no tiene sede asignada en el token JWT.')
-    return int(sedes[0])
+def _get_token(self, request) -> str:
+        cookie_name = getattr(settings, 'JWT_AUTH_COOKIE', 'sisconpat_access')
+        token = request.COOKIES.get(cookie_name)
+        if not token:
+            auth_header = request.headers.get('Authorization', '')
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ', 1)[1]
+        return token
+def _get_sede(self, request) -> int:
+        sedes = request.auth.get('sedes_ids', []) if request.auth else []
+        if not sedes:
+            raise ValidationError('El usuario no tiene sede asignada.')
+        return sedes[0]
 
 def _get_sede_nombre_from_token(request) -> str:
     sedes = request.auth.get('sedes', []) if request.auth else []
@@ -69,20 +77,29 @@ _R404 = {404: OpenApiTypes.OBJECT}
 
 class BajaViewSet(ViewSet):
     def get_permissions(self):
-        mapa = {
-            'list':                    [HasJWTPermission('ms-bienes:bajas:view_baja')],
-            'retrieve':                [HasJWTPermission('ms-bienes:bajas:view_baja')],
-            'create':                  [HasJWTPermission('ms-bienes:bajas:add_baja')],
-            'reenviar':                [HasJWTPermission('ms-bienes:bajas:add_baja')],
-            'aprobar':                 [HasJWTPermission('ms-bienes:bajas:change_baja')],
-            'devolver':                [HasJWTPermission('ms-bienes:bajas:change_baja')],
-            'cancelar':                [HasJWTPermission('ms-bienes:bajas:delete_baja')],
-            'descargar_pdf':           [HasJWTPermission('ms-bienes:bajas:view_baja')],
-            'subir_pdf_firmado':       [HasJWTPermission('ms-bienes:bajas:add_baja')],
-            'bienes_para_baja':        [HasJWTPermission('ms-bienes:bajas:add_baja')],
-            'mantenimientos_del_bien': [HasJWTPermission('ms-bienes:bajas:add_baja')],
+        view_b   = HasJWTPermission('ms-bienes:bajas:view_baja')
+        view_bd  = HasJWTPermission('ms-bienes:bajas:view_bajadetalle')
+        view_ba  = HasJWTPermission('ms-bienes:bajas:view_bajaaprobacion')
+        add_b    = HasJWTPermission('ms-bienes:bajas:add_baja')
+        add_bd   = HasJWTPermission('ms-bienes:bajas:add_bajadetalle')
+        add_ba   = HasJWTPermission('ms-bienes:bajas:add_bajaaprobacion')
+        chg_b    = HasJWTPermission('ms-bienes:bajas:change_baja')
+        del_b    = HasJWTPermission('ms-bienes:bajas:delete_baja'),
+        del_md   = HasJWTPermission('ms-bienes:bajas:delete_baja')
+        perms = {
+            'list':                    [OR(view_b,view_ba)],
+            'retrieve':                [OR(view_b,view_ba)],
+            'create':                  [add_b],
+            'reenviar':                [add_b],
+            'aprobar':                 [add_ba],
+            'devolver':                [add_ba],
+            'cancelar':                [add_b],
+            'descargar_pdf':           [add_b],
+            'subir_pdf_firmado':       [add_b],
+            'bienes_para_baja':        [add_b],
+            'mantenimientos_del_bien': [add_b],
         }
-        return mapa.get(self.action, [IsAuthenticated()])
+        return perms.get(self.action, [IsAuthenticated()])
 
     @extend_schema(
         tags=['Bajas'],
@@ -136,7 +153,7 @@ class BajaViewSet(ViewSet):
             usuario_elabora_id=request.user.id,
             nombre_elabora=_get_nombre_completo(request),
             cargo_elabora_token=_get_cargo_from_token(request),
-            sede_elabora_id=_get_sede_id_from_token(request),
+            sede_elabora_id=_get_sede(request),
             sede_nombre=_get_sede_nombre_from_token(request),
             modulo_elabora_id=_get_modulo_id_from_token(request),
             modulo_elabora_nombre=_get_modulo_nombre_from_token(request),
@@ -155,8 +172,12 @@ class BajaViewSet(ViewSet):
     @action(detail=True, methods=['patch'], url_path='reenviar')
     def reenviar(self, request, pk=None):
         ser = BajaReenviarSerializer(data=request.data)
-        ser.is_valid(raise_exception=True)
-        result = BajaService.reenviar(int(pk), ser.validated_data, request.user.id)
+        ser.is_valid(raise_exception=True)   
+        result = BajaService.reenviar(pk=pk, 
+                                      data=ser.validated_data,
+                                      user=request.user.id,
+                                      role=_get_role(request),
+                                      token=_get_token(request) )
         return Response({
             'success': True,
             'message': result['message'],
@@ -173,10 +194,11 @@ class BajaViewSet(ViewSet):
     @action(detail=True, methods=['patch'], url_path='aprobar')
     def aprobar(self, request, pk=None):
         result = BajaService.aprobar(
-            int(pk),
-            request.user.id,
-            _get_nombre_completo(request),
-            _get_cargo_from_token(request),
+            pk=pk,
+            coordsistema_id=request.user.id,
+            nombre_coord=_get_nombre_completo(request),
+            cargo_coord=_get_cargo_from_token(request),
+            role=_get_role(request),
         )
         return Response(result, status=status.HTTP_200_OK)
 
@@ -199,7 +221,12 @@ class BajaViewSet(ViewSet):
     def devolver(self, request, pk=None):
         ser = DevolucionSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        result = BajaService.devolver(int(pk), ser.validated_data['motivo_devolucion'], request.user.id)
+        result = BajaService.devolver(
+            pk=pk, 
+            motivo=ser.validated_data['motivo_devolucion'], 
+            usuario_id=request.user.id,
+            role=_get_role(request),
+            )
         return Response(result, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -215,10 +242,11 @@ class BajaViewSet(ViewSet):
         ser = CancelacionSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = BajaService.cancelar(
-            int(pk),
-            ser.validated_data['motivo_cancelacion_id'],
-            ser.validated_data.get('detalle_cancelacion', ''),
-            request.user.id,
+            pk=pk,
+            motivo_cancelacion_id=ser.validated_data['motivo_cancelacion_id'],
+            detalle=ser.validated_data.get('detalle_cancelacion', ''),
+            usuario_id=request.user.id,
+            role=_get_role(request),
         )
         return Response(result, status=status.HTTP_200_OK)
 
@@ -241,34 +269,11 @@ class BajaViewSet(ViewSet):
     )
     @action(detail=True, methods=['get'], url_path='descargar-pdf')
     def descargar_pdf(self, request, pk=None):
-        baja    = BajaService.descargar_pdf(int(pk))
-        firmado = request.query_params.get('firmado') == '1'
-        if firmado:
-            if not baja.pdf_firmado_path:
-                return Response(
-                    {'success': False, 'error': 'No existe PDF firmado para esta baja.'},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-            ruta = baja.pdf_firmado_path
-        else:
-            if not baja.pdf_path:
-                return Response(
-                    {'success': False, 'error': 'Archivo PDF no encontrado.'},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-            ruta = baja.pdf_path
-        try:
-            pdf_bytes = storage_client.descargar_pdf(ruta)
-        except Exception as exc:
-            logger_name = baja.numero_informe
-            return Response(
-                {'success': False, 'error': f'No se pudo descargar el archivo: {exc}'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        nombre_archivo = ruta.rsplit('/', 1)[-1]
-        response = HttpResponse(pdf_bytes, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
-        return response
+        cookie    = _get_token(request)
+        pdf_bytes = BajaService.descargar_pdf(pk, cookie)
+        response  = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="MNT-{pk}.pdf"'
+        return response    
 
     @extend_schema(
         tags=['Bajas'],
@@ -282,8 +287,7 @@ class BajaViewSet(ViewSet):
         parameters=[OpenApiParameter('id', OpenApiTypes.INT, location=OpenApiParameter.PATH)],
         responses={200: OpenApiTypes.OBJECT, **_R400, **_R404},
     )
-    @action(detail=True, methods=['post'], url_path='pdf-firmado',
-            parser_classes=[MultiPartParser, FormParser])
+    @action(detail=True, methods=['post'], url_path='pdf-firmado',parser_classes=[MultiPartParser, FormParser])
     def subir_pdf_firmado(self, request, pk=None):
         archivo = request.FILES.get('archivo')
         if not archivo:
@@ -307,7 +311,7 @@ class BajaViewSet(ViewSet):
     )
     @action(detail=False, methods=['get'], url_path='bienes-para-baja')
     def bienes_para_baja(self, request):
-        sede_id = _get_sede_id_from_token(request)
+        sede_id = _get_sede(request)
         data    = BajaService.obtener_bienes_para_baja(sede_id)
         return Response(BienParaBajaSerializer(data, many=True).data, status=status.HTTP_200_OK)
 

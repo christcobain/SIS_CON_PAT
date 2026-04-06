@@ -414,7 +414,6 @@ export default function AlertasMantenimientos({ onVerDetalle,sedeId,userId, acci
           sedeId={sedeId}
           user={userId}
           onDetalle={onVerDetalle}
-          onAprobado={refresh}
           acciones={acciones}
         />
       ))}

@@ -102,7 +102,6 @@ def eliminar_imagen_mantenimiento(ruta: str) -> None:
         logger.warning('No se pudo eliminar imagen de Supabase (%s): %s', ruta, e)
 # ── BAJAS ─────────────────────────────────────────────────────────────────────
 def subir_pdf_baja(pdf_bytes: bytes, nombre_archivo: str) -> str:
-    """Sube el PDF generado del informe de baja a bajas/pdfs/."""
     ruta = f'bajas/pdfs/{nombre_archivo}'
     _client().storage.from_(_bucket()).upload(
         path=ruta,
@@ -113,7 +112,6 @@ def subir_pdf_baja(pdf_bytes: bytes, nombre_archivo: str) -> str:
     return ruta
  
 def subir_docx_baja(docx_bytes: bytes, nombre_archivo: str) -> str:
-    """Sube el DOCX generado del informe de baja a bajas/docx/."""
     ruta = f'bajas/docx/{nombre_archivo}'
     _client().storage.from_(_bucket()).upload(
         path=ruta,
@@ -127,7 +125,6 @@ def subir_docx_baja(docx_bytes: bytes, nombre_archivo: str) -> str:
     return ruta
  
 def subir_pdf_firmado_baja(archivo_bytes: bytes, nombre_archivo: str) -> str:
-    """Sube el documento firmado físicamente a bajas/firmados/."""
     ext = nombre_archivo.rsplit('.', 1)[-1].lower()
     tipos = {'pdf': 'application/pdf', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png'}
     ruta = f'bajas/firmados/{nombre_archivo}'
