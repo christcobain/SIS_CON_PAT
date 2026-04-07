@@ -77,8 +77,8 @@ function SeccionNarrativa({ label, valor }) {
   );
 }
 
-export default function ModalDetalleBaja({open, onClose, item, acciones, onGestionar, onCancelar,
-  puedeAccionesRegistrador, puedeAccionesAprobador, onUser,
+export default function ModalDetalleBaja({open, onClose, item, acciones, onGestionar, 
+  onUser,
 }) {
   const toast       = useToast();
   const [tab,     setTab]     = useState('detalle');
@@ -91,7 +91,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
     setTab('detalle');
     setBaja(null);
     setLoading(true);
-    acciones.obtener(item.id)
+    acciones.obtenerBaja(item.id)
       .then((data) => setBaja(data))
       .catch(() => { toast.error('No se pudo cargar el detalle de la baja.'); setBaja(item); })
       .finally(() => setLoading(false));
@@ -119,7 +119,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
 
   const handleDescargarSinFirma = async () => {
     try {
-      await acciones.descargarPDF(item.id, false);
+      await acciones.descargarPDFBaja(item.id, false);
     } catch (e) {
       toast.error(e?.response?.data?.error || e?.error || 'No se pudo descargar el PDF.');
     }
@@ -127,7 +127,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
 
   const handleDescargarFirmado = async () => {
     try {
-      await acciones.descargarPDF(b.id, true, `FIRMADO_${b.numero_informe}.pdf`);
+      await acciones.descargarPDFBaja(b.id, true, `FIRMADO_${b.numero_informe}.pdf`);
     } catch (e) {
       toast.error(e?.response?.data?.error || e?.error || 'No se pudo descargar el PDF firmado.');
     }
@@ -139,7 +139,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
     const formData = new FormData();
     formData.append('archivo', archivo);
     try {
-      const result = await acciones.pdfFirmado(item.id, formData);
+      const result = await acciones.pdfFirmadoBaja(item.id, formData);
       toast.success(result?.message || 'Acta firmada subida exitosamente.');
       onClose();
     } catch (err) {
