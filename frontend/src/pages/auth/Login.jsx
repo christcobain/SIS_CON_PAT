@@ -30,21 +30,7 @@ export default function Login() {
     setCpOpen(true);
   };
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   try {
-  //     await login(username, password);
-  //   } catch (err) {
-  //     const msg = err?.response?.data?.error;
-  //     const mustChange = Array.isArray(msg) 
-  //       ? msg.some(m => m.includes("Debe cambiar su contraseña")) 
-  //       : msg?.includes("Debe cambiar su contraseña");
 
-  //     if (mustChange) {
-  //       openChangePassword('expired', username);
-  //     }
-  //   }
-  // };
   const handleSubmit = async (e) => {
     e.preventDefault();
     localStorage.removeItem('sisconpat-auth-storage');

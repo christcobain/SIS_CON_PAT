@@ -106,7 +106,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
   const yaAprobado      = !!b.aprobado_por_coordsistema_id;
   const tienePdfBase    = !!b.pdf_path;
   const tienePdfFirmado = !!(b.pdf_firmado_path && b.fecha_pdf_firmado);
-  const esElaborador    = onUser === b.usuario_elabora_id;
+  const esElaborador    = onUser === b.usuario_elabora_id&&'ms-bienes:bajas:add_baja' ;
   const esDestinatario  = onUser === b.usuario_destino_id;
 
   const puedeDescargarSinFirma = esAtendido && yaAprobado && tienePdfBase && !tienePdfFirmado && esElaborador;

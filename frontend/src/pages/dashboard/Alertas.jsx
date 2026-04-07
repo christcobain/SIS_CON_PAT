@@ -115,12 +115,10 @@ export default function Alertas() {
   } = useTransferencias('TRASLADO_SEDE', { misTransferencias: false, usuarioId: user?.id });
 
   const [modalDetalleMant,  setModalDetalleMant]  = useState(false);
-  const [modalEnviar,       setModalEnviar]        = useState(false);
-  const [modalAprobacion,   setModalAprobacion]    = useState(false);
-  const [modoAprobacion,    setModoAprobacion]     = useState('aprobar');
   const [itemActivoMant,    setItemActivoMant]     = useState(null);
 
   const {
+    actualizandoMant,
     refetchMant,
     aprobarMant,
     devolverMant,
@@ -134,10 +132,10 @@ export default function Alertas() {
   const [itemActivoBaja,     setItemActivoBaja]     = useState(null);
 
   const {
-    aprobar:     aprobarBaja,
-    devolver:    devolverBaja,
-    descargarPDF: descargarPDFBaja,
-    pdfFirmado:  pdfFirmadoBaja,
+    aprobarBaja,
+    devolverBaja,
+    descargarPDFBaja,
+    pdfFirmadoBaja,
   } = useBajas({});
 
   const refreshPendientesRef = useRef(null);
@@ -159,15 +157,7 @@ export default function Alertas() {
   };
 
   const handleVerDetalleMant  = (item) => { setItemActivoMant(item); setModalDetalleMant(true); };
-  const handleAprobarMant     = (item) => { setItemActivoMant(item); setModoAprobacion('aprobar');     setModalDetalleMant(false); setModalAprobacion(true); };
-  const handleDevolverMant    = (item) => { setItemActivoMant(item); setModoAprobacion('devolver');    setModalDetalleMant(false); setModalAprobacion(true); };
-  const handleEnviarMant      = (item) => { setItemActivoMant(item); setModalDetalleMant(false); setModalEnviar(true); };
-  const handleConformarMant   = (item) => { setItemActivoMant(item); setModoAprobacion('conformidad'); setModalDetalleMant(false); setModalAprobacion(true); };
-  const handleAccionMantExitosa = () => {
-    setModalAprobacion(false); setModalEnviar(false); setModalDetalleMant(false); setItemActivoMant(null);
-    toast.success('Proceso actualizado exitosamente.');
-    refetchMant(); notificarYRefrescar();
-  };
+
 
   const handleVerDetalleBaja = (item) => {
     setItemActivoBaja(item);
@@ -186,6 +176,17 @@ export default function Alertas() {
     toast.success(res?.message || 'Operación realizada con éxito.');
     notificarYRefrescar();
   };
+//-------ACCIONES------------
+const accionesTransf = {
+  aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
+  rechazarSalidaSeguridad, rechazarEntradaSeguridad,
+  retornoSalida, retornoEntrada, devolver,
+  descargarPDFTransf, subirFirmado,
+};
+  const accionesMant = {
+    aprobarMant, devolverMant, 
+    descargarPDFMant, subirFirmadoMant
+  }; 
 
   const accionesBaja = {
     aprobarBaja,
@@ -193,6 +194,7 @@ export default function Alertas() {
     descargarPDFBaja,
     pdfFirmadoBaja,
   };
+  
 
   return (
     <div className="p-4 max-w-[1600px] animate-in fade-in duration-500 pb-20">
@@ -260,12 +262,7 @@ export default function Alertas() {
                 onVerDetalle={handleVerDetalleTransf}
                 userId={userId}
                 sedeId={sedeId}
-                acciones={{
-                  aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
-                  rechazarSalidaSeguridad, rechazarEntradaSeguridad,
-                  retornoSalida, retornoEntrada, devolver,
-                  descargarPDFTransf, subirFirmado,
-                }}
+                acciones={accionesTransf}
                 onRefreshReady={(fn) => { refreshPendientesRef.current = fn; }}
               />
             </div>
@@ -278,12 +275,7 @@ export default function Alertas() {
                 onClose={() => { setModalDetalleTransf(false); setItemDetalleTransf(null); }}
                 item={itemDetalleTransf}
                 actualizando={actualizando}
-                acciones={{
-                  aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
-                  rechazarSalidaSeguridad, rechazarEntradaSeguridad,
-                  retornoSalida, retornoEntrada, devolver,
-                  descargarPDFTransf, subirFirmado,
-                }}
+                acciones={accionesTransf}
                 onAccionExitosa={() => {
                   setModalDetalleTransf(false);
                   setItemDetalleTransf(null);
@@ -307,7 +299,7 @@ export default function Alertas() {
                 onVerDetalle={handleVerDetalleMant}
                 userId={userId}
                 sedeId={sedeId}
-                acciones={{ aprobarMant, devolverMant, descargarPDFMant, subirFirmadoMant }}
+                acciones={accionesMant}
                 onAccionExitosa={() => { refetchMant(); notificarYRefrescar(); }}
                 onRefreshReady={(fn) => { refreshPendientesRef.current = fn; }}
               />
@@ -320,12 +312,13 @@ export default function Alertas() {
                 open={modalDetalleMant}
                 onClose={() => { setModalDetalleMant(false); setItemActivoMant(null); }}
                 item={itemActivoMant}
-                onAprobar={handleAprobarMant}
-                onDevolver={handleDevolverMant}
-                onEnviar={handleEnviarMant}
-                onConformar={handleConformarMant}
-                onSubirFirmado={handleAccionMantExitosa}
+                actualizando={actualizandoMant}
+                acciones={accionesMant}
+                // navegacion={navegacion}
+        
               />
+
+         
             )}
           </Suspense>
 
@@ -356,22 +349,9 @@ export default function Alertas() {
             open={modalDetalleBaja}
             onClose={() => { setModalDetalleBaja(false); setItemActivoBaja(null); }}
             item={itemActivoBaja}
+            acciones={accionesBaja}
             onGestionar={handleGestionarBaja}
-            puedeAccionesRegistrador={can('ms-bienes:bajas:add_baja')}
-            puedeAccionesAprobador={can('ms-bienes:bajas:add_bajaaprobacion')}
             onUser={userId}
-            descargarPDF={async (id) => {
-              const { default: bajasService } = await import('../../services/bajas.service');
-              const blob = await bajasService.descargarPDF(id);
-              const url  = window.URL.createObjectURL(new Blob([blob]));
-              const link = document.createElement('a');
-              link.href  = url;
-              link.setAttribute('download', 'baja.pdf');
-              document.body.appendChild(link);
-              link.click();
-              link.remove();
-            }}
-            pdfFirmado={pdfFirmadoBaja}
           />
         )}
 

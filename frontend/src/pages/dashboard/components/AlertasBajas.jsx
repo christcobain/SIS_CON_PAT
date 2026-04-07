@@ -240,7 +240,7 @@ function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
               <ActionBtn
                 icon="assignment_return" label="Devolver" color="#dc2626"
                 bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
-                disabled={busy} onClick={() => setModalDv(true)}
+                disabled={busy} onClick={() => setModalDv('devolverBaja')}
               />
             </>
           )}
@@ -279,8 +279,9 @@ function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
         onClose={() => setModalDv(false)}
         loading={busy}
         onConfirm={(motivo) => {
+          const fn = modalDv === 'devolverBaja' ? devolverBaja:null;
           setModalDv(false);
-          ejecutar(devolverBaja, baja.id, motivo);
+          ejecutar(fn, baja.id, { motivo_devolucion: motivo});
         }}
       />
     </>

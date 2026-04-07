@@ -2,7 +2,6 @@ import { useState, lazy, Suspense } from 'react';
 import { useBajas }      from '../../../hooks/useBajas';
 import { useLocaciones } from '../../../hooks/useLocaciones';
 import { useToast }      from '../../../hooks/useToast';
-import { usePermission } from '../../../hooks/usePermission';
 import { useAuthStore }  from '../../../store/authStore';
 import Can               from '../../../components/auth/Can';
 import BajasStats        from './components/BajasStats';
@@ -23,17 +22,16 @@ const FILTROS_INICIALES = { estado_baja: '', sede_elabora_id: '', misInformes: f
 export default function BajasPage() {
   const toast     = useToast();
   const { sedes } = useLocaciones();
-  const { can }   = usePermission();
   const userId    = useAuthStore((s) => s.user?.id);
 
   const {
     bajas, loading, error,
     refetch, aplicarFiltros,
     bienesParaBaja,
-    crear,
-    aprobar, devolver, cancelar, reenviar,
-    descargarPDF, pdfFirmado,
-    obtener,
+    crearBaja,
+    aprobarBaja, devolverBaja, cancelarBaja, reenviarBaja,
+    descargarPDFBaja, pdfFirmadoBaja,
+    obtenerBaja,
   } = useBajas({});
 
   const [filtrosLocales, setFiltrosLocales] = useState(FILTROS_INICIALES);
@@ -86,14 +84,14 @@ export default function BajasPage() {
 
   const acciones = {
     bienesParaBaja,
-    crear,
-    aprobar,
-    devolver,
-    cancelar,
-    reenviar,
-    descargarPDF,
-    pdfFirmado,
-    obtener,
+    crearBaja,
+    aprobarBaja,
+    devolverBaja,
+    cancelarBaja,
+    reenviarBaja,
+    descargarPDFBaja,
+    pdfFirmadoBaja,
+    obtenerBaja,
   };
 
   return (
@@ -145,7 +143,7 @@ export default function BajasPage() {
           onVerDetalle={handleVerDetalle}
           onGestionar={handleGestionar}
           onCancelar={handleCancelar}
-          onDescargarPDF={descargarPDF}
+          onDescargarPDF={descargarPDFBaja}
           onUser={userId}
         />
       </div>
@@ -156,6 +154,7 @@ export default function BajasPage() {
           <ModalCrearBaja
             open={modalCrear}
             onClose={() => { setModalCrear(false); setItemEditar(null); }}
+            item={itemEditar}
             acciones={acciones}
             onGuardado={() => { setModalCrear(false); refetch(); }}
           />
@@ -168,9 +167,6 @@ export default function BajasPage() {
             item={itemActivo}
             acciones={acciones}
             onGestionar={handleGestionar}
-            onCancelar={handleCancelar}
-            puedeAccionesRegistrador={can('ms-bienes:bajas:add_baja')}
-            puedeAccionesAprobador={can('ms-bienes:bajas:change_baja')}
             onUser={userId}
           />
         )}

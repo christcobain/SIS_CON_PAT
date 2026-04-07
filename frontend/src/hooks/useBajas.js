@@ -75,7 +75,7 @@ export function useBajas(filtrosIniciales = {}) {
     bajas, loading, error, actualizando, filtros,
     aplicarFiltros,
     refetch:               fetchBajas,
-    obtener:               (id)         => bajasService.obtener(id),
+    obtenerBaja:               (id)         => bajasService.obtener(id),
     bienesParaBaja:        (params)     => bajasService.bienesParaBaja(params),
     mantenimientosDelBien: (bienId)     => bajasService.mantenimientosDelBien(bienId),
     crearBaja:                 (data)       => ejecutarYRefrescar(bajasService.crear, data),
