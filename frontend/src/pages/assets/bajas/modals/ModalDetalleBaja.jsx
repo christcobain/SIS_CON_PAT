@@ -82,6 +82,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
 }) {
   const toast       = useToast();
   const [tab,     setTab]     = useState('detalle');
+  const [busy,      setBusy]      = useState(false);
   const [baja,    setBaja]    = useState(null);
   const [loading, setLoading] = useState(false);
   const fileFirmRef = useRef();
@@ -102,36 +103,37 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
   const b     = baja ?? item;
   const badge = BADGE_BAJA[b.estado_baja] || BADGE_BAJA.PENDIENTE_APROBACION;
 
-  const esAtendido      = b.estado_baja === 'ATENDIDO';
-  const yaAprobado      = !!b.aprobado_por_coordsistema_id;
+  const estado      = b.estado_baja ;
+  const esAprobado      = b.aprobado_por_coordsistema_id !== null;
   const tienePdfBase    = !!b.pdf_path;
-  const tienePdfFirmado = !!(b.pdf_firmado_path && b.fecha_pdf_firmado);
+  const tienePdfFirmado = !!b.pdf_firmado_path && !!b.fecha_pdf_firmado;
   const esElaborador    = onUser === b.usuario_elabora_id&&'ms-bienes:bajas:add_baja' ;
-  const esDestinatario  = onUser === b.usuario_destino_id;
+  const eAprobador  = onUser === b.usuario_destino_id &&'ms-bienes:bajas:add_bajaaprobacion';
 
-  const puedeDescargarSinFirma = esAtendido && yaAprobado && tienePdfBase && !tienePdfFirmado && esElaborador;
-  const puedeSubirFirmado      = esAtendido && yaAprobado && tienePdfBase && !tienePdfFirmado && esElaborador;
-  const puedeDescargarFirmado  = esAtendido && tienePdfFirmado;
+  const puedeAprobar       = estado=='PENDIENTE_APROBACION' && !esAprobado && eAprobador;
+  const puedeDescargar = tienePdfBase  && esElaborador && (estado === 'APROBADO' || estado === 'ATENDIDO');
+  const puedeSubirFirmado      = estado=='APROBADO' && esAprobado && tienePdfBase && !tienePdfFirmado && esElaborador;
+
+
+  const ejecutar = async (fn, ...args) => {
+    if (!fn) return;
+    setBusy(true);
+    try {
+      const res = await fn(...args);
+      toast.success(res?.message||res?.response?.message||res?.response?.data?.message||'Accion realizada con exito');
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Error al procesar la acción.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const hayDiagnosticos = b.detalles?.some(
     (d) => d.diagnostico_inicial || d.trabajo_realizado || d.diagnostico_final || d.observacion_tecnica
   );
 
-  const handleDescargarSinFirma = async () => {
-    try {
-      await acciones.descargarPDFBaja(item.id, false);
-    } catch (e) {
-      toast.error(e?.response?.data?.error || e?.error || 'No se pudo descargar el PDF.');
-    }
-  };
-
-  const handleDescargarFirmado = async () => {
-    try {
-      await acciones.descargarPDFBaja(b.id, true, `FIRMADO_${b.numero_informe}.pdf`);
-    } catch (e) {
-      toast.error(e?.response?.data?.error || e?.error || 'No se pudo descargar el PDF firmado.');
-    }
-  };
+  const handleDescargar = () => ejecutar(acciones.descargarPDFBaja, item.id);
+ 
 
   const handleSubirFirmado = async (e) => {
     const archivo = e.target.files?.[0];
@@ -417,11 +419,11 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                   </div>
                 ))}
               </div>
-
+                    {/* Documentación */}
               <div className="space-y-2">
                 <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
 
-                {esAtendido && yaAprobado && b.fecha_doc && (
+                {estado=='ATENDIDO' && esAprobado && b.fecha_doc && (
                   <div className="flex items-center gap-2 p-2.5 rounded-xl"
                     style={{ background: 'rgb(37 99 235 / 0.08)', border: '1px solid rgb(37 99 235 / 0.2)' }}>
                     <Icon name="description" className="text-[14px]" style={{ color: '#1d4ed8' }} />
@@ -432,8 +434,8 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                   </div>
                 )}
 
-                {puedeDescargarSinFirma && !loading && (
-                  <button onClick={handleDescargarSinFirma}
+                {puedeDescargar && !loading && (
+                  <button onClick={handleDescargar}
                     className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
                     style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
                     <Icon name="picture_as_pdf" className="text-[15px]" />Descargar PDF
@@ -447,17 +449,9 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                     <button type="button" onClick={() => fileFirmRef.current?.click()}
                       className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
                       style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
-                      <Icon name="upload_file" className="text-[15px]" />Subir PDF Firmado
+                      <Icon name="upload_file" className="text-[15px]" />Subir acta firmada
                     </button>
                   </>
-                )}
-
-                {puedeDescargarFirmado && !loading && (
-                  <button onClick={handleDescargarFirmado}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
-                    style={{ background: 'rgb(22 163 74 / 0.08)', color: '#16a34a', border: '1px solid rgb(22 163 74 / 0.2)' }}>
-                    <Icon name="verified" className="text-[15px]" />PDF Firmado
-                  </button>
                 )}
 
                 {tienePdfFirmado && (
@@ -467,6 +461,11 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                     <p className="text-[10px] font-black" style={{ color: '#16a34a' }}>Acta firmada y archivada</p>
                   </div>
                 )}
+                {b.fecha_pdf && (
+                <p className="text-[9px]" style={{ color: 'var(--color-text-faint)' }}>
+                  PDF: {fmtT(b.fecha_pdf)}
+                </p>
+              )}
               </div>
             </aside>
           </div>
@@ -482,15 +481,15 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
           Cerrar Ficha
         </button>
         <div className="flex items-center gap-2 flex-wrap">
-          {b.estado_baja === 'DEVUELTO' && puedeAccionesRegistrador && !loading && (
+          {b.estado_baja === 'DEVUELTO' && puedeDescargar && !loading && (
             <button onClick={() => onGestionar(b, 'reenviar')}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer transition-all"
               style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
-              <Icon name="send" className="text-[16px]" /> Corregir y Reenviar
+              <Icon name="send" className="text-[16px]" /> Reenviar
             </button>
           )}
 
-          {b.estado_baja === 'PENDIENTE_APROBACION' && puedeAccionesAprobador && esDestinatario && !loading && (
+          {puedeAprobar&& !loading && (
             <>
               <button onClick={() => onGestionar(b, 'devolver')}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
@@ -503,15 +502,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
             </>
           )}
 
-          <Can perform="ms-bienes:bajas:delete_baja">
-            {!['ATENDIDO', 'CANCELADO'].includes(b.estado_baja) && !loading && (
-              <button onClick={() => onCancelar(b)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
-                style={{ background: 'rgb(220 38 38 / 0.08)', color: '#dc2626', border: '1px solid rgb(220 38 38 / 0.2)' }}>
-                <Icon name="cancel" className="text-[16px]" /> Cancelar Informe
-              </button>
-            )}
-          </Can>
+
         </div>
       </ModalFooter>
     </Modal>

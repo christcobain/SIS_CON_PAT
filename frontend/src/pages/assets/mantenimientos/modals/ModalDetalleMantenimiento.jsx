@@ -665,7 +665,8 @@ export default function ModalDetalleMantenimiento({
 
               {puedeSubirFirma && (
                 <>
-                  <input ref={fileFirmRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleSubirFirmado} />
+                  <input ref={fileFirmRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" 
+                  onChange={handleSubirFirmado} />
                   <button onClick={() => fileFirmRef.current?.click()} disabled={busy}
                     className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase cursor-pointer disabled:opacity-50"
                     style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
