@@ -365,9 +365,7 @@ export default function ModalDetalleTransferencia({
   const puedeRetornoSalida      = esSegur && esTraslado && estado === 'EN_RETORNO' && !retornoSalidaOk && sedeDestino === miSede;
   const puedeRetornoEntrada     = esSegur && esTraslado && estado === 'EN_RETORNO' && retornoSalidaOk && !t.aprobado_retorno_entrada_id && sedeOrigen === miSede;
 
-  const puedeDescargarPDF = (
-    (esUsuarioFinal && estado === 'EN_ESPERA_FIRMA') ||
-    (estado === 'ATENDIDO' && (t.pdf_path || t.tiene_pdf_firmado))
+  const puedeDescargarPDF = ((esUsuarioFinal && estado === 'EN_ESPERA_FIRMA') || (estado === 'ATENDIDO' && (t.pdf_path || t.tiene_pdf_firmado))
   );
   const mostrarSubirActa = esUsuarioFinal && estado === 'EN_ESPERA_FIRMA' && !t.tiene_pdf_firmado;
 

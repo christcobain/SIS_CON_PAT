@@ -92,11 +92,11 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
     setTab('detalle');
     setBaja(null);
     setLoading(true);
-    acciones.obtenerBaja(item.id)
-      .then((data) => setBaja(data))
-      .catch(() => { toast.error('No se pudo cargar el detalle de la baja.'); setBaja(item); })
-      .finally(() => setLoading(false));
-  }, [open, item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    // acciones.obtenerBaja(item.id)
+    //   .then((data) => setBaja(data))
+    //   .catch(() => { toast.error('No se pudo cargar el detalle de la baja.'); setBaja(item); })
+    //   .finally(() => setLoading(false));
+  }, [open, item?.id]); 
 
   if (!item) return null;
 
@@ -435,7 +435,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                 )}
 
                 {puedeDescargar && !loading && (
-                  <button onClick={handleDescargar}
+                  <button onClick={handleDescargar} disabled={busy}
                     className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
                     style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
                     <Icon name="picture_as_pdf" className="text-[15px]" />Descargar PDF
@@ -446,7 +446,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                   <>
                     <input ref={fileFirmRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
                       onChange={handleSubirFirmado} />
-                    <button type="button" onClick={() => fileFirmRef.current?.click()}
+                    <button type="button" onClick={() => fileFirmRef.current?.click()} disabled={busy}
                       className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
                       style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
                       <Icon name="upload_file" className="text-[15px]" />Subir acta firmada

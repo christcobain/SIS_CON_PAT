@@ -151,18 +151,9 @@ export default function Alertas() {
     setTimeout(() => setLoadingSync(false), 600);
   };
 
-  const handleVerDetalleTransf = (item) => {
-    setItemDetalleTransf(item);
-    setModalDetalleTransf(true);
-  };
-
+  const handleVerDetalleTransf = (item) => { setItemDetalleTransf(item); setModalDetalleTransf(true);};
   const handleVerDetalleMant  = (item) => { setItemActivoMant(item); setModalDetalleMant(true); };
-
-
-  const handleVerDetalleBaja = (item) => {
-    setItemActivoBaja(item);
-    setModalDetalleBaja(true);
-  };
+  const handleVerDetalleBaja = (item) => { setItemActivoBaja(item);  setModalDetalleBaja(true); };
 
   const handleGestionarBaja = (item, modo) => {
     setItemActivoBaja(item);
