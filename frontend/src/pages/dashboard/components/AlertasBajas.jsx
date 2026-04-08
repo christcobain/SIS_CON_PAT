@@ -10,25 +10,24 @@ const Icon = ({ name, className = '', style = {} }) => (
 const fmtT = (iso) =>
   !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
+const BADGE = {
+  PENDIENTE_APROBACION: { label: 'Pendiente',  color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'    },
+  APROBADO:             { label: 'Aprobado',   color: '#1d4ed8', bg: 'rgb(37 99 235 / 0.1)'   },
+  DEVUELTO:             { label: 'Devuelto',   color: '#e11d48', bg: 'rgb(225 29 72 / 0.1)'   },
+  ATENDIDO:             { label: 'Atendido',   color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'   },
+  CANCELADO:            { label: 'Cancelado',  color: '#64748b', bg: 'rgb(100 116 139 / 0.1)'  },
+};
+
+// ─── Mini-modal motivo devolución ─────────────────────────────────────────────
 function MiniModalMotivo({ open, onClose, onConfirm, loading }) {
   const [motivo, setMotivo] = useState('');
   if (!open) return null;
-  const handleConfirm = () => {
-    if (motivo.trim().length < 5) return;
-    onConfirm(motivo.trim());
-    setMotivo('');
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center"
+    <div className="fixed inset-0 z-[200] flex items-center justify-center"
       style={{ background: 'rgba(0,0,0,0.5)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) { onClose(); setMotivo(''); } }}
-    >
-      <div
-        className="rounded-2xl p-5 w-[400px] space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200"
-        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
-      >
+      onClick={(e) => { if (e.target === e.currentTarget) { onClose(); setMotivo(''); } }}>
+      <div className="rounded-2xl p-5 w-[400px] space-y-4 shadow-2xl animate-in fade-in zoom-in duration-200"
+        style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="size-8 rounded-xl flex items-center justify-center" style={{ background: 'rgb(220 38 38 / 0.1)' }}>
@@ -42,20 +41,12 @@ function MiniModalMotivo({ open, onClose, onConfirm, loading }) {
             <Icon name="close" className="text-[18px]" />
           </button>
         </div>
-        <textarea
-          value={motivo}
-          onChange={(e) => setMotivo(e.target.value)}
-          rows={3}
-          placeholder="Describe el motivo de devolución al asistente (mín. 5 caracteres)..."
+        <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3}
+          placeholder="Describe el motivo de devolución (mín. 5 caracteres)..."
           className="w-full text-sm rounded-xl px-3 py-2.5 resize-none"
-          style={{
-            background: 'var(--color-surface-alt)',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-primary)',
-            outline: 'none',
-          }}
+          style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', outline: 'none' }}
           onFocus={(e) => { e.currentTarget.style.border = '1px solid var(--color-primary)'; }}
-          onBlur={(e) => { e.currentTarget.style.border = '1px solid var(--color-border)'; }}
+          onBlur={(e)  => { e.currentTarget.style.border = '1px solid var(--color-border)'; }}
         />
         {motivo.trim().length > 0 && motivo.trim().length < 5 && (
           <p className="text-[10px] text-red-500 font-semibold -mt-2">Mínimo 5 caracteres.</p>
@@ -63,11 +54,10 @@ function MiniModalMotivo({ open, onClose, onConfirm, loading }) {
         <div className="flex gap-2 justify-end">
           <button onClick={() => { onClose(); setMotivo(''); }} className="btn-secondary text-xs">Cancelar</button>
           <button
-            onClick={handleConfirm}
+            onClick={() => { if (motivo.trim().length >= 5) { onConfirm(motivo.trim()); setMotivo(''); } }}
             disabled={loading || motivo.trim().length < 5}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
-            style={{ background: 'rgb(220 38 38 / 0.1)', color: '#dc2626', border: '1px solid rgb(220 38 38 / 0.25)' }}
-          >
+            style={{ background: 'rgb(220 38 38 / 0.1)', color: '#dc2626', border: '1px solid rgb(220 38 38 / 0.25)' }}>
             {loading && <span className="btn-loading-spin" style={{ borderColor: '#fca5a5', borderTopColor: '#dc2626' }} />}
             <Icon name="assignment_return" className="text-[14px]" />
             Confirmar devolución
@@ -80,12 +70,9 @@ function MiniModalMotivo({ open, onClose, onConfirm, loading }) {
 
 function ActionBtn({ icon, label, onClick, disabled, color, bgColor, borderColor }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
+    <button onClick={onClick} disabled={disabled}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-      style={{ background: bgColor, color, border: `1px solid ${borderColor}` }}
-    >
+      style={{ background: bgColor, color, border: `1px solid ${borderColor}` }}>
       {disabled
         ? <span className="btn-loading-spin" style={{ borderColor: `${color}40`, borderTopColor: color }} />
         : <Icon name={icon} className="text-[14px]" />
@@ -95,15 +82,18 @@ function ActionBtn({ icon, label, onClick, disabled, color, bgColor, borderColor
   );
 }
 
+// ─── Tarjeta individual ───────────────────────────────────────────────────────
 function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
-  const toast                             = useToast();
-  const fileRef                           = useRef();
-  const [busy, setBusy]                   = useState(false);
-  const [modalDv, setModalDv]             = useState(false);
-  const { can }                           = usePermission();
+  const toast           = useToast();
+  const fileRef         = useRef();
+  const [busy, setBusy] = useState(false);
+  const [modalDv, setModalDv] = useState(false);
+  const { can }         = usePermission();
+
+  // Claves con sufijo — vienen de accionesBaja en Alertas.jsx
   const { aprobarBaja, devolverBaja, descargarPDFBaja, pdfFirmadoBaja } = acciones;
 
-  const esAprobadorPermiso  = can('ms-bienes:bajas:add_bajaaprobacion');
+  const esAprobadorPermiso   = can('ms-bienes:bajas:add_bajaaprobacion');
   const esRegistradorPermiso = can('ms-bienes:bajas:add_baja');
 
   const esAprobador = esAprobadorPermiso
@@ -114,10 +104,10 @@ function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
     && String(baja.usuario_elabora_id) === String(userId)
     && String(baja.sede_elabora_id) === String(sedeId);
 
-  const puedeAprobar       = esAprobador   && baja.estado_baja === 'PENDIENTE_APROBACION';
-  const puedeDescargarPDF  = esRegistrador && baja.estado_baja === 'APROBADO';
-  const puedeSubirActa     = puedeDescargarPDF && !baja.pdf_firmado_path;
-  const hayAccion          = puedeAprobar || puedeDescargarPDF || puedeSubirActa;
+  const puedeAprobar      = esAprobador   && baja.estado_baja === 'PENDIENTE_APROBACION';
+  const puedeDescargarPDF = esRegistrador && baja.estado_baja === 'APROBADO';
+  const puedeSubirActa    = puedeDescargarPDF && !baja.pdf_firmado_path;
+  const hayAccion         = puedeAprobar || puedeDescargarPDF || puedeSubirActa;
 
   const ejecutar = async (fn, ...args) => {
     if (!fn) return;
@@ -147,29 +137,18 @@ function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
     if (puedeDescargarPDF) return { paso: '②', desc: 'Informe aprobado — descarga, firma y sube el acta', color: '#7c3aed' };
     return null;
   };
-  const paso = getPaso();
-
-  const BADGE = {
-    PENDIENTE_APROBACION: { label: 'Pendiente',  color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
-    APROBADO:             { label: 'Aprobado',   color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
-    DEVUELTO:             { label: 'Devuelto',   color: '#e11d48', bg: 'rgb(225 29 72 / 0.1)'  },
-    CANCELADO:            { label: 'Cancelado',  color: '#64748b', bg: 'rgb(100 116 139 / 0.1)' },
-    ATENDIDO:             { label: 'Atendido',   color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
-  };
+  const paso  = getPaso();
   const badge = BADGE[baja.estado_baja] ?? { label: baja.estado_baja, color: '#64748b', bg: 'var(--color-border-light)' };
 
   return (
     <>
-      <div
-        className="card p-4 hover:shadow-md transition-shadow"
-        style={{ borderLeft: puedeAprobar ? '3px solid rgb(127 29 29 / 0.4)' : puedeDescargarPDF ? '3px solid rgb(124 58 237 / 0.4)' : undefined }}
-      >
+      <div className="card p-4 hover:shadow-md transition-shadow"
+        style={{ borderLeft: puedeAprobar ? '3px solid rgb(127 29 29 / 0.4)' : puedeDescargarPDF ? '3px solid rgb(124 58 237 / 0.4)' : undefined }}>
+
         <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
           <div className="flex items-start gap-3 min-w-0">
-            <div
-              className="size-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
-              style={{ background: 'rgb(127 29 29 / 0.08)' }}
-            >
+            <div className="size-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+              style={{ background: 'rgb(127 29 29 / 0.08)' }}>
               <Icon name="delete_sweep" className="text-[22px]" style={{ color: 'var(--color-primary)' }} />
             </div>
             <div className="min-w-0">
@@ -177,10 +156,8 @@ function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
                 <p className="text-sm font-black" style={{ color: 'var(--color-text-primary)' }}>
                   {baja.numero_informe}
                 </p>
-                <span
-                  className="text-[9px] font-black px-2 py-0.5 rounded-md"
-                  style={{ color: badge.color, background: badge.bg }}
-                >
+                <span className="text-[9px] font-black px-2 py-0.5 rounded-md"
+                  style={{ color: badge.color, background: badge.bg }}>
                   {badge.label}
                 </span>
               </div>
@@ -197,75 +174,46 @@ function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
               </p>
             </div>
           </div>
-
-          <button
-            onClick={() => onDetalle(baja)}
+          <button onClick={() => onDetalle(baja)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer shrink-0"
-            style={{
-              background: 'var(--color-surface-alt)',
-              border: '1px solid var(--color-border)',
-              color: 'var(--color-text-body)',
-            }}
-          >
+            style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-body)' }}>
             <Icon name="visibility" className="text-[14px]" />
             Detalle
           </button>
         </div>
 
         {paso && (
-          <div
-            className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3"
-            style={{ background: `${paso.color}08`, border: `1px dashed ${paso.color}30` }}
-          >
-            <span className="text-[12px] font-black shrink-0" style={{ color: paso.color }}>
-              {paso.paso}
-            </span>
-            <p className="text-[10px] font-semibold" style={{ color: 'var(--color-text-muted)' }}>
-              {paso.desc}
-            </p>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-3"
+            style={{ background: `${paso.color}08`, border: `1px dashed ${paso.color}30` }}>
+            <span className="text-[12px] font-black shrink-0" style={{ color: paso.color }}>{paso.paso}</span>
+            <p className="text-[10px] font-semibold" style={{ color: 'var(--color-text-muted)' }}>{paso.desc}</p>
           </div>
         )}
 
-        <div
-          className="flex items-center gap-2 flex-wrap border-t pt-3"
-          style={{ borderColor: 'var(--color-border-light)' }}
-        >
+        <div className="flex items-center gap-2 flex-wrap border-t pt-3"
+          style={{ borderColor: 'var(--color-border-light)' }}>
           {puedeAprobar && (
             <>
-              <ActionBtn
-                icon="check_circle" label="Aprobar Baja" color="#16a34a"
+              <ActionBtn icon="check_circle" label="Aprobar Baja" color="#16a34a"
                 bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
-                disabled={busy} onClick={() => ejecutar(aprobarBaja, baja.id)}
-              />
-              <ActionBtn
-                icon="assignment_return" label="Devolver" color="#dc2626"
+                disabled={busy} onClick={() => ejecutar(aprobarBaja, baja.id)} />
+              <ActionBtn icon="assignment_return" label="Devolver" color="#dc2626"
                 bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
-                disabled={busy} onClick={() => setModalDv('devolverBaja')}
-              />
+                disabled={busy} onClick={() => setModalDv(true)} />
             </>
           )}
-
           {puedeDescargarPDF && (
-            <ActionBtn
-              icon="download" label="Descargar Acta PDF" color="#7c3aed"
+            <ActionBtn icon="download" label="Descargar Acta PDF" color="#7c3aed"
               bgColor="rgb(124 58 237 / 0.08)" borderColor="rgb(124 58 237 / 0.3)"
-              disabled={busy} onClick={() => ejecutar(descargarPDFBaja, baja.id)}
-            />
+              disabled={busy} onClick={() => ejecutar(descargarPDFBaja, baja.id)} />
           )}
-
-          <input
-            ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png"
-            className="hidden" onChange={handleSubirFirmado}
-          />
-
+          <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+            onChange={handleSubirFirmado} />
           {puedeSubirActa && (
-            <ActionBtn
-              icon="upload_file" label="Subir Acta Firmada" color="#7c3aed"
+            <ActionBtn icon="upload_file" label="Subir Acta Firmada" color="#7c3aed"
               bgColor="rgb(124 58 237 / 0.12)" borderColor="rgb(124 58 237 / 0.45)"
-              disabled={busy} onClick={() => fileRef.current?.click()}
-            />
+              disabled={busy} onClick={() => fileRef.current?.click()} />
           )}
-
           {!hayAccion && (
             <p className="text-[10px] italic" style={{ color: 'var(--color-text-faint)' }}>
               Sin acciones disponibles para tu rol en esta etapa.
@@ -279,15 +227,15 @@ function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
         onClose={() => setModalDv(false)}
         loading={busy}
         onConfirm={(motivo) => {
-          const fn = modalDv === 'devolverBaja' ? devolverBaja:null;
           setModalDv(false);
-          ejecutar(fn, baja.id, { motivo_devolucion: motivo});
+          ejecutar(devolverBaja, baja.id, motivo);
         }}
       />
     </>
   );
 }
 
+// ─── Componente principal ─────────────────────────────────────────────────────
 export default function AlertasBajas({ onVerDetalle, userId, sedeId, acciones, onRefreshReady }) {
   const [pendientes, setPendientes] = useState([]);
   const [loading,    setLoading]    = useState(false);
@@ -316,9 +264,7 @@ export default function AlertasBajas({ onVerDetalle, userId, sedeId, acciones, o
 
   const refresh = useCallback(() => setRecargar((r) => r + 1), []);
 
-  useEffect(() => {
-    onRefreshReady?.(refresh);
-  }, [onRefreshReady, refresh]);
+  useEffect(() => { onRefreshReady?.(refresh); }, [onRefreshReady, refresh]);
 
   if (!tieneAcceso) {
     return (
@@ -359,20 +305,13 @@ export default function AlertasBajas({ onVerDetalle, userId, sedeId, acciones, o
         <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>
           {pendientes.length} informe(s) pendiente(s)
         </p>
-        <button
-          onClick={refresh}
+        <button onClick={refresh}
           className="flex items-center gap-1.5 text-[10px] font-black uppercase px-3 py-1.5 rounded-xl transition-all cursor-pointer"
-          style={{
-            background: 'var(--color-surface-alt)',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-muted)',
-          }}
-        >
+          style={{ background: 'var(--color-surface-alt)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>
           <Icon name="refresh" className="text-[14px]" />
           Actualizar
         </button>
       </div>
-
       {pendientes.map((baja) => (
         <TarjetaBaja
           key={baja.id}

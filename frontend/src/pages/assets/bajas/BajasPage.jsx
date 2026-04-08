@@ -29,8 +29,12 @@ export default function BajasPage() {
     refetch, aplicarFiltros,
     bienesParaBaja,
     crearBaja,
-    aprobarBaja, devolverBaja, cancelarBaja, reenviarBaja,
-    descargarPDFBaja, pdfFirmadoBaja,
+    aprobarBaja,
+    devolverBaja,
+    cancelarBaja,
+    reenviarBaja,
+    descargarPDFBaja,
+    pdfFirmadoBaja,
     obtenerBaja,
   } = useBajas({});
 
@@ -85,13 +89,13 @@ export default function BajasPage() {
   const acciones = {
     bienesParaBaja,
     crearBaja,
-    aprobarBaja,
-    devolverBaja,
-    cancelarBaja,
-    reenviarBaja,
+    obtenerBaja,
     descargarPDFBaja,
     pdfFirmadoBaja,
-    obtenerBaja,
+    aprobar:  aprobarBaja,
+    devolver: devolverBaja,
+    cancelar: cancelarBaja,
+    reenviar: reenviarBaja,
   };
 
   return (
@@ -167,6 +171,7 @@ export default function BajasPage() {
             item={itemActivo}
             acciones={acciones}
             onGestionar={handleGestionar}
+            onCancelar={handleCancelar}
             onUser={userId}
           />
         )}

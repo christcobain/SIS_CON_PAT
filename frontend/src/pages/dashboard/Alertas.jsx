@@ -19,12 +19,6 @@ const ModalDetalleTransferencia = lazy(() =>
 const ModalDetalleMantenimiento = lazy(() =>
   import('../assets/mantenimientos/modals/ModalDetalleMantenimiento')
 );
-const ModalAprobacionMantenimiento = lazy(() =>
-  import('../assets/mantenimientos/modals/ModalAprobacionMantenimiento')
-);
-const ModalEnviarAprobacion = lazy(() =>
-  import('../assets/mantenimientos/modals/ModalEnviarAprobacion')
-);
 const ModalDetalleBaja = lazy(() =>
   import('../assets/bajas/modals/ModalDetalleBaja')
 );
@@ -96,6 +90,7 @@ export default function Alertas() {
     refetchNotif,
   } = useNotificaciones();
 
+  // ── Transferencias ──────────────────────────────────────────────────────────
   const [modalDetalleTransf, setModalDetalleTransf] = useState(false);
   const [itemDetalleTransf,  setItemDetalleTransf]  = useState(null);
 
@@ -114,8 +109,9 @@ export default function Alertas() {
     refetchTransf,
   } = useTransferencias('TRASLADO_SEDE', { misTransferencias: false, usuarioId: user?.id });
 
-  const [modalDetalleMant,  setModalDetalleMant]  = useState(false);
-  const [itemActivoMant,    setItemActivoMant]     = useState(null);
+  // ── Mantenimientos ──────────────────────────────────────────────────────────
+  const [modalDetalleMant, setModalDetalleMant] = useState(false);
+  const [itemActivoMant,   setItemActivoMant]   = useState(null);
 
   const {
     actualizandoMant,
@@ -126,16 +122,20 @@ export default function Alertas() {
     subirFirmadoMant,
   } = useMantenimientos({});
 
+  // ── Bajas ───────────────────────────────────────────────────────────────────
   const [modalDetalleBaja,   setModalDetalleBaja]   = useState(false);
   const [modalGestionarBaja, setModalGestionarBaja] = useState(false);
   const [modoGestionBaja,    setModoGestionBaja]    = useState('aprobar');
   const [itemActivoBaja,     setItemActivoBaja]     = useState(null);
 
+ 
   const {
     aprobarBaja,
     devolverBaja,
+    reenviarBaja,
     descargarPDFBaja,
     pdfFirmadoBaja,
+    obtenerBaja,
   } = useBajas({});
 
   const refreshPendientesRef = useRef(null);
@@ -151,9 +151,10 @@ export default function Alertas() {
     setTimeout(() => setLoadingSync(false), 600);
   };
 
-  const handleVerDetalleTransf = (item) => { setItemDetalleTransf(item); setModalDetalleTransf(true);};
-  const handleVerDetalleMant  = (item) => { setItemActivoMant(item); setModalDetalleMant(true); };
-  const handleVerDetalleBaja = (item) => { setItemActivoBaja(item);  setModalDetalleBaja(true); };
+  // ── Handlers ────────────────────────────────────────────────────────────────
+  const handleVerDetalleTransf = (item) => { setItemDetalleTransf(item); setModalDetalleTransf(true); };
+  const handleVerDetalleMant   = (item) => { setItemActivoMant(item); setModalDetalleMant(true); };
+  const handleVerDetalleBaja   = (item) => { setItemActivoBaja(item); setModalDetalleBaja(true); };
 
   const handleGestionarBaja = (item, modo) => {
     setItemActivoBaja(item);
@@ -163,33 +164,43 @@ export default function Alertas() {
   };
 
   const handleAccionBajaExitosa = (res) => {
-    setModalGestionarBaja(false); setModalDetalleBaja(false); setItemActivoBaja(null);
+    setModalGestionarBaja(false);
+    setModalDetalleBaja(false);
+    setItemActivoBaja(null);
     toast.success(res?.message || 'Operación realizada con éxito.');
     notificarYRefrescar();
   };
-//-------ACCIONES------------
-const accionesTransf = {
-  aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
-  rechazarSalidaSeguridad, rechazarEntradaSeguridad,
-  retornoSalida, retornoEntrada, devolver,
-  descargarPDFTransf, subirFirmado,
-};
+
+  // ── Objetos de acciones ─────────────────────────────────────────────────────
+  const accionesTransf = {
+    aprobarAdminsede, aprobarSalidaSeguridad, aprobarEntradaSeguridad,
+    rechazarSalidaSeguridad, rechazarEntradaSeguridad,
+    retornoSalida, retornoEntrada, devolver,
+    descargarPDFTransf, subirFirmado,
+  };
+
   const accionesMant = {
-    aprobarMant, devolverMant, 
-    descargarPDFMant, subirFirmadoMant
-  }; 
+    aprobarMant, devolverMant,
+    descargarPDFMant, subirFirmadoMant,
+  };
+
 
   const accionesBaja = {
     aprobarBaja,
     devolverBaja,
     descargarPDFBaja,
     pdfFirmadoBaja,
+    obtenerBaja,
+
+    aprobar:  aprobarBaja,
+    devolver: devolverBaja,
+    reenviar: reenviarBaja,
   };
-  
 
   return (
     <div className="p-4 max-w-[1600px] animate-in fade-in duration-500 pb-20">
 
+      {/* ── Cabecera ── */}
       <div className="card p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -212,6 +223,7 @@ const accionesTransf = {
           </button>
         </div>
 
+        {/* ── Tabs ── */}
         <div className="flex gap-6 mt-4 pt-3 border-t border-border">
           {TABS.map(({ id, label, icon }) => (
             <button
@@ -241,6 +253,7 @@ const accionesTransf = {
 
         <div className="mt-6">
 
+          {/* ── Tab Transferencias ── */}
           {activeTab === 'pendientes' && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
@@ -278,6 +291,7 @@ const accionesTransf = {
             )}
           </Suspense>
 
+          {/* ── Tab Mantenimientos ── */}
           {activeTab === 'mantenimiento' && can('ms-bienes:mantenimientos:view_mantenimiento') && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
@@ -305,14 +319,11 @@ const accionesTransf = {
                 item={itemActivoMant}
                 actualizando={actualizandoMant}
                 acciones={accionesMant}
-                // navegacion={navegacion}
-        
               />
-
-         
             )}
           </Suspense>
 
+          {/* ── Tab Bajas ── */}
           {activeTab === 'bajas' && canAny('ms-bienes:bajas:add_baja', 'ms-bienes:bajas:add_bajaaprobacion') && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>
@@ -334,6 +345,7 @@ const accionesTransf = {
         </div>
       </div>
 
+      {/* ── Modales Bajas (fuera del page-content para no recortarse) ── */}
       <Suspense fallback={null}>
         {modalDetalleBaja && (
           <ModalDetalleBaja
@@ -358,6 +370,7 @@ const accionesTransf = {
         )}
       </Suspense>
 
+      {/* ── Tab Historial ── */}
       {activeTab === 'historial' && (
         <div className="space-y-4 mt-6">
           <div className="flex items-center gap-2 px-1" style={{ color: 'var(--color-text-faint)' }}>

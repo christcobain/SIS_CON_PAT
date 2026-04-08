@@ -4,7 +4,8 @@ import ModalHeader from '../../../../components/modal/ModalHeader';
 import ModalBody   from '../../../../components/modal/ModalBody';
 import ModalFooter from '../../../../components/modal/ModalFooter';
 import Can         from '../../../../components/auth/Can';
-import { useToast } from '../../../../hooks/useToast';
+import { useToast }      from '../../../../hooks/useToast';
+import { usePermission } from '../../../../hooks/usePermission';
 
 const Icon = ({ name, className = '', style = {} }) => (
   <span className={`material-symbols-outlined leading-none select-none ${className}`} style={style}>{name}</span>
@@ -14,10 +15,11 @@ const fmtT = (iso) =>
   !iso ? '—' : new Date(iso).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
 
 const BADGE_BAJA = {
-  PENDIENTE_APROBACION: { label: 'Pendiente aprobación',  color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'   },
-  ATENDIDO:             { label: 'Baja Definitiva',        color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'  },
-  DEVUELTO:             { label: 'Devuelto p/ Corrección', color: '#e11d48', bg: 'rgb(225 29 72 / 0.1)'  },
-  CANCELADO:            { label: 'Cancelado',              color: '#64748b', bg: 'rgb(100 116 139 / 0.1)' },
+  PENDIENTE_APROBACION: { label: 'Pendiente aprobación',  color: '#b45309', bg: 'rgb(180 83 9 / 0.1)'    },
+  APROBADO:             { label: 'Aprobado',               color: '#1d4ed8', bg: 'rgb(37 99 235 / 0.1)'   },
+  ATENDIDO:             { label: 'Baja Definitiva',        color: '#16a34a', bg: 'rgb(22 163 74 / 0.1)'   },
+  DEVUELTO:             { label: 'Devuelto p/ Corrección', color: '#e11d48', bg: 'rgb(225 29 72 / 0.1)'   },
+  CANCELADO:            { label: 'Cancelado',              color: '#64748b', bg: 'rgb(100 116 139 / 0.1)'  },
 };
 
 const ICONO_ACCION = {
@@ -30,8 +32,8 @@ const ICONO_ACCION = {
 };
 
 const TABS = [
-  { id: 'detalle',   label: 'Informe y Bienes',      icon: 'description'  },
-  { id: 'tecnico',   label: 'Diagnósticos Técnicos',  icon: 'build_circle' },
+  { id: 'detalle',   label: 'Informe y Bienes',      icon: 'description'    },
+  { id: 'tecnico',   label: 'Diagnósticos Técnicos',  icon: 'build_circle'   },
   { id: 'historial', label: 'Historial',               icon: 'manage_history' },
 ];
 
@@ -48,25 +50,6 @@ function InfoRow({ label, value, icon }) {
   );
 }
 
-function FlujoPaso({ label, nombre, fecha, hecho }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="size-7 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-        style={{ background: hecho ? 'rgb(22 163 74 / 0.12)' : 'var(--color-border-light)' }}>
-        <Icon name={hecho ? 'check_circle' : 'radio_button_unchecked'} className="text-[15px]"
-          style={{ color: hecho ? '#16a34a' : 'var(--color-text-faint)' }} />
-      </div>
-      <div className="min-w-0 flex-1 pb-4">
-        <p className="text-[10px] font-black uppercase tracking-widest"
-          style={{ color: hecho ? 'var(--color-text-primary)' : 'var(--color-text-faint)' }}>{label}</p>
-        {hecho && nombre && <p className="text-xs font-semibold mt-0.5" style={{ color: 'var(--color-text-body)' }}>{nombre}</p>}
-        {hecho && fecha  && <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-muted)' }}>{fmtT(fecha)}</p>}
-        {!hecho && <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-faint)' }}>Pendiente</p>}
-      </div>
-    </div>
-  );
-}
-
 function SeccionNarrativa({ label, valor }) {
   if (!valor) return null;
   return (
@@ -77,50 +60,79 @@ function SeccionNarrativa({ label, valor }) {
   );
 }
 
-export default function ModalDetalleBaja({open, onClose, item, acciones, onGestionar, 
-  onUser,
+
+// ─────────────────────────────────────────────────────────────────────────────
+export default function ModalDetalleBaja({
+  open, onClose, item, acciones, onGestionar, onCancelar, onUser,
 }) {
   const toast       = useToast();
+  const { can }     = usePermission();
   const [tab,     setTab]     = useState('detalle');
-  const [busy,      setBusy]      = useState(false);
+  const [busy,    setBusy]    = useState(false);
   const [baja,    setBaja]    = useState(null);
   const [loading, setLoading] = useState(false);
   const fileFirmRef = useRef();
+
+  // ── Carga del detalle ───────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!open || !item?.id) return;
     setTab('detalle');
     setBaja(null);
+
+    if (typeof acciones?.obtenerBaja !== 'function') {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    // acciones.obtenerBaja(item.id)
-    //   .then((data) => setBaja(data))
-    //   .catch(() => { toast.error('No se pudo cargar el detalle de la baja.'); setBaja(item); })
-    //   .finally(() => setLoading(false));
-  }, [open, item?.id]); 
+    acciones.obtenerBaja(item.id)
+      .then((data) => setBaja(data))
+      .catch(() => {
+        toast.error('No se pudo cargar el detalle. Mostrando datos parciales.');
+        setBaja(item);
+      })
+      .finally(() => setLoading(false));
+  }, [open, item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!item) return null;
 
   const b     = baja ?? item;
   const badge = BADGE_BAJA[b.estado_baja] || BADGE_BAJA.PENDIENTE_APROBACION;
+  const estado = b.estado_baja;
 
-  const estado      = b.estado_baja ;
-  const esAprobado      = b.aprobado_por_coordsistema_id !== null;
+  const tieneAprobacion = !!b.aprobado_por_coordsistema_id;
   const tienePdfBase    = !!b.pdf_path;
   const tienePdfFirmado = !!b.pdf_firmado_path && !!b.fecha_pdf_firmado;
-  const esElaborador    = onUser === b.usuario_elabora_id&&'ms-bienes:bajas:add_baja' ;
-  const eAprobador  = onUser === b.usuario_destino_id &&'ms-bienes:bajas:add_bajaaprobacion';
 
-  const puedeAprobar       = estado=='PENDIENTE_APROBACION' && !esAprobado && eAprobador;
-  const puedeDescargar = tienePdfBase  && esElaborador && (estado === 'APROBADO' || estado === 'ATENDIDO');
-  const puedeSubirFirmado      = estado=='APROBADO' && esAprobado && tienePdfBase && !tienePdfFirmado && esElaborador;
+  // ── Permisos ─────────────────────────────────────────────────────────────────
 
+  const esElaborador = can('ms-bienes:bajas:add_baja')
+    && String(onUser) === String(b.usuario_elabora_id);
+
+  const esAprobador  = can('ms-bienes:bajas:add_bajaaprobacion')
+    && String(onUser) === String(b.usuario_destino_id)
+    && !tieneAprobacion;
+
+  const puedeAprobar      = esAprobador  && estado === 'PENDIENTE_APROBACION';
+  const puedeDevolver     = esAprobador  && estado === 'PENDIENTE_APROBACION';
+
+  const puedeReenviar     = esElaborador && estado === 'DEVUELTO';
+  const puedeDescargar    = esElaborador && tienePdfBase
+    && (estado === 'APROBADO' || estado === 'ATENDIDO');
+  const puedeSubirFirmado = esElaborador && estado === 'APROBADO'
+    && tienePdfBase && !tienePdfFirmado && tieneAprobacion;
+
+  const hayDiagnosticos = b.detalles?.some(
+    (d) => d.diagnostico_inicial || d.trabajo_realizado || d.diagnostico_final || d.observacion_tecnica
+  );
 
   const ejecutar = async (fn, ...args) => {
     if (!fn) return;
     setBusy(true);
     try {
       const res = await fn(...args);
-      toast.success(res?.message||res?.response?.message||res?.response?.data?.message||'Accion realizada con exito');
+      toast.success(res?.message || res?.response?.message || 'Acción realizada con éxito.');
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Error al procesar la acción.');
     } finally {
@@ -128,12 +140,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
     }
   };
 
-  const hayDiagnosticos = b.detalles?.some(
-    (d) => d.diagnostico_inicial || d.trabajo_realizado || d.diagnostico_final || d.observacion_tecnica
-  );
-
   const handleDescargar = () => ejecutar(acciones.descargarPDFBaja, item.id);
- 
 
   const handleSubirFirmado = async (e) => {
     const archivo = e.target.files?.[0];
@@ -183,13 +190,13 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                     }}>
                     <Icon name={t.icon} className="text-[16px]" />
                     {t.label}
-                    {t.id === 'detalle' && (b.detalles?.length > 0) && (
+                    {t.id === 'detalle' && b.detalles?.length > 0 && (
                       <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
                         style={{ background: 'rgb(127 29 29 / 0.1)', color: 'var(--color-primary)' }}>
                         {b.detalles.length}
                       </span>
                     )}
-                    {t.id === 'historial' && (b.aprobaciones?.length > 0) && (
+                    {t.id === 'historial' && b.aprobaciones?.length > 0 && (
                       <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
                         style={{ background: 'var(--color-border-light)', color: 'var(--color-text-muted)' }}>
                         {b.aprobaciones.length}
@@ -199,13 +206,12 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                 ))}
               </div>
 
-              {/* ── Contenido tab ── */}
+              {/* ── Contenido ── */}
               <div className="flex-1 overflow-y-auto p-6 min-w-0">
 
+                {/* TAB: Detalle */}
                 {tab === 'detalle' && (
                   <div className="space-y-6 animate-in fade-in duration-300">
-
-                    {/* Cabecera del informe */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <InfoRow label="A (Destinatario)" value={`${b.nombre_destino || '—'}${b.cargo_destino ? ` · ${b.cargo_destino}` : ''}`} icon="person_check" />
                       <InfoRow label="De (Elaborador)"  value={`${b.nombre_elabora || '—'}${b.cargo_elabora ? ` · ${b.cargo_elabora}` : ''}`} icon="person" />
@@ -213,7 +219,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                       <InfoRow label="Fecha registro"   value={fmtT(b.fecha_registro)} icon="calendar_today" />
                     </div>
 
-                    {b.estado_baja === 'DEVUELTO' && b.motivo_devolucion && (
+                    {estado === 'DEVUELTO' && b.motivo_devolucion && (
                       <div className="p-3 rounded-xl"
                         style={{ background: 'rgb(180 83 9 / 0.06)', border: '1px solid rgb(180 83 9 / 0.2)' }}>
                         <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#b45309' }}>
@@ -223,19 +229,16 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                       </div>
                     )}
 
-                    {b.estado_baja === 'ATENDIDO' && b.nombre_coordsistema && (
+                    {(estado === 'APROBADO' || estado === 'ATENDIDO') && b.nombre_coordsistema && (
                       <div className="p-3 rounded-xl"
                         style={{ background: 'rgb(22 163 74 / 0.06)', border: '1px solid rgb(22 163 74 / 0.2)' }}>
-                        <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#16a34a' }}>
-                          Aprobado por
-                        </p>
+                        <p className="text-[9px] font-black uppercase tracking-widest mb-1" style={{ color: '#16a34a' }}>Aprobado por</p>
                         <p className="text-xs font-semibold" style={{ color: 'var(--color-text-body)' }}>
                           {b.nombre_coordsistema}{b.cargo_coordsistema ? ` · ${b.cargo_coordsistema}` : ''}
                         </p>
                       </div>
                     )}
 
-                    {/* Secciones narrativas */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <SeccionNarrativa label="Antecedentes"    valor={b.antecedentes}    />
                       <SeccionNarrativa label="Análisis"        valor={b.analisis}        />
@@ -243,7 +246,6 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                       <SeccionNarrativa label="Recomendaciones" valor={b.recomendaciones} />
                     </div>
 
-                    {/* Bienes */}
                     {b.detalles?.length > 0 && (
                       <div>
                         <p className="text-[9px] font-black uppercase tracking-widest mb-3"
@@ -272,7 +274,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                                     </span>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex items-center gap-2 shrink-0 flex-wrap">
                                   <span className="text-[9px] font-black px-2 py-0.5 rounded-md"
                                     style={{ color: '#dc2626', background: 'rgb(220 38 38 / 0.1)' }}>
                                     {det.estado_funcionamiento}
@@ -299,6 +301,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                   </div>
                 )}
 
+                {/* TAB: Técnico */}
                 {tab === 'tecnico' && (
                   <div className="space-y-4 animate-in fade-in duration-300">
                     {hayDiagnosticos ? b.detalles?.map((det, idx) => (
@@ -340,6 +343,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                   </div>
                 )}
 
+                {/* TAB: Historial */}
                 {tab === 'historial' && (
                   <div className="space-y-0 animate-in fade-in duration-300">
                     {!b.aprobaciones?.length ? (
@@ -350,8 +354,7 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                     ) : (
                       <div className="relative pl-3.5" style={{ borderLeft: '2px solid var(--color-border)' }}>
                         {b.aprobaciones.map((aprob) => {
-                          const meta    = ICONO_ACCION[aprob.accion] || ICONO_ACCION.REGISTRADO;
-                          // const esUlitmo = idx === b.aprobaciones.length - 1;
+                          const meta = ICONO_ACCION[aprob.accion] || ICONO_ACCION.REGISTRADO;
                           return (
                             <div key={aprob.id} className="flex items-start gap-3 pb-4">
                               <div className="size-7 rounded-full flex items-center justify-center shrink-0 -ml-3.5"
@@ -405,10 +408,10 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
               <div className="card p-3 space-y-2">
                 <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Resumen</p>
                 {[
-                  { label: 'Bienes',    value: b.total_bienes ?? b.detalles?.length ?? 0, icon: 'inventory_2'    },
-                  { label: 'Registro',  value: fmtT(b.fecha_registro),                    icon: 'calendar_today' },
-                  { label: 'Aprobado',  value: b.nombre_coordsistema ?? '—',               icon: 'verified'       },
-                  { label: 'Acciones',  value: b.aprobaciones?.length ?? 0,                icon: 'manage_history' },
+                  { label: 'Bienes',   value: b.total_bienes ?? b.detalles?.length ?? 0, icon: 'inventory_2'    },
+                  { label: 'Registro', value: fmtT(b.fecha_registro),                    icon: 'calendar_today' },
+                  { label: 'Aprobado', value: b.nombre_coordsistema ?? '—',               icon: 'verified'       },
+                  { label: 'Acciones', value: b.aprobaciones?.length ?? 0,                icon: 'manage_history' },
                 ].map((s) => (
                   <div key={s.label} className="flex items-start gap-1.5">
                     <Icon name={s.icon} className="text-[13px] mt-0.5 shrink-0" style={{ color: 'var(--color-text-faint)' }} />
@@ -419,11 +422,11 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                   </div>
                 ))}
               </div>
-                    {/* Documentación */}
+
               <div className="space-y-2">
                 <p className="text-[9px] font-black uppercase tracking-widest" style={{ color: 'var(--color-text-muted)' }}>Documentación</p>
 
-                {estado=='ATENDIDO' && esAprobado && b.fecha_doc && (
+                {(estado === 'APROBADO' || estado === 'ATENDIDO') && tieneAprobacion && b.fecha_doc && (
                   <div className="flex items-center gap-2 p-2.5 rounded-xl"
                     style={{ background: 'rgb(37 99 235 / 0.08)', border: '1px solid rgb(37 99 235 / 0.2)' }}>
                     <Icon name="description" className="text-[14px]" style={{ color: '#1d4ed8' }} />
@@ -434,20 +437,20 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                   </div>
                 )}
 
-                {puedeDescargar && !loading && (
+                {puedeDescargar && (
                   <button onClick={handleDescargar} disabled={busy}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer disabled:opacity-50"
                     style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
                     <Icon name="picture_as_pdf" className="text-[15px]" />Descargar PDF
                   </button>
                 )}
 
-                {puedeSubirFirmado && !loading && (
+                {puedeSubirFirmado && (
                   <>
                     <input ref={fileFirmRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
                       onChange={handleSubirFirmado} />
                     <button type="button" onClick={() => fileFirmRef.current?.click()} disabled={busy}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer"
+                      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all cursor-pointer disabled:opacity-50"
                       style={{ background: 'rgb(127 29 29 / 0.08)', color: 'var(--color-primary)', border: '1px solid rgb(127 29 29 / 0.2)' }}>
                       <Icon name="upload_file" className="text-[15px]" />Subir acta firmada
                     </button>
@@ -462,17 +465,25 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
                   </div>
                 )}
                 {b.fecha_pdf && (
-                <p className="text-[9px]" style={{ color: 'var(--color-text-faint)' }}>
-                  PDF: {fmtT(b.fecha_pdf)}
-                </p>
-              )}
+                  <p className="text-[9px]" style={{ color: 'var(--color-text-faint)' }}>
+                    PDF: {fmtT(b.fecha_pdf)}
+                  </p>
+                )}
               </div>
             </aside>
           </div>
         )}
       </ModalBody>
 
-      <ModalFooter align="space" className="bg-slate-50 dark:bg-slate-900/80">
+      {/* ── Footer: botones de acción por rol ─────────────────────────────────
+          REGLA ANTI-DUPLICADOS:
+          Cada botón aparece una sola vez, controlado por su propia variable booleana.
+          Los botones llaman a onGestionar(b, modo) → abre ModalGestionarBaja,
+          que es el único lugar donde se ejecuta la acción real.
+          El modal principal NO ejecuta acciones de aprobación/devolución/reenvío
+          directamente — solo delega en ModalGestionarBaja vía onGestionar.
+      ── */}
+      <ModalFooter align="space">
         <button onClick={onClose}
           className="px-6 py-2 text-[11px] font-black uppercase tracking-widest transition-colors"
           style={{ color: 'var(--color-text-muted)' }}
@@ -480,29 +491,43 @@ export default function ModalDetalleBaja({open, onClose, item, acciones, onGesti
           onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}>
           Cerrar Ficha
         </button>
+
         <div className="flex items-center gap-2 flex-wrap">
-          {b.estado_baja === 'DEVUELTO' && puedeDescargar && !loading && (
+
+          {/* ELABORADOR: cuando fue devuelto, puede corregir y reenviar */}
+          {puedeReenviar && (
             <button onClick={() => onGestionar(b, 'reenviar')}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer transition-all"
               style={{ background: 'rgb(37 99 235 / 0.08)', color: '#1d4ed8', border: '1px solid rgb(37 99 235 / 0.2)' }}>
-              <Icon name="send" className="text-[16px]" /> Reenviar
+              <Icon name="send" className="text-[16px]" /> Corregir y Reenviar
             </button>
           )}
 
-          {puedeAprobar&& !loading && (
-            <>
-              <button onClick={() => onGestionar(b, 'devolver')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
-                style={{ background: 'rgb(180 83 9 / 0.1)', color: '#b45309', border: '1px solid rgb(180 83 9 / 0.25)' }}>
-                <Icon name="assignment_return" className="text-[16px]" /> Devolver
-              </button>
-              <button onClick={() => onGestionar(b, 'aprobar')} className="btn-primary flex items-center gap-2">
-                <Icon name="check_circle" className="text-[16px]" /> Aprobar Baja
-              </button>
-            </>
+          {/* APROBADOR: cuando está pendiente, puede devolver o aprobar */}
+          {puedeDevolver && (
+            <button onClick={() => onGestionar(b, 'devolver')}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
+              style={{ background: 'rgb(180 83 9 / 0.1)', color: '#b45309', border: '1px solid rgb(180 83 9 / 0.25)' }}>
+              <Icon name="assignment_return" className="text-[16px]" /> Devolver
+            </button>
           )}
 
+          {puedeAprobar && (
+            <button onClick={() => onGestionar(b, 'aprobar')} className="btn-primary flex items-center gap-2">
+              <Icon name="check_circle" className="text-[16px]" /> Aprobar Baja
+            </button>
+          )}
 
+          {/* ELABORADOR: cancelar (solo si viene onCancelar desde BajasPage) */}
+          {onCancelar && !['ATENDIDO', 'CANCELADO'].includes(estado) && esElaborador && (
+            <Can perform="ms-bienes:bajas:delete_baja">
+              <button onClick={() => { onClose(); onCancelar(b); }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold cursor-pointer"
+                style={{ background: 'rgb(220 38 38 / 0.06)', color: '#dc2626', border: '1px solid rgb(220 38 38 / 0.2)' }}>
+                <Icon name="cancel" className="text-[16px]" /> Cancelar Informe
+              </button>
+            </Can>
+          )}
         </div>
       </ModalFooter>
     </Modal>
