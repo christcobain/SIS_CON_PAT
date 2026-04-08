@@ -329,23 +329,27 @@ class BajaService:
         return {'success': True, 'message': 'Baja cancelada correctamente.'}
 
     @staticmethod
-    def descargar_pdf(pk: int,cookie: str = ''):
-        baja = BajaService._get_or_404(pk)
+    def descargar_pdf(pk: int,firmado: bool = False) -> bytes  :
+        baja = BajaService._get_or_404(pk)        
         if baja.estado_baja not in ('APROBADO', 'ATENDIDO'):
             raise ValidationError(
                 'El documento solo está disponible cuando el estado es APROBADO o ATENDIDO.'
-            )        
-        if baja.pdf_firmado_path:
-            try:
-                return descargar_pdf(baja.pdf_firmado_path)
-            except Exception as e:
-                logger.warning('No se pudo descargar PDF firmado de mantenimiento %s: %s', baja.pdf_firmado_path, e)
-        if baja.pdf_path:
-            try:
-                return descargar_pdf(baja.pdf_path)
-            except Exception as e:
-                logger.warning('No se pudo descargar PDF de mantenimiento %s: %s', baja.pdf_path, e)
-        return generar_documentos_baja(baja)
+            )      
+        # if baja.pdf_firmado_path:
+        #     try:
+        #         return descargar_pdf(baja.pdf_firmado_path)
+        #     except Exception as e:
+        #         logger.warning('No se pudo descargar PDF firmado de mantenimiento %s: %s', baja.pdf_firmado_path, e)
+        # if baja.pdf_path:
+        #     try:
+        #         return descargar_pdf(baja.pdf_path)
+        #     except Exception as e:
+        #         logger.warning('No se pudo descargar PDF de mantenimiento %s: %s', baja.pdf_path, e)
+        ruta = baja.pdf_firmado_path if firmado else baja.pdf_path    
+        if not ruta:
+            raise ValidationError(f"El documento solicitado no existe para la Baja {pk}")
+        return descargar_pdf(ruta)
+        # return generar_documentos_baja(baja)
  
     @staticmethod
     @transaction.atomic

@@ -293,8 +293,8 @@ class BajaViewSet(ViewSet):
     )
     @action(detail=True, methods=['get'], url_path='descargar-pdf')
     def descargar_pdf(self, request, pk=None):
-        cookie    = _get_token(request)
-        pdf_bytes = BajaService.descargar_pdf(pk, cookie)
+        es_firmado = request.query_params.get('firmado') == '1'        
+        pdf_bytes = BajaService.descargar_pdf(pk, firmado=es_firmado)
         response  = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="MNT-{pk}.pdf"'
         return response    
