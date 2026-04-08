@@ -89,21 +89,15 @@ function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
   const [busy, setBusy] = useState(false);
   const [modalDv, setModalDv] = useState(false);
   const { can }         = usePermission();
-
-  // Claves con sufijo — vienen de accionesBaja en Alertas.jsx
   const { aprobarBaja, devolverBaja, descargarPDFBaja, pdfFirmadoBaja } = acciones;
-
   const esAprobadorPermiso   = can('ms-bienes:bajas:add_bajaaprobacion');
   const esRegistradorPermiso = can('ms-bienes:bajas:add_baja');
-
   const esAprobador = esAprobadorPermiso
     && String(baja.usuario_destino_id) === String(userId)
     && !baja.aprobado_por_coordsistema_id;
-
   const esRegistrador = esRegistradorPermiso
     && String(baja.usuario_elabora_id) === String(userId)
     && String(baja.sede_elabora_id) === String(sedeId);
-
   const puedeAprobar      = esAprobador   && baja.estado_baja === 'PENDIENTE_APROBACION';
   const puedeDescargarPDF = esRegistrador && baja.estado_baja === 'APROBADO';
   const puedeSubirActa    = puedeDescargarPDF && !baja.pdf_firmado_path;

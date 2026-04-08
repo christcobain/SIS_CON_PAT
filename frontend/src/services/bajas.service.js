@@ -69,12 +69,6 @@ const bajasService = {
     });
     return response.data;
   },
-  // pendientesAprobacion: async () => {
-  //   const response = await axiosBienes.get('/bajas/', {
-  //     params: { estado_baja: 'PENDIENTE_APROBACION' },
-  //   });
-  //   return response.data;
-  // },
 
   pendientesAprobacion: async () => {
     const response = await axiosBienes.get('/bajas/pendientes-aprobacion/');

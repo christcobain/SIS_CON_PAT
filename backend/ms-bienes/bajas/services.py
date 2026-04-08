@@ -282,22 +282,25 @@ class BajaService:
         if role == 'SYSADMIN':
             qs = qs.filter(estado_baja='PENDIENTE_APROBACION')
         else:
-            filtros = Q()
- 
+            filtros = Q() 
             filtros |= Q(
                 estado_baja='PENDIENTE_APROBACION',
                 sede_elabora_id=sede_id,
                 usuario_destino_id=user_id,
                 aprobado_por_coordsistema_id__isnull=True,
             )
+            filtros |= Q(
+                estado_baja='PENDIENTE_APROBACION',
+                usuario_destino_id=user_id,
+                pdf_firmado_path__isnull=True,
+            ) 
  
             filtros |= Q(
                 estado_baja='APROBADO',
                 sede_elabora_id=sede_id,
                 usuario_elabora_id=user_id,
                 pdf_firmado_path__isnull=True,
-            ) & ~Q(aprobado_por_coordsistema_id=user_id)
- 
+            )  & ~Q(aprobado_por_coordsistema_id=user_id) 
             qs = qs.filter(filtros)
  
         return list(qs.order_by('-fecha_registro').distinct())
