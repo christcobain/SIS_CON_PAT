@@ -118,7 +118,7 @@ export default function ModalDetalleBaja({
   const puedeDevolver     = esAprobador  && estado === 'PENDIENTE_APROBACION';
 
   const puedeReenviar     = esElaborador && estado === 'DEVUELTO';
-  const puedeDescargar    = esElaborador && tienePdfBase
+  const puedeDescargar    = esElaborador 
     && (estado === 'APROBADO' || estado === 'ATENDIDO');
   const puedeSubirFirmado = esElaborador && estado === 'APROBADO'
     && tienePdfBase && !tienePdfFirmado && tieneAprobacion;
@@ -476,12 +476,7 @@ export default function ModalDetalleBaja({
       </ModalBody>
 
       {/* ── Footer: botones de acción por rol ─────────────────────────────────
-          REGLA ANTI-DUPLICADOS:
-          Cada botón aparece una sola vez, controlado por su propia variable booleana.
-          Los botones llaman a onGestionar(b, modo) → abre ModalGestionarBaja,
-          que es el único lugar donde se ejecuta la acción real.
-          El modal principal NO ejecuta acciones de aprobación/devolución/reenvío
-          directamente — solo delega en ModalGestionarBaja vía onGestionar.
+
       ── */}
       <ModalFooter align="space">
         <button onClick={onClose}
@@ -517,6 +512,7 @@ export default function ModalDetalleBaja({
               <Icon name="check_circle" className="text-[16px]" /> Aprobar Baja
             </button>
           )}
+          
 
           {/* ELABORADOR: cancelar (solo si viene onCancelar desde BajasPage) */}
           {onCancelar && !['ATENDIDO', 'CANCELADO'].includes(estado) && esElaborador && (

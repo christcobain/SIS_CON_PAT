@@ -191,10 +191,12 @@ function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
               <ActionBtn icon="check_circle" label="Aprobar Baja" color="#16a34a"
                 bgColor="rgb(22 163 74 / 0.08)" borderColor="rgb(22 163 74 / 0.3)"
                 disabled={busy} onClick={() => ejecutar(aprobarBaja, baja.id)} />
+
               <ActionBtn icon="assignment_return" label="Devolver" color="#dc2626"
                 bgColor="rgb(220 38 38 / 0.06)" borderColor="rgb(220 38 38 / 0.25)"
                 disabled={busy} onClick={() => setModalDv(true)} />
             </>
+            
           )}
           {puedeDescargarPDF && (
             <ActionBtn icon="download" label="Descargar Acta PDF" color="#7c3aed"
@@ -203,6 +205,7 @@ function TarjetaBaja({ baja, userId, sedeId, onDetalle, acciones, onRefresh }) {
           )}
           <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
             onChange={handleSubirFirmado} />
+
           {puedeSubirActa && (
             <ActionBtn icon="upload_file" label="Subir Acta Firmada" color="#7c3aed"
               bgColor="rgb(124 58 237 / 0.12)" borderColor="rgb(124 58 237 / 0.45)"
