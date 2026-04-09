@@ -1,3 +1,4 @@
+import io
 import os
 from docx2pdf import convert
 from pathlib import Path
@@ -114,7 +115,6 @@ def _paragraph(doc, text: str, *, align=WD_ALIGN_PARAGRAPH.JUSTIFY,
     return p
 
 def _section_title(doc, numero: str, titulo: str):
-    """Título de sección numerado."""
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(10)
     p.paragraph_format.space_after  = Pt(4)
@@ -123,7 +123,6 @@ def _section_title(doc, numero: str, titulo: str):
     run.underline      = False
     run.font.size      = Pt(11)
     run.font.color.rgb = NEGRO
- 
     return p
 
 def _subsection_title(doc, numero: str, titulo: str):
@@ -299,13 +298,9 @@ def generar_docx_baja(baja) -> str:
     _set_line_spacing_single(p_intro)
     p_intro.paragraph_format.space_after = Pt(8)
 
-    # ══════════════════════════════════════════════════════════════════
-    # 1. ANTECEDENTES
     _section_title(doc, '1', 'Antecedentes')
     _narrative_text(doc, baja.antecedentes)
 
-    # ══════════════════════════════════════════════════════════════════
-    # 2. ANÁLISIS
     _section_title(doc, '2', 'Análisis')
     detalles = list(baja.detalles.select_related('motivo_baja', 'mantenimiento').all())
 
@@ -360,10 +355,8 @@ def generar_docx_baja(baja) -> str:
         _cell_borders(tb)
         doc.add_paragraph().paragraph_format.space_after = Pt(4)
 
-    # ── 2.1. OBSERVACIONES ──────────────────────────────────────────
     _subsection_title(doc, '2.1.', 'Observaciones')
 
-    # Diagnósticos por bien (del mantenimiento)
     for det in detalles:
         tiene_obs = any([det.diagnostico_inicial, det.trabajo_realizado, det.estado_funcionamiento])
         if tiene_obs:
@@ -406,7 +399,6 @@ def generar_docx_baja(baja) -> str:
                 rt2.font.size = Pt(10); rt2.font.color.rgb = NEGRO
                 _set_line_spacing_single(p_tr)
 
-    # Texto libre de observaciones (campo 2.1 del formulario)
     obs_texto, sust_texto = _split_analisis(baja.analisis)
     if obs_texto:
         for linea in obs_texto.split('\n'):
@@ -421,10 +413,8 @@ def generar_docx_baja(baja) -> str:
             ran.font.size = Pt(10); ran.font.color.rgb = NEGRO
             _set_line_spacing_single(p_an)
 
-    # ── 2.2. SUSTENTO TÉCNICO ────────────────────────────────────────
     _subsection_title(doc, '2.2.', 'Sustento Técnico')
 
-    # Diagnóstico final por bien (del mantenimiento)
     for det in detalles:
         tiene_sust = any([det.diagnostico_final, det.observacion_tecnica])
         if tiene_sust:
@@ -465,7 +455,6 @@ def generar_docx_baja(baja) -> str:
                 rot2.font.size = Pt(10); rot2.font.color.rgb = NEGRO
                 _set_line_spacing_single(p_ot)
 
-    # Texto libre de sustento técnico (campo 2.2 del formulario)
     if sust_texto:
         for linea in sust_texto.split('\n'):
             linea = linea.strip()
@@ -479,15 +468,9 @@ def generar_docx_baja(baja) -> str:
             rst.font.size = Pt(10); rst.font.color.rgb = NEGRO
             _set_line_spacing_single(p_st)
 
-    # ══════════════════════════════════════════════════════════════════
-    # 3. CONCLUSIONES
-    # ══════════════════════════════════════════════════════════════════
     _section_title(doc, '3', 'Conclusiones')
     _narrative_text(doc, baja.conclusiones)
 
-    # ══════════════════════════════════════════════════════════════════
-    # 4. RECOMENDACIONES
-    # ══════════════════════════════════════════════════════════════════
     _section_title(doc, '4', 'Recomendaciones')
     _narrative_text(doc, baja.recomendaciones)
 
@@ -504,14 +487,12 @@ def generar_docx_baja(baja) -> str:
     rat = p_at.add_run('Atentamente.')
     rat.font.size = Pt(10); rat.font.color.rgb = NEGRO
     _set_line_spacing_single(p_at)
-    p_at.paragraph_format.space_after = Pt(30)   # espacio antes de la firma
+    p_at.paragraph_format.space_after = Pt(30)
 
-    # ── Bloque de firma ─────────────────────────────────────────────
     tf = doc.add_table(rows=3, cols=1)
     tf.alignment = WD_TABLE_ALIGNMENT.CENTER
     _remove_all_borders(tf)
 
-    # Línea superior sobre el nombre
     top_cell_tc = tf.rows[0].cells[0]._tc.get_or_add_tcPr()
     tcBdr2  = OxmlElement('w:tcBorders')
     top_el  = OxmlElement('w:top')
@@ -570,12 +551,27 @@ def convertir_docx_a_pdf(docx_abs_path: str) -> str:
 
 
 def generar_documentos_baja(baja) -> dict:
-    docx_abs   = generar_docx_baja(baja)
-    pdf_abs    = convertir_docx_a_pdf(docx_abs)
+    """
+    Genera el DOCX y convierte a PDF.
+    Retorna rutas absolutas/relativas Y los bytes de ambos archivos
+    para que _regenerar_documentos() los suba a Supabase.
+    """
+    docx_abs = generar_docx_baja(baja)
+    pdf_abs  = convertir_docx_a_pdf(docx_abs)
+
+    # Leer bytes para subir a Supabase Storage
+    with open(docx_abs, 'rb') as f:
+        docx_bytes = f.read()
+    with open(pdf_abs, 'rb') as f:
+        pdf_bytes = f.read()
+
     media_root = str(settings.MEDIA_ROOT)
     docx_rel   = docx_abs.replace(media_root, '').lstrip(os.sep)
     pdf_rel    = pdf_abs.replace(media_root, '').lstrip(os.sep)
+
     return {
-        'docx_path': docx_rel,
-        'pdf_path':  pdf_rel,
+        'docx_path':  docx_rel,
+        'pdf_path':   pdf_rel,
+        'docx_bytes': docx_bytes,
+        'pdf_bytes':  pdf_bytes,
     }

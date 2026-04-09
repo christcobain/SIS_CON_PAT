@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Any, List
-from django.db.models import  Q
+from django.db.models import Q
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, NotFound
@@ -16,7 +16,7 @@ from bienes.models import Bien
 from mantenimientos.models import Mantenimiento, MantenimientoImagen
 from transferencias.services import TransferenciaService
 from shared.storage_client import (
-    subir_docx_baja,subir_pdf_baja,subir_pdf_firmado_baja,descargar_pdf
+    subir_docx_baja, subir_pdf_baja, subir_pdf_firmado_baja, descargar_pdf
 )
 
 logger = logging.getLogger(__name__)
@@ -25,12 +25,14 @@ ESTADOS_FUNCIONAMIENTO_BAJA = {'INOPERATIVO', 'OBSOLETO', 'IRRECUPERABLE'}
 
 
 class BajaService:
+
     @staticmethod
     def _get_or_404(pk: int):
         baja = BajaRepository.get_by_id(pk)
         if not baja:
             raise NotFound(f'Baja con id={pk} no encontrada.')
         return baja
+
     @staticmethod
     def _validar_item(item: Dict[str, Any]) -> Dict[str, Any]:
         bien = BienRepository.get_by_id(item['bien_id'])
@@ -117,22 +119,37 @@ class BajaService:
     def _regenerar_documentos(baja) -> bool:
         try:
             docs = generar_documentos_baja(baja)
+
             pdf_bytes  = docs.get('pdf_bytes')
             docx_bytes = docs.get('docx_bytes')
-            nombre_pdf  = f'BAJ-{baja.pk}-{timezone.now().strftime("%Y%m%d%H%M%S")}.pdf'
-            nombre_docx = f'BAJ-{baja.pk}-{timezone.now().strftime("%Y%m%d%H%M%S")}.docx'
+
+            ts          = timezone.now().strftime('%Y%m%d%H%M%S')
+            nombre_pdf  = f'BAJ-{baja.pk}-{ts}.pdf'
+            nombre_docx = f'BAJ-{baja.pk}-{ts}.docx'
+
             pdf_ruta  = None
             docx_ruta = None
+
             if pdf_bytes:
                 pdf_ruta = subir_pdf_baja(pdf_bytes, nombre_pdf)
+                logger.info('PDF de baja %s subido a Supabase: %s', baja.pk, pdf_ruta)
+            else:
+                logger.error('No se obtuvieron bytes del PDF para Baja id=%s', baja.pk)
+
             if docx_bytes:
                 docx_ruta = subir_docx_baja(docx_bytes, nombre_docx)
+                logger.info('DOCX de baja %s subido a Supabase: %s', baja.pk, docx_ruta)
+            else:
+                logger.error('No se obtuvieron bytes del DOCX para Baja id=%s', baja.pk)
+
+            # Guardar rutas de Supabase (no las rutas locales de disco)
             BajaRepository.update_fields(baja, {
-                'docx_path': docx_ruta or docs.get('docx_path'),
-                'pdf_path':  pdf_ruta  or docs.get('pdf_path'),
+                'docx_path': docx_ruta,
+                'pdf_path':  pdf_ruta,
                 'fecha_doc': timezone.now(),
             })
-            return True
+            return pdf_ruta is not None
+
         except Exception as exc:
             logger.error(
                 'Error generando documentos para Baja id=%s: %s',
@@ -154,9 +171,17 @@ class BajaService:
 
     @staticmethod
     @transaction.atomic
-    def crear(data: Dict[str, Any],usuario_elabora_id: int,nombre_elabora: str,
-        cargo_elabora_token: str,sede_elabora_id: int,sede_nombre: str = '',
-        modulo_elabora_id: int = None,modulo_elabora_nombre: str = '',rol: str = '') -> Dict[str, Any]:
+    def crear(
+        data: Dict[str, Any],
+        usuario_elabora_id: int,
+        nombre_elabora: str,
+        cargo_elabora_token: str,
+        sede_elabora_id: int,
+        sede_nombre: str = '',
+        modulo_elabora_id: int = None,
+        modulo_elabora_nombre: str = '',
+        rol: str = '',
+    ) -> Dict[str, Any]:
         items_raw = data.pop('items', [])
         items     = [BajaService._validar_item(item) for item in items_raw]
         numero_informe = BajaRepository.generate_numero_informe()
@@ -192,7 +217,7 @@ class BajaService:
 
     @staticmethod
     @transaction.atomic
-    def reenviar(pk: int, data: Dict[str, Any], usuario_id: int,role:str,token:str) -> Dict[str, Any]:
+    def reenviar(pk: int, data: Dict[str, Any], usuario_id: int, role: str, token: str) -> Dict[str, Any]:
         baja = BajaService._get_or_404(pk)
         if baja.estado_baja != 'DEVUELTO':
             raise ValidationError(
@@ -216,7 +241,7 @@ class BajaService:
 
     @staticmethod
     @transaction.atomic
-    def aprobar(pk: int,coordsistema_id: int,nombre_coord: str, cargo_coord: str,role:str) -> Dict[str, Any]:
+    def aprobar(pk: int, coordsistema_id: int, nombre_coord: str, cargo_coord: str, role: str) -> Dict[str, Any]:
         baja = BajaService._get_or_404(pk)
         if baja.estado_baja != 'PENDIENTE_APROBACION':
             raise ValidationError(
@@ -236,6 +261,17 @@ class BajaService:
             'fecha_aprobacion':             now,
             'estado_baja':                  'APROBADO',
         })
+
+        # Refrescar objeto desde BD para que _regenerar_documentos tenga el estado correcto
+        baja = BajaRepository.get_by_id(pk)
+        doc_ok = BajaService._regenerar_documentos(baja)
+        if not doc_ok:
+            logger.warning(
+                'Baja %s aprobada pero el PDF no pudo regenerarse. '
+                'El elaborador no podrá descargar hasta que se corrija.',
+                pk,
+            )
+
         BajaAprobacionRepository.registrar(
             baja=baja,
             accion='APROBADO',
@@ -254,7 +290,7 @@ class BajaService:
 
     @staticmethod
     @transaction.atomic
-    def devolver(pk: int, motivo: str, usuario_id: int,role:str) -> Dict[str, Any]:
+    def devolver(pk: int, motivo: str, usuario_id: int, role: str) -> Dict[str, Any]:
         baja = BajaService._get_or_404(pk)
         if baja.estado_baja != 'PENDIENTE_APROBACION':
             raise ValidationError(
@@ -273,16 +309,15 @@ class BajaService:
         )
         return {'success': True, 'message': 'Informe devuelto al asistente para corrección.'}
 
-
     @staticmethod
     def listar_pendientes_aprobacion(user_id: int, role: str, sede_id: int, token: str) -> list:
         qs = BajaRepository.filter({})
         qs = qs.exclude(estado_baja__in=['ATENDIDO', 'CANCELADO'])
- 
+
         if role == 'SYSADMIN':
             qs = qs.filter(estado_baja='PENDIENTE_APROBACION')
         else:
-            filtros = Q() 
+            filtros = Q()
             filtros |= Q(
                 estado_baja='PENDIENTE_APROBACION',
                 sede_elabora_id=sede_id,
@@ -290,24 +325,18 @@ class BajaService:
                 aprobado_por_coordsistema_id__isnull=True,
             )
             filtros |= Q(
-                estado_baja='PENDIENTE_APROBACION',
-                usuario_destino_id=user_id,
-                pdf_firmado_path__isnull=True,
-            ) 
- 
-            filtros |= Q(
                 estado_baja='APROBADO',
                 sede_elabora_id=sede_id,
                 usuario_elabora_id=user_id,
                 pdf_firmado_path__isnull=True,
-            )  & ~Q(aprobado_por_coordsistema_id=user_id) 
+            ) & ~Q(aprobado_por_coordsistema_id=user_id)
             qs = qs.filter(filtros)
- 
+
         return list(qs.order_by('-fecha_registro').distinct())
-    
+
     @staticmethod
     @transaction.atomic
-    def cancelar(pk: int,motivo_cancelacion_id: int, detalle: str,usuario_id: int,role:str) -> Dict[str, Any]:
+    def cancelar(pk: int, motivo_cancelacion_id: int, detalle: str, usuario_id: int, role: str) -> Dict[str, Any]:
         baja = BajaService._get_or_404(pk)
         if baja.estado_baja in ('ATENDIDO', 'CANCELADO'):
             raise ValidationError(
@@ -329,28 +358,56 @@ class BajaService:
         return {'success': True, 'message': 'Baja cancelada correctamente.'}
 
     @staticmethod
-    def descargar_pdf(pk: int,firmado: bool = False) -> bytes  :
-        baja = BajaService._get_or_404(pk)        
+    def descargar_pdf(pk: int, firmado: bool = False) -> bytes:
+        baja = BajaService._get_or_404(pk)
+
         if baja.estado_baja not in ('APROBADO', 'ATENDIDO'):
             raise ValidationError(
                 'El documento solo está disponible cuando el estado es APROBADO o ATENDIDO.'
-            )      
-        # if baja.pdf_firmado_path:
-        #     try:
-        #         return descargar_pdf(baja.pdf_firmado_path)
-        #     except Exception as e:
-        #         logger.warning('No se pudo descargar PDF firmado de mantenimiento %s: %s', baja.pdf_firmado_path, e)
-        # if baja.pdf_path:
-        #     try:
-        #         return descargar_pdf(baja.pdf_path)
-        #     except Exception as e:
-        #         logger.warning('No se pudo descargar PDF de mantenimiento %s: %s', baja.pdf_path, e)
-        ruta = baja.pdf_firmado_path if firmado else baja.pdf_path    
-        if not ruta:
-            raise ValidationError(f"El documento solicitado no existe para la Baja {pk}")
-        return descargar_pdf(ruta)
-        # return generar_documentos_baja(baja)
- 
+            )
+
+        if firmado:
+            ruta = baja.pdf_firmado_path
+            if not ruta:
+                raise ValidationError(f'No existe acta firmada para la Baja {pk}.')
+            return descargar_pdf(ruta)
+
+        # Sin firma: primero intentar el PDF generado en Supabase
+        if baja.pdf_path:
+            try:
+                return descargar_pdf(baja.pdf_path)
+            except Exception as e:
+                logger.warning(
+                    'No se pudo descargar PDF de Supabase para Baja %s (%s). '
+                    'Regenerando al vuelo...', pk, e,
+                )
+
+        # Fallback: regenerar el documento al vuelo y devolverlo sin guardar
+        logger.info('Regenerando PDF al vuelo para Baja %s', pk)
+        try:
+            docs = generar_documentos_baja(baja)
+            pdf_bytes = docs.get('pdf_bytes')
+            if not pdf_bytes:
+                raise ValueError('generar_documentos_baja no devolvió bytes de PDF.')
+
+            # Aprovechar y guardar en Supabase para la próxima vez
+            ts       = timezone.now().strftime('%Y%m%d%H%M%S')
+            nombre   = f'BAJ-{baja.pk}-{ts}.pdf'
+            pdf_ruta = subir_pdf_baja(pdf_bytes, nombre)
+            BajaRepository.update_fields(baja, {
+                'pdf_path':  pdf_ruta,
+                'fecha_doc': timezone.now(),
+            })
+            logger.info('PDF regenerado y subido a Supabase: %s', pdf_ruta)
+            return pdf_bytes
+
+        except Exception as exc:
+            logger.error('Error regenerando PDF para Baja %s: %s', pk, exc, exc_info=True)
+            raise ValidationError(
+                f'No se pudo obtener el documento para la Baja {pk}. '
+                f'Contacte al administrador del sistema.'
+            )
+
     @staticmethod
     @transaction.atomic
     def subir_pdf_firmado(pk: int, archivo, usuario_id: int, role: str) -> Dict[str, Any]:
@@ -363,17 +420,17 @@ class BajaService:
             raise ValidationError(
                 'Ya existe un documento firmado para esta baja. No se puede reemplazar.'
             )
-        archivo_bytes = b''.join(archivo.chunks())
-        ext    = (getattr(archivo, 'name', '.pdf').rsplit('.', 1)[-1].lower()) or 'pdf'
-        nombre_archivo = f'{baja.numero_informe}_firmado{ext}'
-        ruta   = subir_pdf_firmado_baja(archivo_bytes, nombre_archivo)        
+        archivo_bytes  = b''.join(archivo.chunks())
+        ext            = (getattr(archivo, 'name', '.pdf').rsplit('.', 1)[-1].lower()) or 'pdf'
+        nombre_archivo = f'{baja.numero_informe}_firmado.{ext}'
+        ruta           = subir_pdf_firmado_baja(archivo_bytes, nombre_archivo)
         bienes = [det.bien for det in baja.detalles.select_related('bien')]
         TransferenciaService._cambiar_estado_bienes(bienes, 'INACTIVO')
         BajaRepository.update_fields(baja, {
-            'estado_baja': 'ATENDIDO',
+            'estado_baja':       'ATENDIDO',
             'pdf_firmado_path':  ruta,
             'fecha_pdf_firmado': timezone.now(),
-            'tiene_pdf_firmado':    True,
+            'tiene_pdf_firmado': True,
             'subido_por_id':     usuario_id,
         })
         BajaAprobacionRepository.registrar(
@@ -381,9 +438,10 @@ class BajaService:
             accion='ATENDIDO',
             rol=role,
             usuario_id=usuario_id,
-            observacion='Acta firmada recibida. Proceso ATENDIDO',
+            observacion='Acta firmada recibida. Proceso ATENDIDO.',
         )
         return {'success': True, 'message': 'Documento firmado subido correctamente.'}
+
     @staticmethod
     def obtener_bienes_para_baja(sede_id: int) -> List[Dict[str, Any]]:
         bienes = (
