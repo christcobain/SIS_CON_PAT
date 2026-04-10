@@ -176,7 +176,7 @@ class BajaViewSet(ViewSet):
         ser.is_valid(raise_exception=True)   
         result = BajaService.reenviar(pk=pk, 
                                       data=ser.validated_data,
-                                      user=request.user.id,
+                                      usuario_id=request.user.id,
                                       role=_get_role(request),
                                       token=_get_token(request) )
         return Response({

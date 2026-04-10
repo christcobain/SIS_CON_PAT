@@ -1,6 +1,7 @@
 import io
 import os
-from docx2pdf import convert
+import shutil
+import subprocess
 from pathlib import Path
 from datetime import date
 from django.conf import settings
@@ -539,15 +540,38 @@ def generar_docx_baja(baja) -> str:
     return str(docx_abs)
 
 
+def _libreoffice_bin() -> str:
+    for candidato in ('libreoffice', 'soffice', '/usr/bin/libreoffice', '/usr/bin/soffice'):
+        if shutil.which(candidato):
+            return candidato
+    raise RuntimeError(
+        'LibreOffice no está instalado. \n'
+        'Agrega "libreoffice" en nixpacks.toml o \n'
+        '"RUN apt-get install -y libreoffice" en Dockerfile.'
+    )
+
+
 def convertir_docx_a_pdf(docx_abs_path: str) -> str:
     pdf_dir  = str(MEDIA_BAJAS_PDF)
-    base     = Path(docx_abs_path).stem
-    pdf_path = str(Path(pdf_dir) / f'{base}.pdf')
+    pdf_path = str(Path(pdf_dir) / f'{Path(docx_abs_path).stem}.pdf')
     try:
-        convert(docx_abs_path, pdf_path)
+        lo        = _libreoffice_bin()
+        resultado = subprocess.run(
+            [lo, '--headless', '--convert-to', 'pdf', '--outdir', pdf_dir, docx_abs_path],
+            capture_output=True, text=True, timeout=120,
+        )
+        if resultado.returncode != 0:
+            raise RuntimeError(f'LibreOffice error {resultado.returncode}: {resultado.stderr.strip()}')
+        pdf_generado = str(Path(pdf_dir) / f'{Path(docx_abs_path).stem}.pdf')
+        if not Path(pdf_generado).exists():
+            raise RuntimeError(f'PDF no generado en {pdf_generado}. stdout: {resultado.stdout.strip()}')
+        if pdf_generado != pdf_path:
+            shutil.move(pdf_generado, pdf_path)
         return pdf_path
+    except RuntimeError:
+        raise
     except Exception as e:
-        raise RuntimeError(f'Error al convertir PDF: {str(e)}')
+        raise RuntimeError(f'Error convirtiendo DOCX a PDF: {str(e)}')
 
 
 def generar_documentos_baja(baja) -> dict:

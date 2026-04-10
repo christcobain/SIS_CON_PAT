@@ -119,10 +119,8 @@ class BajaService:
     def _regenerar_documentos(baja) -> bool:
         try:
             docs = generar_documentos_baja(baja)
-
             pdf_bytes  = docs.get('pdf_bytes')
             docx_bytes = docs.get('docx_bytes')
-
             ts          = timezone.now().strftime('%Y%m%d%H%M%S')
             nombre_pdf  = f'BAJ-{baja.pk}-{ts}.pdf'
             nombre_docx = f'BAJ-{baja.pk}-{ts}.docx'
