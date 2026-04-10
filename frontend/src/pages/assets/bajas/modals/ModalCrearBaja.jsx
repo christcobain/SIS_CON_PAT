@@ -397,6 +397,11 @@ export default function ModalCrearBaja({ open, onClose, acciones, onGuardado }) 
       toast.success(res?.message || 'Informe de baja registrado correctamente.');
       onGuardado();
     } catch (err) {
+      console.log('1= ',err)
+      console.log('2= ',err?.response)
+      console.log('3= ',err?.response?.data)
+      console.log('4= ',err?.response?.data?.detail)
+      console.log('5= ',err?.error)
       toast.error(err?.error ||err?.response?.error ||err?.response?.data?.error || err?.response?.data?.detail || 'Error al registrar el informe de baja');
     } finally {
       setGuardando(false);
