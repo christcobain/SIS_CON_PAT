@@ -248,7 +248,7 @@ function BienRow({ bien, seleccionado, motivosBaja, onToggle, onMotivoChange, on
 export default function ModalCrearBaja({ open, onClose, acciones, onGuardado }) {
   const toast = useToast();
 
-  const { bienesParaBaja, crear } = acciones ?? {};
+  const { bienesParaBaja, crearBaja } = acciones ?? {};
 
   const { fetchCatalogos, motivosBaja }               = useCatalogos();
   const { filtrarUsuarios, loading: loadingUsuarios }  = useUsuarios();
@@ -393,7 +393,7 @@ export default function ModalCrearBaja({ open, onClose, acciones, onGuardado }) 
         recomendaciones:    form.recomendaciones,
         items,
       };
-      const res = await crear(payload);
+      const res = await crearBaja(payload);
       toast.success(res?.message || 'Informe de baja registrado correctamente.');
       onGuardado();
     } catch (err) {
