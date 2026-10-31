@@ -47,6 +47,7 @@ pip install reportlab
 pip install requests
 
 pip freeze > requirements.txt
+
 django-admin startproject config .
 cd ms-bienes/
 python manage.py startapp catalogs
