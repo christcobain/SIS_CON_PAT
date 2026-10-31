@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  ms-usuarios:
+    build:
+      context: ./backend/ms-usuarios
+      dockerfile: Dockerfile
+    container_name: sis-con-pat-ms-usuarios
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DEBUG=False
+      - ALLOWED_HOSTS=localhost,127.0.0.1,ms-usuarios
+    restart: unless-stopped
+
+  ms-bienes:
+    build:
+      context: ./backend/ms-bienes
+      dockerfile: Dockerfile
+    container_name: sis-con-pat-ms-bienes
+    ports:
+      - "8001:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DEBUG=False
+      - ALLOWED_HOSTS=localhost,127.0.0.1,ms-bienes
+      - MS_USUARIOS_BASE_URL=http://ms-usuarios:8000/api/v1
+    depends_on:
+      - ms-usuarios
+    restart: unless-stopped
+
+  ms-reportes:
+    build:
+      context: ./backend/ms-reportes
+      dockerfile: Dockerfile
+    container_name: sis-con-pat-ms-reportes
+    ports:
+      - "8002:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.prod
+      - DEBUG=False
+      - ALLOWED_HOSTS=localhost,127.0.0.1,ms-reportes
+    restart: unless-stopped
